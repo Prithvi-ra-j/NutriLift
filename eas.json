@@ -1,0 +1,43 @@
+{
+  "cli": {
+    "version": ">= 14.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "channel": "development",
+      "env": {
+        "EXPO_NO_CAPABILITY_SYNC": "1"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "channel": "preview",
+      "env": {
+        "EXPO_NO_CAPABILITY_SYNC": "1"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      },
+      "channel": "production",
+      "env": {
+        "EXPO_NO_CAPABILITY_SYNC": "1"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
