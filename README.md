@@ -1,8 +1,8 @@
-# NutriLift
+# Apex
 
-> AI-Powered Fitness Tracking for React Native
+> AI-Powered Fitness & Nutrition Tracking — React Native
 
-NutriLift is a comprehensive fitness tracking application that combines traditional workout and nutrition logging with cutting-edge AI capabilities. Built with React Native and powered by Groq AI, it provides intelligent food parsing, voice transcription, and personalized coaching.
+Apex is a comprehensive fitness tracking application that combines workout logging, nutrition tracking, and AI coaching. Built with React Native (Expo), SQLite, and Groq AI.
 
 ---
 
@@ -11,7 +11,7 @@ NutriLift is a comprehensive fitness tracking application that combines traditio
 ### AI-Powered Capabilities
 
 **Voice Input**  
-Speak your meals naturally and let AI transcribe and parse them into structured nutrition logs. Supports English, Hindi, and Hinglish.
+Speak your meals naturally — AI transcribes and parses them into structured nutrition logs. Supports English, Hindi, and Hinglish.
 
 **Intelligent Food Parsing**  
 Natural language understanding with automatic macro calculation. Built-in Indian food database for accurate nutritional information.
@@ -26,21 +26,20 @@ Weekly and monthly AI-generated summaries with trend analysis and actionable ins
 
 **Nutrition Tracking**
 - Voice, manual, or barcode-based food logging
-- Macro and calorie tracking
-- Meal history and patterns
-- Daily nutrition summaries
+- Macro and calorie tracking with daily targets
+- Meal-by-meal breakdown (breakfast, lunch, snack, dinner)
+- 7-day adherence tracking
 
 **Workout Logging**
-- Exercise and set tracking
-- Personal record detection
-- Workout templates `[EXPERIMENTAL]`
-- Progress monitoring
+- Exercise and set tracking with Personal Record auto-detection
+- Exercise-type-aware logging (weight, reps-only, duration, cardio)
+- Delete, swap, and edit exercises and sets inline
+- Workout templates and double-progression alerts
 
 **Progress Analytics**
-- Body composition tracking
+- Body composition tracking (InBody paste support)
 - Weight and measurement logs
 - Interactive charts and graphs
-- Goal setting and tracking
 
 ---
 
@@ -51,7 +50,7 @@ Weekly and monthly AI-generated summaries with trend analysis and actionable ins
 | Framework | React Native with Expo SDK 54 |
 | Language | TypeScript |
 | Database | SQLite + Drizzle ORM |
-| Styling | NativeWind (Tailwind CSS) |
+| Design System | Material 3 (M3) dark theme |
 | State Management | Zustand with Immer |
 | AI Provider | Groq API (LLaMA 3.3 70B + Whisper) |
 | Navigation | Expo Router |
@@ -64,7 +63,6 @@ Weekly and monthly AI-generated summaries with trend analysis and actionable ins
 
 - Node.js 18 or higher
 - npm or yarn
-- Expo CLI (optional)
 - Groq API key (free at [console.groq.com](https://console.groq.com))
 
 ### Installation
@@ -85,40 +83,40 @@ npm run ios     # iOS
 npm run android # Android
 ```
 
-### Environment Setup
-
-Create a `.env` file in the root directory:
-
-```env
-GROQ_API_KEY=your_groq_api_key_here
-```
-
-Get your free API key at: https://console.groq.com/keys
-
-**Free Tier Limits:**
-- 30 requests per minute
-- 14,400 requests per day
-
 ---
 
 ## Project Structure
 
 ```
-nutrilift/
-├── app/                 # Expo Router screens
-│   ├── (tabs)/         # Tab navigation screens
-│   └── modals/         # Modal screens
-├── components/         # Reusable UI components
+apex/
+├── app/                    # Expo Router screens
+│   ├── (tabs)/            # Tab navigation screens
+│   │   ├── index.tsx      # Home / Dashboard
+│   │   ├── nutrition.tsx  # Nutrition tracking
+│   │   ├── workout.tsx    # Workout logging
+│   │   ├── coach.tsx      # AI Coach chat
+│   │   ├── progress.tsx   # Progress analytics
+│   │   └── more.tsx       # Settings & more
+│   └── modals/            # Modal screens
+├── components/
+│   └── ui/                # Shared UI components (Card, MacroBar, etc.)
+├── design-system/
+│   └── tokens.ts          # M3 design tokens (colors, shape, typography)
 ├── lib/
-│   ├── db/            # Database schema and queries
-│   ├── groq/          # Groq AI integration
-│   ├── stores/        # Zustand state management
-│   ├── services/      # Business logic
-│   └── utils/         # Utility functions
-├── assets/            # Static resources
-├── docs/              # Documentation
-├── scripts/           # Utility scripts
-└── android/           # Native Android code
+│   ├── db/
+│   │   ├── schema.ts      # Drizzle table definitions + TypeScript types
+│   │   ├── client.ts      # DB client + startup migrations
+│   │   └── queries/       # Per-feature query modules
+│   ├── constants/
+│   │   ├── exercises.ts   # Exercise library with ExerciseType
+│   │   └── workout-templates.ts
+│   ├── groq/              # Groq AI integration
+│   ├── stores/            # Zustand state stores
+│   ├── services/          # Business logic
+│   └── utils/             # Utility functions
+├── assets/                # Static resources
+├── docs/                  # Documentation
+└── android/               # Native Android code
 ```
 
 ---
@@ -128,45 +126,38 @@ nutrilift/
 ### Models Used
 
 **Whisper Large V3 Turbo**  
-Voice transcription with multi-language support (English, Hindi, Hinglish). Latency: 2-5 seconds.
+Voice transcription with multi-language support. Latency: 2-5 seconds.
 
 **LLaMA 3.3 70B Versatile**  
-Used for food parsing, coaching, and report generation. Latency: 1-5 seconds depending on task.
+Food parsing, coaching, and report generation. Latency: 1-5 seconds.
 
 ### API Configuration
 
-All AI features are powered by Groq API. The integration handles:
-- Automatic retry logic
-- Rate limiting
-- Error handling
-- Request queuing
+All AI features use Groq API with automatic retry, rate limiting, and error handling.
 
 ---
 
 ## Database
 
-### Schema
+### Schema Overview
 
-The app uses SQLite with Drizzle ORM for type-safe database operations.
-
-**Core Tables:**
-- `users` - User profiles and settings
-- `nutrition_logs` - Food entries with macros
-- `workout_logs` - Workout sessions
-- `exercises` - Exercise definitions
-- `sets` - Individual exercise sets
-- `coach_messages` - AI chat history
-- `reports` - Generated reports
+| Table | Purpose |
+|---|---|
+| `food_logs` | Food entries with full macro breakdown |
+| `daily_nutrition` | Aggregated daily nutrition summaries |
+| `workout_sessions` | Workout session records |
+| `exercise_logs` | Per-exercise log with `exercise_type` metadata |
+| `set_logs` | Sets with `weight_kg`, `reps`, `duration_sec`, `distance_km` |
+| `personal_records` | Auto-detected PRs per exercise |
+| `body_stats` | Weight and InBody composition data |
+| `recovery_logs` | Sleep, HRV, energy, soreness |
+| `ai_conversations` | Coach chat history |
 
 ### Migrations
 
-```bash
-# Generate migrations
-npm run db:generate
+Schema changes are applied automatically at app startup via `runMigrations()` in `lib/db/client.ts`.
 
-# Apply migrations
-npm run db:migrate
-```
+New columns use `ALTER TABLE` with error-catch for existing columns — **safe and non-destructive** on existing user databases.
 
 ---
 
@@ -175,29 +166,12 @@ npm run db:migrate
 ### Common Commands
 
 ```bash
-# Development
 npm start              # Start Expo dev server
-npm run ios            # Run on iOS simulator
-npm run android        # Run on Android emulator
-
-# Database
-npm run db:generate    # Generate migrations
+npm run ios            # iOS simulator
+npm run android        # Android emulator
+npm run db:generate    # Generate Drizzle migrations
 npm run db:migrate     # Apply migrations
-
-# Type Checking
-npm run type-check     # TypeScript validation
-
-# Utilities
-node scripts/run-seed.js              # Seed database
-node scripts/check-model-access.js    # Verify API access
-```
-
-### Type Safety
-
-The entire codebase is written in TypeScript with strict mode enabled. Run type checking with:
-
-```bash
-npx tsc --noEmit --skipLibCheck
+npx tsc --noEmit --skipLibCheck  # Type check
 ```
 
 ---
@@ -206,183 +180,139 @@ npx tsc --noEmit --skipLibCheck
 
 ### API Key Issues
 
-**Problem:** "API key not configured"
-
-**Solution:**
-1. Verify `.env` file exists in root directory
-2. Ensure `GROQ_API_KEY` is set correctly
-3. Restart the development server
+**Problem:** "API key not configured"  
+**Solution:** Verify `.env` exists with `GROQ_API_KEY` set, then restart the dev server.
 
 ### Rate Limiting
 
-**Problem:** "Rate limit exceeded"
-
-**Solution:**
-- Wait 60 seconds before retrying
-- Check for infinite loops in API calls
-- Monitor usage at https://console.groq.com
+**Problem:** "Rate limit exceeded"  
+**Solution:** Wait 60 seconds. Monitor usage at https://console.groq.com
 
 ### Voice Input
 
-**Problem:** Voice transcription not working
-
-**Solution:**
-- Grant microphone permissions in device settings
-- Verify audio format is supported (m4a)
-- Check Groq API key is valid
+**Problem:** Voice transcription not working  
+**Solution:** Grant microphone permissions, verify audio format (m4a), check API key.
 
 ### Build Errors
 
-**Problem:** Android build fails
-
-**Solution:**
 ```bash
-cd android
-./gradlew clean
-cd ..
-npm start
+cd android && ./gradlew clean && cd .. && npm start
 ```
 
 See [Issues & Fixes](docs/ISSUES_AND_FIXES.md) for comprehensive troubleshooting.
 
 ---
 
-## Documentation
-
-- **[Groq Quick Start](docs/GROQ_QUICK_START.md)** - Get AI features working in 3 steps
-- **[Issues & Fixes](docs/ISSUES_AND_FIXES.md)** - Troubleshooting guide
-- **[Setup](docs/setup/)** - Setup and configuration guides
-- **[Guides](docs/guides/)** - User and development guides
-- **[Development](docs/development/)** - Technical documentation
-- **[Troubleshooting](docs/troubleshooting/)** - Problem solutions
-- **[Archive](docs/archive/)** - Historical documentation
-
----
-
-## Architecture
-
-### State Management
-
-Zustand stores handle application state with Immer for immutable updates:
-
-```typescript
-nutrition-store  → Food logs and daily totals
-workout-store    → Workout sessions and exercises
-user-store       → User preferences and settings
-coach-store      → AI chat messages and history
-```
-
-### Data Flow
-
-```
-User Input → UI Component → Zustand Store → SQLite Database
-                ↓
-           Groq AI API (for AI features)
-```
-
-### Navigation
-
-File-based routing with Expo Router:
-- Automatic route generation from file structure
-- Type-safe navigation
-- Deep linking support
-
----
-
 ## Design System
 
-**Colors:** Dark theme with green accent colors  
-**Typography:** Bebas Neue (headers), DM Sans (body text)  
-**Components:** Custom UI library in `components/ui/`  
-**Styling:** NativeWind (Tailwind CSS for React Native)  
-**Spacing:** Consistent 4px grid system
+The app uses a **Material 3 (M3) dark theme** seeded from `#00D4AA` (teal).
+
+All tokens live in [`design-system/tokens.ts`](./design-system/tokens.ts) — imported as `M3` throughout the codebase. No raw hex strings in screens or components.
+
+### Key Color Tokens
+
+| Token | Value | Role |
+|---|---|---|
+| `background` | `#0F0F13` | Screen background |
+| `surface` | `#16161E` | Cards |
+| `surfaceVariant` | `#1E1E2A` | Elevated cards, inputs |
+| `surfaceContainer` | `#22222F` | Chips, pills, nav bar |
+| `primary` | `#00D4AA` | CTAs, active states |
+| `primaryContainer` | `#003829` | Active pill, badges |
+| `secondary` | `#7CACF8` | Protein / nutrition |
+| `tertiary` | `#B69DF8` | Volume / workout |
+| `error` | `#FF5449` | Destructive actions |
+| `warning` | `#FFB800` | Alerts |
+| `onSurface` | `#E8E8F0` | Primary text |
+| `onSurfaceVariant` | `#909090` | Secondary text |
+
+### Shape Scale
+
+| Token | Value | Usage |
+|---|---|---|
+| `small` | 8px | Chips, pills |
+| `medium` | 12px | Buttons, inputs |
+| `large` | 16px | Cards |
+| `extraLarge` | 28px | Modal corners |
+
+### Typography
+
+- **Display** — BebasNeue 400 (screen titles)
+- **Headline / Title** — DMSans 700 Bold
+- **Body** — DMSans 400 Regular
+- **Label** — DMSans 500 Medium
 
 ---
 
-## Performance
+## Changelog
 
-### Optimizations
+### August 2026
 
-- Lazy loading for route screens
-- Memoization for expensive calculations
-- Virtual lists for long content
-- Image optimization
-- Bundle size monitoring
+#### Workout Plan & Exercise Management
 
-### Metrics
+- **Delete exercise** — Trash icon with confirmation alert removes exercise + all sets
+- **Swap exercise** — Replace icon opens library search to substitute exercises mid-session
+- **Edit logged sets** — Tap any set pill → inline pre-filled edit form with save & delete options
+- **Exercise-type-specific logging** — Form adapts per exercise type:
+  - `weight_reps` → Weight (kg) + Reps + RPE + Warmup *(bench press, squats, etc.)*
+  - `reps_only` → Reps/Count + RPE + Warmup *(pull-ups, dips, bodyweight)*
+  - `duration` → Duration in seconds *(planks, stretches, stability work)*
+  - `distance_duration` → Distance (km) + Duration (min) *(treadmill, cycling, rowing)*
+- **Smart set pills** — Labels adapt to type: `90kg × 8`, `× 15 reps`, `45s`, `5.2km · 28min`
+- **Volume calc fixed** — Only `weight_reps` exercises count toward session total volume
 
-- App launch time: < 2 seconds
-- Voice transcription: 2-5 seconds
-- Food parsing: 1-3 seconds
-- Database queries: < 100ms
+#### Database
 
----
+- `set_logs.duration_sec` — Duration in seconds for time-based exercises
+- `set_logs.distance_km` — Distance for cardio exercises
+- `exercise_logs.exercise_type` — Persisted exercise type per log entry
+- `updateExerciseLog()` — New query for exercise swap feature
+- All migrations are non-destructive (safe `ALTER TABLE` pattern)
 
-## Platform Support
+#### Material 3 Design System — Phase 1
 
-**iOS:** 13.0 and above  
-**Android:** API 26 (Android 8.0) and above
-
-Tested on various device sizes and configurations.
-
----
-
-## Production Build
-
-### Using EAS Build (Recommended)
-
-```bash
-# Install EAS CLI
-npm install -g eas-cli
-
-# Login to Expo
-eas login
-
-# Configure EAS
-eas build:configure
-
-# Build for production
-eas build --platform ios
-eas build --platform android
-```
-
-See [EAS Setup](docs/EAS_SETUP_COMPLETE.md) for detailed configuration.
+- **`design-system/tokens.ts`** — Single source of truth: M3 colors, shape, typescale, spacing, elevation, macro colors, day-type accent colors
+- **Card** — M3 surface spec: `16px` radius, three variants (`filled` / `elevated` / `outlined`), token colors
+- **Navigation Bar** — M3 nav bar: active pill indicator (`primaryContainer`), `80px` height, keyboard-aware
+- **Global token rollout** — All 6 tab screens, 8 UI components, and modals use `M3.*` tokens — no raw hex strings
 
 ---
 
 ## Experimental Features
 
-The following features are currently in development or experimental stage:
-
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Smart Reports | Experimental | Weekly/monthly AI summaries - may require refinement |
-| Workout Templates | Experimental | Pre-built workout plans - under development |
-| Barcode Scanner | Experimental | Food barcode scanning - limited database |
-| PDF Export | Experimental | Report export to PDF - formatting in progress |
-
-These features may have incomplete functionality or require additional setup. Use with caution in production.
+| Smart Reports | Experimental | AI weekly/monthly summaries |
+| Workout Templates | Experimental | Pre-built workout plans |
+| Barcode Scanner | Experimental | Limited food database |
+| PDF Export | Experimental | Formatting in progress |
 
 ---
 
-## Contributing
+## Platform Support
 
-This is currently a personal project. Issues and feedback are welcome.
+**iOS:** 13.0+  
+**Android:** API 26 (Android 8.0)+
+
+---
+
+## Production Build
+
+```bash
+npm install -g eas-cli
+eas login
+eas build:configure
+eas build --platform android
+eas build --platform ios
+```
+
+See [EAS Setup](docs/EAS_SETUP_COMPLETE.md) for details.
 
 ---
 
 ## License
 
-Private project - All rights reserved
-
----
-
-## Support
-
-- **Documentation:** See `docs/` directory
-- **Groq API Docs:** https://console.groq.com/docs
-- **Expo Docs:** https://docs.expo.dev
-- **React Native Docs:** https://reactnative.dev
+Private project — All rights reserved
 
 ---
 
