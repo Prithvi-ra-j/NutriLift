@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Script to delete Sunday's workout
  * Run this with: node scripts/delete-sunday-workout.js

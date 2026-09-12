@@ -30,6 +30,18 @@
       ],
       "@analytics/*": [
         "./lib/analytics/*"
+      ],
+      "@/core/*": [
+        "./src/core/*"
+      ],
+      "@/components/*": [
+        "./src/components/*"
+      ],
+      "@/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@/styles/*": [
+        "./src/styles/*"
       ]
     }
   },

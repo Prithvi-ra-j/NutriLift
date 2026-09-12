@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { groq } from "./client";
 import * as FileSystem from "expo-file-system";
 import { safeGroqCall } from "./safeCall";

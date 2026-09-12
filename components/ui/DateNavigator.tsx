@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { M3 } from "../../design-system/tokens";
 
 interface DateNavigatorProps {
   selectedDate: string; // YYYY-MM-DD
@@ -92,10 +93,10 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
       {showFullDate && (
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
-            <Text style={{ color: "#F0F0F5", fontSize: 18, fontFamily: "DMSans_700Bold" }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 18, fontFamily: "DMSans_700Bold" }}>
               {selected.toLocaleDateString("en-US", { weekday: "long" })}
             </Text>
-            <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular" }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
               {selected.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
             </Text>
           </View>
@@ -103,15 +104,15 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
             <TouchableOpacity
               onPress={goToToday}
               style={{
-                backgroundColor: "#00D4AA22",
+                backgroundColor: M3.colors.primaryContainer,
                 borderRadius: 6,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderWidth: 1,
-                borderColor: "#00D4AA",
+                borderColor: M3.colors.primary,
               }}
             >
-              <Text style={{ color: "#00D4AA", fontSize: 11, fontFamily: "DMSans_700Bold" }}>
+              <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold" }}>
                 TODAY
               </Text>
             </TouchableOpacity>
@@ -128,21 +129,21 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
               flexDirection: "row",
               alignItems: "center",
               gap: 4,
-              backgroundColor: "#12121A",
+              backgroundColor: M3.colors.surface,
               borderRadius: 6,
               paddingHorizontal: 10,
               paddingVertical: 6,
               borderWidth: 1,
-              borderColor: "#252535",
+              borderColor: M3.colors.surfaceContainer,
             }}
           >
-            <Feather name="chevrons-left" size={14} color="#8080A0" />
-            <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+            <Feather name="chevrons-left" size={14} color={M3.colors.onSurfaceVariant} />
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
               Prev Week
             </Text>
           </TouchableOpacity>
           
-          <Text style={{ color: "#4A4A6A", fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+          <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
             Week of {days[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </Text>
           
@@ -152,18 +153,18 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
               flexDirection: "row",
               alignItems: "center",
               gap: 4,
-              backgroundColor: "#12121A",
+              backgroundColor: M3.colors.surface,
               borderRadius: 6,
               paddingHorizontal: 10,
               paddingVertical: 6,
               borderWidth: 1,
-              borderColor: "#252535",
+              borderColor: M3.colors.surfaceContainer,
             }}
           >
-            <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
               Next Week
             </Text>
-            <Feather name="chevrons-right" size={14} color="#8080A0" />
+            <Feather name="chevrons-right" size={14} color={M3.colors.onSurfaceVariant} />
           </TouchableOpacity>
         </View>
       )}
@@ -176,14 +177,14 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
             width: 32,
             height: 32,
             borderRadius: 16,
-            backgroundColor: "#12121A",
+            backgroundColor: M3.colors.surface,
             borderWidth: 1,
-            borderColor: "#252535",
+            borderColor: M3.colors.surfaceContainer,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Feather name="chevron-left" size={16} color="#8080A0" />
+          <Feather name="chevron-left" size={16} color={M3.colors.onSurfaceVariant} />
         </TouchableOpacity>
 
         <ScrollView
@@ -206,9 +207,9 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
                   width: 48,
                   height: 64,
                   borderRadius: 8,
-                  backgroundColor: selected ? "#00D4AA22" : "#12121A",
+                  backgroundColor: selected ? M3.colors.primaryContainer : M3.colors.surface,
                   borderWidth: 1,
-                  borderColor: selected ? "#00D4AA" : todayDate ? "#FFB800" : "#252535",
+                  borderColor: selected ? M3.colors.primary : todayDate ? M3.colors.warning : M3.colors.surfaceContainer,
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 2,
@@ -216,7 +217,7 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
               >
                 <Text
                   style={{
-                    color: selected ? "#00D4AA" : todayDate ? "#FFB800" : "#8080A0",
+                    color: selected ? M3.colors.primary : todayDate ? M3.colors.warning : M3.colors.onSurfaceVariant,
                     fontSize: 10,
                     fontFamily: "DMSans_500Medium",
                   }}
@@ -225,7 +226,7 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
                 </Text>
                 <Text
                   style={{
-                    color: selected ? "#00D4AA" : todayDate ? "#FFB800" : "#F0F0F5",
+                    color: selected ? M3.colors.primary : todayDate ? M3.colors.warning : M3.colors.onSurface,
                     fontSize: 18,
                     fontFamily: "BebasNeue_400Regular",
                   }}
@@ -243,14 +244,14 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
             width: 32,
             height: 32,
             borderRadius: 16,
-            backgroundColor: "#12121A",
+            backgroundColor: M3.colors.surface,
             borderWidth: 1,
-            borderColor: "#252535",
+            borderColor: M3.colors.surfaceContainer,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <Feather name="chevron-right" size={16} color="#8080A0" />
+          <Feather name="chevron-right" size={16} color={M3.colors.onSurfaceVariant} />
         </TouchableOpacity>
       </View>
     </View>

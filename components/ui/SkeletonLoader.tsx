@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { View, Animated, type ViewStyle } from "react-native";
+import { M3 } from "../../design-system/tokens";
 
 interface SkeletonProps {
   width?: number | string;
@@ -9,19 +10,19 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ width = "100%", height = 16, borderRadius = 8, style }: SkeletonProps) {
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const opacity = useRef(new Animated.Value(0.2)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
-          toValue: 0.7,
-          duration: 800,
+          toValue: 0.8,
+          duration: 600,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
-          toValue: 0.3,
-          duration: 800,
+          toValue: 0.2,
+          duration: 600,
           useNativeDriver: true,
         }),
       ])
@@ -37,7 +38,7 @@ export function Skeleton({ width = "100%", height = 16, borderRadius = 8, style 
           width: width as number,
           height,
           borderRadius,
-          backgroundColor: "#252535",
+          backgroundColor: M3.colors.surfaceContainer,
           opacity,
         },
         style,
@@ -50,12 +51,12 @@ export function CardSkeleton() {
   return (
     <View
       style={{
-        backgroundColor: "#12121A",
+        backgroundColor: M3.colors.surface,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: "#252535",
+        borderColor: M3.colors.surfaceContainer,
         padding: 16,
-        gap: 10,
+        gap: 12, // Updated to 4pt grid
       }}
     >
       <Skeleton height={20} width="60%" />

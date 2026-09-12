@@ -3,12 +3,12 @@ import {
   View,
   Text,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from "react-native";
+import { Input } from "../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useAIStore } from "../../lib/stores/ai.store";
@@ -19,6 +19,7 @@ import { getConversationHistory, insertConversationMessage, clearConversationHis
 import { Card } from "../../components/ui/Card";
 import type { AiConversation } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
+import { M3 } from "../../design-system/tokens";
 
 // Suggested prompts for coach
 const COACH_SUGGESTED_PROMPTS = [
@@ -52,7 +53,7 @@ export default function CoachScreen() {
   useEffect(() => {
     checkConfiguration();
     loadHistory();
-  }, []);
+  }, [checkConfiguration, loadHistory]);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -148,7 +149,7 @@ export default function CoachScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -157,7 +158,7 @@ export default function CoachScreen() {
         {/* ── Header ── */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, paddingBottom: 12 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: "#F0F0F5", fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
               APEX COACH
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
@@ -165,34 +166,34 @@ export default function CoachScreen() {
                 width: 6,
                 height: 6,
                 borderRadius: 3,
-                backgroundColor: groqConfigured === true ? "#00C875" : groqConfigured === false ? "#FF4757" : "#FFB800",
+                backgroundColor: groqConfigured === true ? M3.colors.success : groqConfigured === false ? M3.colors.error : M3.colors.warning,
               }} />
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
                 {groqConfigured === true ? "Groq API ready" : groqConfigured === false ? "API key missing" : "Checking..."}
               </Text>
             </View>
           </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ color: "#00D4AA", fontSize: 16, fontFamily: "BebasNeue_400Regular" }}>
+              <Text style={{ color: M3.colors.primary, fontSize: 16, fontFamily: "BebasNeue_400Regular" }}>
                 {requestCount}
               </Text>
-              <Text style={{ color: "#4A4A6A", fontSize: 9, fontFamily: "DMSans_400Regular" }}>
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
                 requests
               </Text>
             </View>
-            <TouchableOpacity onPress={handleClear}>
-              <Feather name="trash-2" size={18} color="#4A4A6A" />
+            <TouchableOpacity onPress={handleClear} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+              <Feather name="trash-2" size={18} color={M3.colors.onSurfaceMuted} />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* ── Groq API warning ── */}
         {groqConfigured === false && (
-          <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: "#FF475722", borderRadius: 8, padding: 12, flexDirection: "row", gap: 8 }}>
-            <Feather name="alert-circle" size={14} color="#FF4757" />
-            <Text style={{ color: "#FF4757", fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
-              Groq API key is not configured. Please add GROQ_API_KEY to your .env file.
+          <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: 8, padding: 12, flexDirection: "row", gap: 8 }}>
+            <Feather name="alert-circle" size={14} color={M3.colors.error} />
+            <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
+              Groq API key is not configured. Please add GROQ_API_KEY to your .env file or Settings.
             </Text>
           </View>
         )}
@@ -210,16 +211,16 @@ export default function CoachScreen() {
                 width: 64,
                 height: 64,
                 borderRadius: 32,
-                backgroundColor: "#00D4AA22",
+                backgroundColor: M3.colors.primaryContainer,
                 alignItems: "center",
                 justifyContent: "center",
               }}>
-                <Feather name="cpu" size={28} color="#00D4AA" />
+                <Feather name="cpu" size={28} color={M3.colors.primary} />
               </View>
-              <Text style={{ color: "#F0F0F5", fontSize: 17, fontFamily: "DMSans_700Bold", textAlign: "center" }}>
+              <Text style={{ color: M3.colors.onSurface, fontSize: 17, fontFamily: "DMSans_700Bold", textAlign: "center" }}>
                 Apex Coach
               </Text>
-              <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", lineHeight: 20 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", lineHeight: 20 }}>
                 Brutally honest. Scientifically rigorous.{"\n"}Ask me anything about your training.
               </Text>
             </View>
@@ -235,26 +236,26 @@ export default function CoachScreen() {
             >
               {msg.role === "assistant" && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                  <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: "#00D4AA22", alignItems: "center", justifyContent: "center" }}>
-                    <Feather name="cpu" size={10} color="#00D4AA" />
+                  <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
+                    <Feather name="cpu" size={10} color={M3.colors.primary} />
                   </View>
-                  <Text style={{ color: "#00D4AA", fontSize: 10, fontFamily: "DMSans_700Bold", letterSpacing: 0.5 }}>
+                  <Text style={{ color: M3.colors.primary, fontSize: 10, fontFamily: "DMSans_700Bold", letterSpacing: 0.5 }}>
                     APEX COACH
                   </Text>
                 </View>
               )}
               <View
                 style={{
-                  backgroundColor: msg.role === "user" ? "#00D4AA22" : "#12121A",
+                  backgroundColor: msg.role === "user" ? M3.colors.primaryContainer : M3.colors.surface,
                   borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: msg.role === "user" ? "#00D4AA44" : "#252535",
+                  borderColor: msg.role === "user" ? "#00D4AA44" : M3.colors.surfaceContainer,
                   padding: 12,
                 }}
               >
-                <Text style={{ color: "#F0F0F5", fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 21 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 21 }}>
                   {msg.content === "..." && isGenerating ? (
-                    <ActivityIndicator size="small" color="#00D4AA" />
+                    <ActivityIndicator size="small" color={M3.colors.primary} />
                   ) : (
                     msg.content
                   )}
@@ -265,8 +266,8 @@ export default function CoachScreen() {
 
           {isGenerating && messages[messages.length - 1]?.role !== "assistant" && (
             <View style={{ alignSelf: "flex-start" }}>
-              <View style={{ backgroundColor: "#12121A", borderRadius: 12, borderWidth: 1, borderColor: "#252535", padding: 12 }}>
-                <ActivityIndicator size="small" color="#00D4AA" />
+              <View style={{ backgroundColor: M3.colors.surface, borderRadius: 12, borderWidth: 1, borderColor: M3.colors.surfaceContainer, padding: 12 }}>
+                <ActivityIndicator size="small" color={M3.colors.primary} />
               </View>
             </View>
           )}
@@ -285,15 +286,15 @@ export default function CoachScreen() {
                 key={prompt}
                 onPress={() => sendMessage(prompt)}
                 style={{
-                  backgroundColor: "#12121A",
+                  backgroundColor: M3.colors.surface,
                   borderRadius: 20,
                   borderWidth: 1,
-                  borderColor: "#252535",
+                  borderColor: M3.colors.surfaceContainer,
                   paddingHorizontal: 14,
                   paddingVertical: 8,
                 }}
               >
-                <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                   {prompt}
                 </Text>
               </TouchableOpacity>
@@ -309,25 +310,17 @@ export default function CoachScreen() {
           padding: 20,
           paddingTop: 12,
           borderTopWidth: 1,
-          borderTopColor: "#252535",
+          borderTopColor: M3.colors.surfaceContainer,
         }}>
-          <TextInput
+          <Input
             value={input}
             onChangeText={setInput}
             placeholder="Ask your coach..."
-            placeholderTextColor="#4A4A6A"
             multiline
             maxLength={500}
             style={{
               flex: 1,
-              backgroundColor: "#12121A",
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: "#252535",
-              padding: 12,
-              color: "#F0F0F5",
-              fontSize: 14,
-              fontFamily: "DMSans_400Regular",
+              backgroundColor: M3.colors.surface,
               maxHeight: 100,
             }}
           />
@@ -338,15 +331,15 @@ export default function CoachScreen() {
               width: 44,
               height: 44,
               borderRadius: 22,
-              backgroundColor: input.trim() && !isGenerating ? "#00D4AA" : "#1A1A26",
+              backgroundColor: input.trim() && !isGenerating ? M3.colors.primary : M3.colors.surfaceVariant,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             {isGenerating ? (
-              <ActivityIndicator size="small" color="#00D4AA" />
+              <ActivityIndicator size="small" color={M3.colors.primary} />
             ) : (
-              <Feather name="send" size={18} color={input.trim() ? "#0A0A0F" : "#4A4A6A"} />
+              <Feather name="send" size={18} color={input.trim() ? M3.colors.background : M3.colors.onSurfaceMuted} />
             )}
           </TouchableOpacity>
         </View>

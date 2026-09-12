@@ -1,4 +1,5 @@
 import { View, Text } from "react-native";
+import { M3 } from "../../design-system/tokens";
 
 interface MacroRingProps {
   protein: number;
@@ -35,11 +36,11 @@ export function MacroRing({
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: "#1A1A26",
+          backgroundColor: M3.colors.surfaceVariant,
           alignItems: "center",
           justifyContent: "center",
           borderWidth: 2,
-          borderColor: "#252535",
+          borderColor: M3.colors.surfaceContainer,
           overflow: "hidden",
         }}
       >
@@ -51,7 +52,7 @@ export function MacroRing({
             left: 0,
             right: 0,
             height: "33.33%",
-            backgroundColor: "#3B82F6",
+            backgroundColor: M3.colors.secondary,
             opacity: proteinPct / 100,
           }}
         />
@@ -62,7 +63,7 @@ export function MacroRing({
             left: 0,
             right: 0,
             height: "33.33%",
-            backgroundColor: "#22C55E",
+            backgroundColor: M3.colors.success,
             opacity: carbsPct / 100,
           }}
         />
@@ -84,16 +85,16 @@ export function MacroRing({
             width: size - 20,
             height: size - 20,
             borderRadius: (size - 20) / 2,
-            backgroundColor: "#1A1A26",
+            backgroundColor: M3.colors.surfaceVariant,
             alignItems: "center",
             justifyContent: "center",
             zIndex: 10,
           }}
         >
-          <Text style={{ color: "#F0F0F5", fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
+          <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
             {calories.toFixed(0)}
           </Text>
-          <Text style={{ color: "#8080A0", fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
             kcal
           </Text>
         </View>
@@ -102,20 +103,20 @@ export function MacroRing({
       {/* Macro indicators below */}
       <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#3B82F6" }} />
-          <Text style={{ color: "#8080A0", fontSize: 9, fontFamily: "DMSans_400Regular" }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: M3.colors.secondary }} />
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
             P {proteinPct.toFixed(0)}%
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#22C55E" }} />
-          <Text style={{ color: "#8080A0", fontSize: 9, fontFamily: "DMSans_400Regular" }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: M3.colors.success }} />
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
             C {carbsPct.toFixed(0)}%
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#F59E0B" }} />
-          <Text style={{ color: "#8080A0", fontSize: 9, fontFamily: "DMSans_400Regular" }}>
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
             F {fatPct.toFixed(0)}%
           </Text>
         </View>

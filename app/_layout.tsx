@@ -1,5 +1,6 @@
 import "../global.css";
 import { useEffect, useState } from "react";
+import { loadGroqApiKey } from "../lib/groq/client";
 import { View, Text, ActivityIndicator } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -16,6 +17,7 @@ import { runMigrations } from "../lib/db/client";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
+import { M3 } from "../design-system/tokens";
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
@@ -30,7 +32,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     logger.info("App starting - initializing database");
-    runMigrations()
+    Promise.all([
+      runMigrations(),
+      loadGroqApiKey()
+    ])
       .then(() => {
         logger.info("Database migrations completed successfully");
         setDbReady(true);
@@ -48,9 +53,9 @@ export default function RootLayout() {
 
   if (!fontsLoaded || !dbReady) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0A0A0F" }}>
-        <ActivityIndicator color="#00D4AA" size="large" />
-        <Text style={{ color: "#8080A0", fontFamily: "DMSans_400Regular", marginTop: 12, fontSize: 14 }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: M3.colors.background }}>
+        <ActivityIndicator color={M3.colors.primary} size="large" />
+        <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", marginTop: 12, fontSize: 14 }}>
           Initializing Apex...
         </Text>
       </View>
@@ -60,7 +65,7 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <StatusBar style="light" backgroundColor="#0A0A0F" />
+        <StatusBar style="light" backgroundColor={M3.colors.background} />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen

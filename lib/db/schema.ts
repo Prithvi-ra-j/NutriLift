@@ -55,6 +55,7 @@ export const exerciseLogs = sqliteTable("exercise_logs", {
   exercise_name: text("exercise_name").notNull(),
   muscle_group: text("muscle_group"), // chest | back | shoulders | biceps | triceps | quads | hamstrings | glutes | core
   equipment: text("equipment"), // machine | barbell | dumbbell | cable | bodyweight
+  exercise_type: text("exercise_type"), // weight_reps | reps_only | duration | distance_duration
   order_in_session: integer("order_in_session"),
 });
 
@@ -67,6 +68,8 @@ export const setLogs = sqliteTable("set_logs", {
   set_number: integer("set_number").notNull(),
   weight_kg: real("weight_kg").notNull(),
   reps: integer("reps").notNull(),
+  duration_sec: integer("duration_sec"),   // for duration / distance_duration exercises
+  distance_km: real("distance_km"),        // for distance_duration exercises
   rpe: integer("rpe"), // set-level RPE
   is_pr: integer("is_pr"), // boolean — auto-detected
   is_warmup: integer("is_warmup"),

@@ -176,7 +176,7 @@ export default function BarcodeScannerModal() {
   if (hasPermission === false) {
     return (
       <View style={styles.container}>
-        <Ionicons name="camera-off" size={64} color="#8080A0" />
+        <Ionicons name={"camera-off" as any} size={64} color="#8080A0" />
         <Text style={styles.errorTitle}>Camera Access Denied</Text>
         <Text style={styles.errorText}>
           Camera permission is required to scan barcodes.

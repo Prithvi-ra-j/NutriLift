@@ -4,13 +4,15 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   Alert,
   Switch,
+  TextInput,
 } from "react-native";
+import { Input } from "../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { getGroqApiKey, setGroqApiKey } from "../../lib/groq/client";
 import { insertBodyStat, getLatestWeight } from "../../lib/db/queries/body";
 import { getSupplementLogsForDate, upsertSupplementLog, getRecoveryLog, upsertRecoveryLog } from "../../lib/db/queries/recovery";
 import { getAllReports } from "../../lib/db/queries/reports";
@@ -24,6 +26,7 @@ type MoreSection = "body" | "supplements" | "recovery" | "reports" | "settings";
 export default function MoreScreen() {
   const today = new Date().toISOString().split("T")[0];
   const [activeSection, setActiveSection] = useState<MoreSection>("body");
+  const [apiKeyInput, setApiKeyInput] = useState(getGroqApiKey() || "");
 
   // Body stats
   const [weightInput, setWeightInput] = useState("");
@@ -225,22 +228,16 @@ export default function MoreScreen() {
                 </Text>
               )}
               <View style={{ flexDirection: "row", gap: 10 }}>
-                <TextInput
+                <Input
                   value={weightInput}
                   onChangeText={setWeightInput}
                   placeholder="Enter weight (kg)"
-                  placeholderTextColor="#4A4A6A"
                   keyboardType="decimal-pad"
                   style={{
                     flex: 1,
                     backgroundColor: "#1A1A26",
-                    borderRadius: 8,
-                    padding: 12,
-                    color: "#F0F0F5",
                     fontSize: 16,
                     fontFamily: "BebasNeue_400Regular",
-                    borderWidth: 1,
-                    borderColor: "#252535",
                   }}
                 />
                 <TouchableOpacity
@@ -314,10 +311,11 @@ export default function MoreScreen() {
                 >
                   <TouchableOpacity
                     onPress={() => toggleSupplement(supp.name, taken)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
                       backgroundColor: taken ? "#00C87522" : "#1A1A26",
                       borderWidth: 2,
                       borderColor: taken ? "#00C875" : "#252535",
@@ -325,7 +323,7 @@ export default function MoreScreen() {
                       justifyContent: "center",
                     }}
                   >
-                    {taken && <Feather name="check" size={14} color="#00C875" />}
+                    {taken && <Feather name="check" size={20} color="#00C875" />}
                   </TouchableOpacity>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: taken ? "#F0F0F5" : "#8080A0", fontSize: 14, fontFamily: "DMSans_500Medium" }}>
@@ -360,21 +358,15 @@ export default function MoreScreen() {
               <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
                 Sleep Duration (hours)
               </Text>
-              <TextInput
+              <Input
                 value={sleepHr}
                 onChangeText={setSleepHr}
                 keyboardType="decimal-pad"
                 placeholder="7.5"
-                placeholderTextColor="#4A4A6A"
                 style={{
                   backgroundColor: "#1A1A26",
-                  borderRadius: 8,
-                  padding: 12,
-                  color: "#F0F0F5",
                   fontSize: 16,
                   fontFamily: "BebasNeue_400Regular",
-                  borderWidth: 1,
-                  borderColor: "#252535",
                 }}
               />
             </View>
@@ -388,22 +380,14 @@ export default function MoreScreen() {
               <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
                 Notes (optional)
               </Text>
-              <TextInput
+              <Input
                 value={recoveryNotes}
                 onChangeText={setRecoveryNotes}
                 placeholder="How are you feeling?"
-                placeholderTextColor="#4A4A6A"
                 multiline
                 numberOfLines={3}
                 style={{
                   backgroundColor: "#1A1A26",
-                  borderRadius: 8,
-                  padding: 12,
-                  color: "#F0F0F5",
-                  fontSize: 14,
-                  fontFamily: "DMSans_400Regular",
-                  borderWidth: 1,
-                  borderColor: "#252535",
                   textAlignVertical: "top",
                   minHeight: 80,
                 }}
@@ -531,6 +515,52 @@ export default function MoreScreen() {
                   </Text>
                 </View>
               ))}
+            </Card>
+
+            <Card>
+              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                API CONFIGURATION
+              </Text>
+              <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
+                Groq API Key
+              </Text>
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <TextInput
+                  value={apiKeyInput}
+                  onChangeText={setApiKeyInput}
+                  placeholder="gsk_..."
+                  placeholderTextColor="#4A4A6A"
+                  secureTextEntry={true}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#1A1A26",
+                    borderRadius: 8,
+                    padding: 12,
+                    color: "#F0F0F5",
+                    fontSize: 14,
+                    fontFamily: "DMSans_400Regular",
+                    borderWidth: 1,
+                    borderColor: "#252535",
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => {
+                    setGroqApiKey(apiKeyInput);
+                    Alert.alert("Saved", "Groq API Key updated successfully.");
+                  }}
+                  style={{
+                    backgroundColor: "#00D4AA",
+                    borderRadius: 8,
+                    paddingHorizontal: 16,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Text style={{ color: "#0A0A0F", fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                    Save
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </Card>
 
             <TouchableOpacity

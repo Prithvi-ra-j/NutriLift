@@ -23,6 +23,7 @@ import { MacroBar } from "../../components/ui/MacroBar";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
+import { M3 } from "../../design-system/tokens";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -112,23 +113,23 @@ export default function NutritionScreen() {
   const mealGroups = groupByMeal(foodLogs);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor="#00D4AA" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={M3.colors.primary} />
         }
         showsVerticalScrollIndicator={false}
       >
         {/* ── Header ── */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={{ color: "#F0F0F5", fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
+          <Text style={{ color: M3.colors.onSurface, fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
             NUTRITION
           </Text>
           <TouchableOpacity
             onPress={() => router.push("/modals/log-food")}
             style={{
-              backgroundColor: "#00D4AA",
+              backgroundColor: M3.colors.primary,
               borderRadius: 8,
               paddingHorizontal: 14,
               paddingVertical: 8,
@@ -137,8 +138,8 @@ export default function NutritionScreen() {
               gap: 6,
             }}
           >
-            <Feather name="plus" size={16} color="#0A0A0F" />
-            <Text style={{ color: "#0A0A0F", fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+            <Feather name="plus" size={16} color={M3.colors.background} />
+            <Text style={{ color: M3.colors.background, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
               Log Food
             </Text>
           </TouchableOpacity>
@@ -151,12 +152,12 @@ export default function NutritionScreen() {
         {new Date(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
-              <Feather name="activity" size={20} color="#FF4757" />
+              <Feather name="activity" size={20} color={M3.colors.error} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: "#FF4757", fontSize: 16, fontFamily: "DMSans_700Bold" }}>
+                <Text style={{ color: M3.colors.error, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
                   MARATHON DAY
                 </Text>
-                <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
                   Focus on recovery and light nutrition
                 </Text>
               </View>
@@ -167,15 +168,15 @@ export default function NutritionScreen() {
         {/* ── Daily Macro Summary ── */}
         <Card>
           <View style={{ alignItems: "center", marginBottom: 16 }}>
-            <Text style={{ color: "#F0F0F5", fontSize: 48, fontFamily: "BebasNeue_400Regular" }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 48, fontFamily: "BebasNeue_400Regular" }}>
               {calories.toFixed(0)}
             </Text>
-            <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
               of {USER_PROFILE.targets.calories} kcal
             </Text>
           </View>
-          <MacroBar label="Protein" current={protein} target={USER_PROFILE.targets.protein_g} color="#3B82F6" />
-          <MacroBar label="Carbs" current={carbs} target={USER_PROFILE.targets.carbs_g} color="#22C55E" />
+          <MacroBar label="Protein" current={protein} target={USER_PROFILE.targets.protein_g} color={M3.colors.secondary} />
+          <MacroBar label="Carbs" current={carbs} target={USER_PROFILE.targets.carbs_g} color={M3.colors.success} />
           <MacroBar label="Fat" current={fat} target={USER_PROFILE.targets.fat_g} color="#F59E0B" />
         </Card>
 
@@ -197,10 +198,10 @@ export default function NutritionScreen() {
               }}
               style={{
                 flex: 1,
-                backgroundColor: "#12121A",
+                backgroundColor: M3.colors.surface,
                 borderRadius: 8,
                 borderWidth: 1,
-                borderColor: "#252535",
+                borderColor: M3.colors.surfaceContainer,
                 padding: 10,
                 alignItems: "center",
                 gap: 4,
@@ -217,9 +218,9 @@ export default function NutritionScreen() {
                     : "camera"
                 }
                 size={16}
-                color="#8080A0"
+                color={M3.colors.onSurfaceVariant}
               />
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
                 {mode}
               </Text>
             </TouchableOpacity>
@@ -234,12 +235,12 @@ export default function NutritionScreen() {
               style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
             >
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Feather name={MEAL_ICONS[group.meal]} size={16} color="#8080A0" />
+                <Feather name={MEAL_ICONS[group.meal]} size={16} color={M3.colors.onSurfaceVariant} />
                 <View>
-                  <Text style={{ color: "#F0F0F5", fontSize: 15, fontFamily: "DMSans_700Bold", textTransform: "capitalize" }}>
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold", textTransform: "capitalize" }}>
                     {group.meal}
                   </Text>
-                  <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                     {group.items.length} items · {group.totalProtein.toFixed(0)}g protein · {group.totalCalories.toFixed(0)} kcal
                   </Text>
                 </View>
@@ -251,17 +252,17 @@ export default function NutritionScreen() {
                     width: 28,
                     height: 28,
                     borderRadius: 14,
-                    backgroundColor: "#1A1A26",
+                    backgroundColor: M3.colors.surfaceVariant,
                     alignItems: "center",
                     justifyContent: "center",
                   }}
                 >
-                  <Feather name="plus" size={14} color="#00D4AA" />
+                  <Feather name="plus" size={14} color={M3.colors.primary} />
                 </TouchableOpacity>
                 <Feather
                   name={expandedMeals.has(group.meal) ? "chevron-up" : "chevron-down"}
                   size={16}
-                  color="#4A4A6A"
+                  color={M3.colors.onSurfaceMuted}
                 />
               </View>
             </TouchableOpacity>
@@ -269,7 +270,7 @@ export default function NutritionScreen() {
             {expandedMeals.has(group.meal) && (
               <View style={{ marginTop: 12, gap: 8 }}>
                 {group.items.length === 0 ? (
-                  <Text style={{ color: "#4A4A6A", fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", paddingVertical: 8 }}>
+                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", paddingVertical: 8 }}>
                     Nothing logged yet
                   </Text>
                 ) : (
@@ -279,22 +280,22 @@ export default function NutritionScreen() {
                       style={{
                         flexDirection: "row",
                         alignItems: "center",
-                        backgroundColor: "#1A1A26",
+                        backgroundColor: M3.colors.surfaceVariant,
                         borderRadius: 8,
                         padding: 10,
                         gap: 10,
                       }}
                     >
                       <View style={{ flex: 1 }}>
-                        <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_500Medium" }}>
+                        <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
                           {item.name}
                         </Text>
-                        <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
+                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
                           {item.calories.toFixed(0)} kcal · P:{item.protein_g.toFixed(0)}g · C:{item.carbs_g.toFixed(0)}g · F:{item.fat_g.toFixed(0)}g
                         </Text>
                       </View>
                       <TouchableOpacity onPress={() => handleDeleteFood(item)}>
-                        <Feather name="trash-2" size={14} color="#FF4757" />
+                        <Feather name="trash-2" size={14} color={M3.colors.error} />
                       </TouchableOpacity>
                     </View>
                   ))
@@ -307,7 +308,7 @@ export default function NutritionScreen() {
         {/* ── Weekly Trend ── */}
         {last7Days.length > 0 && (
           <Card>
-            <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
               7-DAY PROTEIN TREND
             </Text>
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: 60 }}>
@@ -320,11 +321,11 @@ export default function NutritionScreen() {
                       style={{
                         width: "100%",
                         height: Math.max(4, pct * 48),
-                        backgroundColor: hit ? "#00C875" : "#FF4757",
+                        backgroundColor: hit ? M3.colors.success : M3.colors.error,
                         borderRadius: 3,
                       }}
                     />
-                    <Text style={{ color: "#4A4A6A", fontSize: 9, fontFamily: "DMSans_400Regular" }}>
+                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
                       {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                     </Text>
                   </View>
@@ -336,11 +337,11 @@ export default function NutritionScreen() {
 
         {foodLogs.length === 0 && (
           <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>
-            <Feather name="pie-chart" size={48} color="#4A4A6A" />
-            <Text style={{ color: "#F0F0F5", fontSize: 16, fontFamily: "DMSans_700Bold" }}>
+            <Feather name="pie-chart" size={48} color={M3.colors.onSurfaceMuted} />
+            <Text style={{ color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
               Nothing logged yet
             </Text>
-            <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" }}>
               Tap 'Log Food' above to start tracking your nutrition
             </Text>
           </View>

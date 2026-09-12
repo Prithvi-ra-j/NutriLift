@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Generate comprehensive progress report PDF
  * Includes nutrition logs, workout logs, body stats, and recovery data

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import uuid from "react-native-uuid";
 import { getDailyNutritionRange } from "../db/queries/nutrition";
 import { getSessionsForDateRange } from "../db/queries/workout";

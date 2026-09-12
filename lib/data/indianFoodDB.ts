@@ -1,4 +1,4 @@
-﻿// Indian Food Database - IFCT 2017 Sourced
+// Indian Food Database - IFCT 2017 Sourced
 // Version 1.0 - Starter with 20 essential foods
 // Expand to 85 foods as needed
 

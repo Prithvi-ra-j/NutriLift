@@ -1,4 +1,5 @@
 import { View, Text } from "react-native";
+import { M3 } from "../../design-system/tokens";
 
 interface MacroBarProps {
   label: string;
@@ -16,20 +17,20 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
   return (
     <View style={{ marginBottom: 10 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-        <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
           {label}
         </Text>
-        <Text style={{ color: "#F0F0F5", fontSize: 12, fontFamily: "DMSans_500Medium" }}>
-          <Text style={{ color: over ? "#FFB800" : color }}>
+        <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+          <Text style={{ color: over ? M3.colors.warning : color }}>
             {current.toFixed(0)}{unit}
           </Text>
-          <Text style={{ color: "#4A4A6A" }}> / {target}{unit}</Text>
+          <Text style={{ color: M3.colors.onSurfaceMuted }}> / {target}{unit}</Text>
         </Text>
       </View>
       <View
         style={{
           height: 6,
-          backgroundColor: "#1A1A26",
+          backgroundColor: M3.colors.surfaceVariant,
           borderRadius: 3,
           overflow: "hidden",
         }}
@@ -52,7 +53,7 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
               left: "100%",
               height: "100%",
               width: `${overPct}%`,
-              backgroundColor: "#FF4757",
+              backgroundColor: M3.colors.error,
               borderRadius: 3,
             }}
           />

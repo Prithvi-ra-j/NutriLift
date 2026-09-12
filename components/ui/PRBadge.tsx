@@ -1,5 +1,6 @@
 import { View, Text } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { M3 } from "../../design-system/tokens";
 
 export function PRBadge() {
   return (
@@ -14,10 +15,10 @@ export function PRBadge() {
         gap: 3,
       }}
     >
-      <Feather name="award" size={10} color="#0A0A0F" />
+      <Feather name="award" size={10} color={M3.colors.background} />
       <Text
         style={{
-          color: "#0A0A0F",
+          color: M3.colors.background,
           fontSize: 10,
           fontFamily: "DMSans_700Bold",
           letterSpacing: 0.5,

@@ -305,4 +305,19 @@ export async function runMigrations(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_yearly_summaries_year ON yearly_summaries(year);
   `);
+
+  // ─── Additive column migrations (safe to run on existing DBs) ───────────────
+  // SQLite doesn't support IF NOT EXISTS for ALTER TABLE ADD COLUMN, so we
+  // catch the "duplicate column" error and continue.
+  const addColumnIfMissing = async (table: string, column: string, type: string) => {
+    try {
+      await sqlite.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${type};`);
+    } catch {
+      // Column already exists — ignore
+    }
+  };
+
+  await addColumnIfMissing("set_logs", "duration_sec", "INTEGER");
+  await addColumnIfMissing("set_logs", "distance_km", "REAL");
+  await addColumnIfMissing("exercise_logs", "exercise_type", "TEXT");
 }

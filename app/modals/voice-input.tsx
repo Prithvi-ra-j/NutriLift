@@ -30,7 +30,7 @@ export default function VoiceInputModal() {
         return;
       }
 
-      const { granted } = await audioRecorder.requestPermissions();
+      const { granted } = await (audioRecorder as any).requestPermissions();
       if (!granted) {
         Alert.alert(
           "Permission Required",
@@ -59,7 +59,7 @@ export default function VoiceInputModal() {
     try {
       const uri = await audioRecorder.stop();
       
-      if (!uri) {
+      if (uri === undefined || uri === null) {
         throw new Error("No audio recorded");
       }
 

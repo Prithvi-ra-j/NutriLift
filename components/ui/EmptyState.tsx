@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { M3 } from "../../design-system/tokens";
 
 interface EmptyStateProps {
   icon: React.ComponentProps<typeof Feather>["name"];
@@ -25,17 +26,17 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
           width: 64,
           height: 64,
           borderRadius: 32,
-          backgroundColor: "#1A1A26",
+          backgroundColor: M3.colors.surfaceVariant,
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 4,
         }}
       >
-        <Feather name={icon} size={28} color="#4A4A6A" />
+        <Feather name={icon} size={28} color={M3.colors.onSurfaceMuted} />
       </View>
       <Text
         style={{
-          color: "#F0F0F5",
+          color: M3.colors.onSurface,
           fontSize: 17,
           fontFamily: "DMSans_700Bold",
           textAlign: "center",
@@ -45,7 +46,7 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
       </Text>
       <Text
         style={{
-          color: "#8080A0",
+          color: M3.colors.onSurfaceVariant,
           fontSize: 14,
           fontFamily: "DMSans_400Regular",
           textAlign: "center",
@@ -59,7 +60,7 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
           onPress={onAction}
           style={{
             marginTop: 8,
-            backgroundColor: "#00D4AA",
+            backgroundColor: M3.colors.primary,
             borderRadius: 8,
             paddingHorizontal: 20,
             paddingVertical: 10,
@@ -67,7 +68,7 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
         >
           <Text
             style={{
-              color: "#0A0A0F",
+              color: M3.colors.background,
               fontSize: 14,
               fontFamily: "DMSans_700Bold",
             }}

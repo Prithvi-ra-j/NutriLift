@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { logger } from "../../lib/logger";
 import * as FileSystem from "expo-file-system/legacy";
+import { M3 } from "../../design-system/tokens";
 
 export default function ViewLogsModal() {
   const [logs, setLogs] = useState<string>("");
@@ -89,17 +90,17 @@ export default function ViewLogsModal() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 pt-14 pb-4 border-b border-gray-800">
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color="#8080A0" />
+          <Ionicons name="close" size={28} color={M3.colors.onSurfaceVariant} />
         </TouchableOpacity>
         <Text className="text-white font-bebas text-2xl">App Logs</Text>
         <View className="flex-row gap-4">
           {Platform.OS === "web" && (
             <TouchableOpacity onPress={handleClear}>
-              <Ionicons name="trash-outline" size={24} color="#8080A0" />
+              <Ionicons name="trash-outline" size={24} color={M3.colors.onSurfaceVariant} />
             </TouchableOpacity>
           )}
           <TouchableOpacity onPress={handleShare}>
-            <Ionicons name="share-outline" size={24} color="#00D4AA" />
+            <Ionicons name="share-outline" size={24} color={M3.colors.primary} />
           </TouchableOpacity>
         </View>
       </View>

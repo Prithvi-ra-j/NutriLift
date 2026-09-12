@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { getAllPRs } from "../../lib/db/queries/workout";
 import { getWeightHistory, getAllInBodyRecords } from "../../lib/db/queries/body";
 import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
@@ -19,6 +20,7 @@ import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/db/schema";
+import { M3 } from "../../design-system/tokens";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
 
@@ -131,7 +133,7 @@ export default function ProgressScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
         <View style={{ padding: 20, gap: 16 }}>
           <CardSkeleton />
           <CardSkeleton />
@@ -142,32 +144,32 @@ export default function ProgressScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor="#00D4AA" />
+          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={M3.colors.primary} />
         }
         showsVerticalScrollIndicator={false}
       >
         {/* ── Header ── */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={{ color: "#F0F0F5", fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
+          <Text style={{ color: M3.colors.onSurface, fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
             PROGRESS
           </Text>
           {!isCurrentWeek && (
             <TouchableOpacity
               onPress={goToToday}
               style={{
-                backgroundColor: "#00D4AA22",
+                backgroundColor: M3.colors.primaryContainer,
                 borderRadius: 6,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderWidth: 1,
-                borderColor: "#00D4AA",
+                borderColor: M3.colors.primary,
               }}
             >
-              <Text style={{ color: "#00D4AA", fontSize: 11, fontFamily: "DMSans_700Bold" }}>
+              <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold" }}>
                 THIS WEEK
               </Text>
             </TouchableOpacity>
@@ -182,21 +184,21 @@ export default function ProgressScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 4,
-                backgroundColor: "#12121A",
+                backgroundColor: M3.colors.surface,
                 borderRadius: 6,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderWidth: 1,
-                borderColor: "#252535",
+                borderColor: M3.colors.surfaceContainer,
               }}
             >
-              <Feather name="chevrons-left" size={14} color="#8080A0" />
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+              <Feather name="chevrons-left" size={14} color={M3.colors.onSurfaceVariant} />
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
                 Prev Week
               </Text>
             </TouchableOpacity>
             
-            <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
               {isCurrentWeek ? "This Week" : `Week of ${weekRange.monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
             </Text>
             
@@ -206,18 +208,18 @@ export default function ProgressScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 4,
-                backgroundColor: "#12121A",
+                backgroundColor: M3.colors.surface,
                 borderRadius: 6,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
                 borderWidth: 1,
-                borderColor: "#252535",
+                borderColor: M3.colors.surfaceContainer,
               }}
             >
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
                 Next Week
               </Text>
-              <Feather name="chevrons-right" size={14} color="#8080A0" />
+              <Feather name="chevrons-right" size={14} color={M3.colors.onSurfaceVariant} />
             </TouchableOpacity>
           </View>
 
@@ -229,17 +231,17 @@ export default function ProgressScreen() {
               onPress={() => setActiveSection(s.key)}
               style={{
                 flex: 1,
-                backgroundColor: activeSection === s.key ? "#00D4AA22" : "#12121A",
+                backgroundColor: activeSection === s.key ? M3.colors.primaryContainer : M3.colors.surface,
                 borderRadius: 8,
                 borderWidth: 1,
-                borderColor: activeSection === s.key ? "#00D4AA" : "#252535",
+                borderColor: activeSection === s.key ? M3.colors.primary : M3.colors.surfaceContainer,
                 padding: 10,
                 alignItems: "center",
                 gap: 4,
               }}
             >
-              <Feather name={s.icon} size={16} color={activeSection === s.key ? "#00D4AA" : "#8080A0"} />
-              <Text style={{ color: activeSection === s.key ? "#00D4AA" : "#8080A0", fontSize: 10, fontFamily: "DMSans_500Medium" }}>
+              <Feather name={s.icon} size={16} color={activeSection === s.key ? M3.colors.primary : M3.colors.onSurfaceVariant} />
+              <Text style={{ color: activeSection === s.key ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium" }}>
                 {s.label}
               </Text>
             </TouchableOpacity>
@@ -251,21 +253,21 @@ export default function ProgressScreen() {
           <>
             {/* Current stats */}
             <Card>
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 BODY COMPOSITION
               </Text>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 {[
-                  { label: "Weight", value: bodySummary.currentWeight ? `${bodySummary.currentWeight.toFixed(1)}kg` : "—", color: "#F0F0F5" },
-                  { label: "Body Fat", value: latestInBody?.body_fat_pct ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "—", color: "#FF4757" },
-                  { label: "Muscle", value: latestInBody?.skeletal_muscle_mass_kg ? `${latestInBody.skeletal_muscle_mass_kg.toFixed(1)}kg` : "—", color: "#00C875" },
-                  { label: "InBody", value: latestInBody?.inbody_score ? `${latestInBody.inbody_score}` : "—", color: "#00D4AA" },
+                  { label: "Weight", value: bodySummary.currentWeight ? `${bodySummary.currentWeight.toFixed(1)}kg` : "—", color: M3.colors.onSurface },
+                  { label: "Body Fat", value: latestInBody?.body_fat_pct ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "—", color: M3.colors.error },
+                  { label: "Muscle", value: latestInBody?.skeletal_muscle_mass_kg ? `${latestInBody.skeletal_muscle_mass_kg.toFixed(1)}kg` : "—", color: M3.colors.success },
+                  { label: "InBody", value: latestInBody?.inbody_score ? `${latestInBody.inbody_score}` : "—", color: M3.colors.primary },
                 ].map((stat) => (
                   <View key={stat.label} style={{ alignItems: "center" }}>
                     <Text style={{ color: stat.color, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
                       {stat.value}
                     </Text>
-                    <Text style={{ color: "#8080A0", fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
                       {stat.label}
                     </Text>
                   </View>
@@ -276,44 +278,44 @@ export default function ProgressScreen() {
             {/* Goal projection */}
             <Card elevated>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <Feather name="target" size={16} color="#00D4AA" />
-                <Text style={{ color: "#F0F0F5", fontSize: 14, fontFamily: "DMSans_700Bold" }}>
+                <Feather name="target" size={16} color={M3.colors.primary} />
+                <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
                   December 2026 Goal
                 </Text>
               </View>
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
                     Target Body Fat
                   </Text>
-                  <Text style={{ color: "#00D4AA", fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                  <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
                     {USER_PROFILE.targets.body_fat_pct_dec2026}%
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
                     Current Body Fat
                   </Text>
-                  <Text style={{ color: latestInBody?.body_fat_pct ? "#FF4757" : "#8080A0", fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                  <Text style={{ color: latestInBody?.body_fat_pct ? M3.colors.error : M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
                     {latestInBody?.body_fat_pct ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "No InBody data"}
                   </Text>
                 </View>
                 {bodySummary.projectedBFDate && (
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular" }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
                       Projected Date
                     </Text>
-                    <Text style={{ color: bodySummary.onTrackForGoal ? "#00C875" : "#FFB800", fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                    <Text style={{ color: bodySummary.onTrackForGoal ? M3.colors.success : M3.colors.warning, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
                       {new Date(bodySummary.projectedBFDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                     </Text>
                   </View>
                 )}
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
                     Trend
                   </Text>
                   <Text style={{
-                    color: bodySummary.trend === "losing" ? "#00C875" : bodySummary.trend === "gaining" ? "#FF4757" : "#FFB800",
+                    color: bodySummary.trend === "losing" ? M3.colors.success : bodySummary.trend === "gaining" ? M3.colors.error : M3.colors.warning,
                     fontSize: 13,
                     fontFamily: "DMSans_700Bold",
                     textTransform: "capitalize",
@@ -327,7 +329,7 @@ export default function ProgressScreen() {
             {/* Weight history mini chart */}
             {weekWeightHistory.length > 0 && (
               <Card>
-                <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   {isCurrentWeek ? "THIS WEEK" : "WEEK"} WEIGHT TREND
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 60 }}>
@@ -346,26 +348,26 @@ export default function ProgressScreen() {
                           backgroundColor: "#00D4AA44",
                           borderRadius: 2,
                           borderTopWidth: 2,
-                          borderTopColor: "#00D4AA",
+                          borderTopColor: M3.colors.primary,
                         }}
                       />
                     );
                   })}
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
-                  <Text style={{ color: "#4A4A6A", fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
                     Mon
                   </Text>
-                  <Text style={{ color: "#4A4A6A", fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
                     Sun
                   </Text>
                 </View>
                 {weekWeightHistory.length > 0 && (
                   <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                    <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
                       Start: {weekWeightHistory[0]?.weight_kg?.toFixed(1)}kg
                     </Text>
-                    <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
                       End: {weekWeightHistory[weekWeightHistory.length - 1]?.weight_kg?.toFixed(1)}kg
                     </Text>
                   </View>
@@ -376,7 +378,7 @@ export default function ProgressScreen() {
             {/* InBody history */}
             {inBodyRecords.length > 1 && (
               <Card>
-                <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   INBODY HISTORY
                 </Text>
                 {inBodyRecords.slice(-5).reverse().map((record) => (
@@ -387,19 +389,19 @@ export default function ProgressScreen() {
                       justifyContent: "space-between",
                       paddingVertical: 8,
                       borderBottomWidth: 1,
-                      borderBottomColor: "#1A1A26",
+                      borderBottomColor: M3.colors.surfaceVariant,
                     }}
                   >
-                    <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                       {record.date}
                     </Text>
-                    <Text style={{ color: "#F0F0F5", fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+                    <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                       {record.weight_kg?.toFixed(1)}kg
                     </Text>
-                    <Text style={{ color: "#FF4757", fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+                    <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                       {record.body_fat_pct?.toFixed(1)}% BF
                     </Text>
-                    <Text style={{ color: "#00C875", fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+                    <Text style={{ color: M3.colors.success, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                       {record.skeletal_muscle_mass_kg?.toFixed(1)}kg SMM
                     </Text>
                   </View>
@@ -412,6 +414,8 @@ export default function ProgressScreen() {
                 icon="user"
                 title={isCurrentWeek ? "No body data yet" : "No data for this week"}
                 subtitle={isCurrentWeek ? "Log your daily weight or import an InBody report to start tracking." : "No weight or InBody data logged for this week."}
+                actionLabel={isCurrentWeek ? "Log Weight" : undefined}
+                onAction={isCurrentWeek ? () => router.push("/(tabs)/more") : undefined}
               />
             )}
           </>
@@ -422,7 +426,7 @@ export default function ProgressScreen() {
           <>
             {weekPRs.length > 0 ? (
               <Card>
-                <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   {isCurrentWeek ? "THIS WEEK'S" : "WEEK"} PERSONAL RECORDS
                 </Text>
                 {weekPRs.map((pr) => (
@@ -434,14 +438,14 @@ export default function ProgressScreen() {
                       alignItems: "center",
                       paddingVertical: 10,
                       borderBottomWidth: 1,
-                      borderBottomColor: "#1A1A26",
+                      borderBottomColor: M3.colors.surfaceVariant,
                     }}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_500Medium" }}>
+                      <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
                         {pr.exercise_name}
                       </Text>
-                      <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 1 }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 1 }}>
                         {pr.achieved_date}
                       </Text>
                     </View>
@@ -450,12 +454,12 @@ export default function ProgressScreen() {
                         {pr.best_weight_kg}kg × {pr.best_reps_at_best_weight}
                       </Text>
                       {!!pr.best_1rm_estimated && (
-                        <Text style={{ color: "#8080A0", fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
                           ~{pr.best_1rm_estimated.toFixed(0)}kg 1RM
                         </Text>
                       )}
                       {pr.improvement_pct != null && pr.improvement_pct > 0 && (
-                        <Text style={{ color: "#00C875", fontSize: 10, fontFamily: "DMSans_500Medium" }}>
+                        <Text style={{ color: M3.colors.success, fontSize: 10, fontFamily: "DMSans_500Medium" }}>
                           +{pr.improvement_pct.toFixed(1)}%
                         </Text>
                       )}
@@ -468,6 +472,8 @@ export default function ProgressScreen() {
                 icon="zap"
                 title={isCurrentWeek ? "No PRs yet" : "No PRs this week"}
                 subtitle={isCurrentWeek ? "Start logging workouts to track your personal records." : "No personal records achieved during this week."}
+                actionLabel={isCurrentWeek ? "Start Workout" : undefined}
+                onAction={isCurrentWeek ? () => router.push("/(tabs)/workout") : undefined}
               />
             )}
           </>
@@ -477,7 +483,7 @@ export default function ProgressScreen() {
         {activeSection === "nutrition" && (
           <>
             <Card>
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 {isCurrentWeek ? "THIS WEEK" : "WEEK"} NUTRITION SUMMARY
               </Text>
               {[
@@ -487,16 +493,16 @@ export default function ProgressScreen() {
                 { label: "Best Streak", value: `${nutritionSummary.bestStreak} days`, target: "" },
                 { label: "Current Streak", value: `${nutritionSummary.currentStreak} days`, target: "" },
               ].map((item) => (
-                <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#1A1A26" }}>
-                  <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular" }}>
+                <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: M3.colors.surfaceVariant }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
                     {item.label}
                   </Text>
                   <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
-                    <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                    <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
                       {item.value}
                     </Text>
                     {!!item.target && (
-                      <Text style={{ color: "#4A4A6A", fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                      <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
                         / {item.target}
                       </Text>
                     )}
@@ -506,10 +512,10 @@ export default function ProgressScreen() {
             </Card>
 
             <Card elevated>
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
                 PROTEIN ANALYSIS
               </Text>
-              <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
+              <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
                 {nutritionSummary.proteinGapAnalysis}
               </Text>
             </Card>
@@ -519,6 +525,8 @@ export default function ProgressScreen() {
                 icon="pie-chart"
                 title={isCurrentWeek ? "No nutrition data" : "No data for this week"}
                 subtitle={isCurrentWeek ? "Start logging food to see your nutrition analytics." : "No nutrition data logged for this week."}
+                actionLabel={isCurrentWeek ? "Log Food" : undefined}
+                onAction={isCurrentWeek ? () => router.push("/(tabs)/nutrition") : undefined}
               />
             )}
           </>
@@ -530,17 +538,17 @@ export default function ProgressScreen() {
             {weekRecoveryLogs.length > 0 ? (
               <>
                 <Card>
-                  <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                     {isCurrentWeek ? "THIS WEEK" : "WEEK"} SLEEP TREND
                   </Text>
                   <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 4, height: 60 }}>
                     {weekRecoveryLogs.map((log, i) => {
                       const pct = Math.min(1, (log.sleep_duration_hr ?? 0) / 9);
-                      const color = (log.sleep_duration_hr ?? 0) >= 7 ? "#00C875" : (log.sleep_duration_hr ?? 0) >= 6 ? "#FFB800" : "#FF4757";
+                      const color = (log.sleep_duration_hr ?? 0) >= 7 ? M3.colors.success : (log.sleep_duration_hr ?? 0) >= 6 ? M3.colors.warning : M3.colors.error;
                       return (
                         <View key={i} style={{ flex: 1, alignItems: "center", gap: 3 }}>
                           <View style={{ width: "100%", height: Math.max(4, pct * 52), backgroundColor: color, borderRadius: 3 }} />
-                          <Text style={{ color: "#4A4A6A", fontSize: 8, fontFamily: "DMSans_400Regular" }}>
+                          <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 8, fontFamily: "DMSans_400Regular" }}>
                             {new Date(log.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                           </Text>
                         </View>
@@ -550,7 +558,7 @@ export default function ProgressScreen() {
                 </Card>
 
                 <Card>
-                  <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                     RECOVERY AVERAGES
                   </Text>
                   {[
@@ -567,9 +575,9 @@ export default function ProgressScreen() {
                       value: `${(weekRecoveryLogs.reduce((a, b) => a + (b.muscle_soreness ?? 0), 0) / weekRecoveryLogs.length).toFixed(1)} / 5`,
                     },
                   ].map((item) => (
-                    <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#1A1A26" }}>
-                      <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
-                      <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_700Bold" }}>{item.value}</Text>
+                    <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: M3.colors.surfaceVariant }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
+                      <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{item.value}</Text>
                     </View>
                   ))}
                 </Card>
@@ -579,6 +587,8 @@ export default function ProgressScreen() {
                 icon="moon"
                 title={isCurrentWeek ? "No recovery data" : "No data for this week"}
                 subtitle={isCurrentWeek ? "Log your sleep and recovery daily to see trends." : "No recovery data logged for this week."}
+                actionLabel={isCurrentWeek ? "Log Recovery" : undefined}
+                onAction={isCurrentWeek ? () => router.push("/(tabs)/more") : undefined}
               />
             )}
           </>

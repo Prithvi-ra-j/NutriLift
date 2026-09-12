@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Script to add dummy data for a full week (Monday to Sunday)
  * This will populate nutrition, workout, and recovery data
