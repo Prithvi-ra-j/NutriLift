@@ -33,7 +33,7 @@ export interface ListProps {
  * 
  * Lists are continuous, vertical indexes of text or images.
  */
-export const List: React.FC<ListProps> = ({
+export const List: React.FC<ListProps> = React.memo(({
   data,
   lines = 1,
   showDividers = false,

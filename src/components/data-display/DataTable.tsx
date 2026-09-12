@@ -28,7 +28,7 @@ export interface DataTableProps<T> {
   onSort?: (columnId: string, ascending: boolean) => void;
 }
 
-export const DataTable = <T extends Record<string, any>>({
+export const DataTable = React.memo(<T extends Record<string, any>>({
   columns,
   data,
   keyExtractor,
@@ -212,6 +212,6 @@ export const DataTable = <T extends Record<string, any>>({
       </ScrollView>
     </View>
   );
-};
+});
 
 export default DataTable;

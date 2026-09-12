@@ -29,7 +29,7 @@ import { MenuProps, MenuItem } from '../../core/types/component';
  *   ]}
  * />
  */
-export const Menu: React.FC<MenuProps> = ({
+export const Menu: React.FC<MenuProps> = React.memo(({
   visible,
   onDismiss,
   items,
@@ -238,7 +238,7 @@ export const Menu: React.FC<MenuProps> = ({
       </Modal>
     </>
   );
-};
+});
 
 Menu.displayName = 'Menu';
 
