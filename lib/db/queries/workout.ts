@@ -13,6 +13,9 @@ import {
   type SetLog,
   type NewSetLog,
   type PersonalRecord,
+  customExercises,
+  type CustomExercise,
+  type NewCustomExercise,
 } from "../schema";
 
 // ─── Epley 1RM Formula ────────────────────────────────────────────────────────
@@ -367,4 +370,14 @@ export async function getPreviousSessionForDayType(
     session,
     exercises: exercisesWithSets,
   };
+}
+
+// ─── Custom Exercise Queries ──────────────────────────────────────────────────
+
+export async function getCustomExercises(): Promise<CustomExercise[]> {
+  return db.select().from(customExercises).orderBy(desc(customExercises.created_at));
+}
+
+export async function insertCustomExercise(exercise: NewCustomExercise): Promise<void> {
+  await db.insert(customExercises).values(exercise).onConflictDoNothing();
 }

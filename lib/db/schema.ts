@@ -255,6 +255,16 @@ export const personalFoodsEditHistory = sqliteTable("personal_foods_edit_history
   affected_log_count: integer("affected_log_count"),
 });
 
+// ─── Custom Exercises ─────────────────────────────────────────────────────────
+export const customExercises = sqliteTable("custom_exercises", {
+  id: text("id").primaryKey(),
+  exercise_name: text("exercise_name").notNull().unique(),
+  muscle_group: text("muscle_group"),
+  equipment: text("equipment"),
+  exercise_type: text("exercise_type").notNull(), // weight_reps | reps_only | duration | distance_duration
+  created_at: integer("created_at").notNull(),
+});
+
 // ─── Type Exports ─────────────────────────────────────────────────────────────
 export type FoodLog = typeof foodLogs.$inferSelect;
 export type NewFoodLog = typeof foodLogs.$inferInsert;
@@ -306,3 +316,6 @@ export type NewPersonalFood = typeof personalFoods.$inferInsert;
 
 export type PersonalFoodEditHistory = typeof personalFoodsEditHistory.$inferSelect;
 export type NewPersonalFoodEditHistory = typeof personalFoodsEditHistory.$inferInsert;
+
+export type CustomExercise = typeof customExercises.$inferSelect;
+export type NewCustomExercise = typeof customExercises.$inferInsert;

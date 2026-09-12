@@ -164,7 +164,7 @@ export const List: React.FC<ListProps> = React.memo(({
       accessibilityRole="list"
     />
   );
-};
+});
 
 List.displayName = 'List';
 
