@@ -335,6 +335,7 @@ export const Dialog: React.FC<DialogProps> = ({
               ref={dialogRef}
               style={styles.dialog}
               accessibilityRole="alert"
+                accessible
               accessibilityLabel={title ? `Dialog: ${title}` : 'Dialog'}
             >
               {/* Title */}

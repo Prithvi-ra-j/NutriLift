@@ -130,8 +130,8 @@ class Logger {
       };
 
       // Get existing logs from localStorage
-      const logsKey = "apex_logs";
-      const existingLogs = localStorage.getItem(logsKey);
+      const logsKey = "nutrilift_logs";
+      const existingLogs = localStorage.getItem(logsKey) ?? localStorage.getItem("apex_logs");
       const logs: LogEntry[] = existingLogs ? JSON.parse(existingLogs) : [];
       
       logs.push(entry);
@@ -142,6 +142,7 @@ class Logger {
       }
 
       localStorage.setItem(logsKey, JSON.stringify(logs));
+      localStorage.removeItem("apex_logs");
     } catch (error) {
       // Silently fail if localStorage is full or unavailable
     }
@@ -259,7 +260,7 @@ class Logger {
     if (Platform.OS !== "web") return [];
 
     try {
-      const logsKey = "apex_logs";
+      const logsKey = "nutrilift_logs";
       const existingLogs = localStorage.getItem(logsKey);
       return existingLogs ? JSON.parse(existingLogs) : [];
     } catch (error) {
@@ -274,7 +275,7 @@ class Logger {
 
   public clearWebLogs() {
     if (Platform.OS === "web") {
-      localStorage.removeItem("apex_logs");
+      localStorage.removeItem("nutrilift_logs");
     }
   }
 }

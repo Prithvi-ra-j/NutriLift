@@ -56,7 +56,6 @@ export function ThemeProvider({ children, initialDark }: ThemeProviderProps) {
     initialDark ?? systemColorScheme === 'dark'
   );
   const [customTokens, setCustomTokensState] = useState<Partial<ThemeTokens> | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load theme preference from storage on mount
   useEffect(() => {
@@ -69,10 +68,8 @@ export function ThemeProvider({ children, initialDark }: ThemeProviderProps) {
       if (savedTheme !== null) {
         setIsDark(savedTheme === 'dark');
       }
-      setIsLoaded(true);
     } catch (error) {
       console.warn('Failed to load theme preference:', error);
-      setIsLoaded(true);
     }
   };
 
@@ -91,11 +88,6 @@ export function ThemeProvider({ children, initialDark }: ThemeProviderProps) {
   const setCustomTokens = useCallback((tokens: Partial<ThemeTokens>) => {
     setCustomTokensState(tokens);
   }, []);
-
-  if (!isLoaded) {
-    // Render placeholder while loading theme preference
-    return <>{children}</>;
-  }
 
   // Get colors based on theme
   const colors = isDark ? darkThemeColors : lightThemeColors;

@@ -42,17 +42,24 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const opacity = useRef(new Animated.Value(0)).current;
 
   const showTooltip = () => {
+    const reveal = () => {
+      setVisible(true);
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    };
+
     if (anchorRef.current) {
       anchorRef.current.measureInWindow((x, y, width, height) => {
         setAnchorLayout({ x, y, width, height });
-        setVisible(true);
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }).start();
+        reveal();
       });
+      return;
     }
+
+    reveal();
   };
 
   const hideTooltip = () => {

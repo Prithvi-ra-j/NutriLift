@@ -159,7 +159,7 @@ export default function CoachScreen() {
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, paddingBottom: 12 }}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: M3.colors.onSurface, fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-              APEX COACH
+              NUTRILIFT COACH
             </Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <View style={{
@@ -218,7 +218,7 @@ export default function CoachScreen() {
                 <Feather name="cpu" size={28} color={M3.colors.primary} />
               </View>
               <Text style={{ color: M3.colors.onSurface, fontSize: 17, fontFamily: "DMSans_700Bold", textAlign: "center" }}>
-                Apex Coach
+                NutriLift Coach
               </Text>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", lineHeight: 20 }}>
                 Brutally honest. Scientifically rigorous.{"\n"}Ask me anything about your training.
@@ -240,7 +240,7 @@ export default function CoachScreen() {
                     <Feather name="cpu" size={10} color={M3.colors.primary} />
                   </View>
                   <Text style={{ color: M3.colors.primary, fontSize: 10, fontFamily: "DMSans_700Bold", letterSpacing: 0.5 }}>
-                    APEX COACH
+                    NUTRILIFT COACH
                   </Text>
                 </View>
               )}

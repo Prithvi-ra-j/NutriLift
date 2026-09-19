@@ -122,7 +122,7 @@ export async function generateDailyInsight(
       messages: [
         {
           role: "system",
-          content: `You are Apex Coach. Give a single, specific, actionable insight for today based on the user's current progress. Be direct and reference actual numbers. Keep it to 1-2 sentences max.`,
+          content: `You are NutriLift Coach. Give a single, specific, actionable insight for today based on the user's current progress. Be direct and reference actual numbers. Keep it to 1-2 sentences max.`,
         },
         {
           role: "user",

@@ -331,6 +331,7 @@ export const Snackbar: React.FC<SnackbarProps> = ({
           },
         ]}
         accessibilityRole="alert"
+        accessible
         accessibilityLiveRegion="polite"
         accessibilityLabel={message}
       >

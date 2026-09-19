@@ -64,7 +64,7 @@ describe('DataTable Component', () => {
     // Since Checkbox is custom, we might just look for the first row checkbox
     const checkboxes = getAllByRole('checkbox');
     // First is 'select all', second is 'Apple'
-    fireEvent(checkboxes[1], 'valueChange', true);
+    fireEvent.press(checkboxes[1]);
 
     expect(onSelectionChange).toHaveBeenCalledWith(['1']);
   });

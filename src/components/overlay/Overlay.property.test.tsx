@@ -11,8 +11,18 @@ import { Dialog } from './Dialog';
 jest.mock('../../hooks/useTheme', () => ({
   useTheme: () => ({
     tokens: {
-      colors: {},
+      colors: {
+        surface: '#FFFFFF', onSurface: '#000000', primary: '#6750A4', onPrimary: '#FFFFFF',
+        primaryContainer: '#EADDFF', onPrimaryContainer: '#21005E', secondary: '#625B71',
+        onSecondary: '#FFFFFF', secondaryContainer: '#E8DEF8', onSecondaryContainer: '#1D192B',
+        tertiary: '#7D5260', onTertiary: '#FFFFFF', tertiaryContainer: '#FFD8E4',
+        onTertiaryContainer: '#370B1E', error: '#B3261E', onError: '#FFFFFF',
+        errorContainer: '#F9DEDC', onErrorContainer: '#410E0B', background: '#FFFBFE',
+        onBackground: '#1C1B1F', surfaceVariant: '#E7E0EC', onSurfaceVariant: '#49454E',
+        outline: '#79747E', outlineVariant: '#CAC7D0', shadow: '#000000', scrim: '#000000',
+      },
       spacing: { sm: 8, md: 16 },
+      elevation: { 0: {}, 1: {}, 2: {}, 3: {}, 4: {}, 5: {} },
       typography: {
         label: { large: { fontSize: 14 }, small: { fontSize: 11 } },
         body: { medium: { fontSize: 14 } },
@@ -83,11 +93,11 @@ describe('Overlay Components Accessibility Properties', () => {
         />
       );
 
-      const dialog = getByRole('alertdialog');
+      const dialog = getByRole('alert');
       expect(dialog).toBeTruthy();
       
       // Accessibility title matching the dialog title
-      expect(dialog.props.accessibilityLabel).toBe('Dialog Title');
+      expect(dialog.props.accessibilityLabel).toBe('Dialog: Dialog Title');
     });
   });
 });

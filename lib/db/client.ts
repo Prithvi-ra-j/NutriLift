@@ -10,6 +10,7 @@ if (Platform.OS !== "web") {
   const SQLite = require("expo-sqlite");
   const { drizzle } = require("drizzle-orm/expo-sqlite");
   
+  // Preserve the established filename so existing installations retain local data.
   sqlite = SQLite.openDatabaseSync("apex.db");
   db = drizzle(sqlite, { schema });
 } else {
@@ -320,4 +321,52 @@ export async function runMigrations(): Promise<void> {
   await addColumnIfMissing("set_logs", "duration_sec", "INTEGER");
   await addColumnIfMissing("set_logs", "distance_km", "REAL");
   await addColumnIfMissing("exercise_logs", "exercise_type", "TEXT");
+  await addColumnIfMissing("daily_nutrition", "updated_at", "TEXT");
+  await addColumnIfMissing("workout_sessions", "updated_at", "TEXT");
+  await addColumnIfMissing("personal_records", "updated_at", "TEXT");
+  await addColumnIfMissing("body_stats", "updated_at", "TEXT");
+  await addColumnIfMissing("recovery_logs", "updated_at", "TEXT");
+  await addColumnIfMissing("sync_tombstones", "external_id", "TEXT");
+
+  const migrationTimestamp = new Date().toISOString();
+  await sqlite.execAsync(`
+    UPDATE daily_nutrition SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+    UPDATE workout_sessions SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+    UPDATE personal_records SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+    UPDATE body_stats SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+    UPDATE recovery_logs SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+
+    CREATE TABLE IF NOT EXISTS sync_tombstones (
+      id TEXT PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      external_id TEXT,
+      deleted_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(entity_type, entity_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id TEXT PRIMARY KEY,
+      external_id TEXT NOT NULL UNIQUE,
+      payload_json TEXT NOT NULL,
+      state TEXT NOT NULL,
+      attempt_count INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      next_retry_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_sync_queue_state ON sync_queue(state, next_retry_at);
+
+    CREATE TABLE IF NOT EXISTS sync_state (
+      source_app TEXT PRIMARY KEY,
+      cursor TEXT,
+      last_synced_at TEXT,
+      last_success_at TEXT,
+      last_error TEXT,
+      updated_at TEXT NOT NULL
+    );
+  `);
 }

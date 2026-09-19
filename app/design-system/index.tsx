@@ -42,10 +42,10 @@ const ShowcaseContent = () => {
       <Text style={{ ...tokens.typography.title.large, color: tokens.colors.onBackground, marginBottom: tokens.spacing.sm }}>
         Lists
       </Text>
-      <List 
-        items={[
-          { key: '1', title: 'Item 1', subtitle: 'Subtitle 1' },
-          { key: '2', title: 'Item 2', subtitle: 'Subtitle 2' }
+      <List
+        data={[
+          { id: '1', title: 'Item 1', description: 'Subtitle 1' },
+          { id: '2', title: 'Item 2', description: 'Subtitle 2' }
         ]}
       />
     </ScrollView>

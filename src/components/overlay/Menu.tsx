@@ -207,6 +207,7 @@ export const Menu: React.FC<MenuProps> = React.memo(({
             onStartShouldSetResponder={() => true}
             onTouchEnd={(e) => e.stopPropagation()}
             accessibilityRole="menu"
+            accessible
           >
             <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
               {items.map((item, index) => (

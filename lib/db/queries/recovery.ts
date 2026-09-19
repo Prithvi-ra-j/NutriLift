@@ -15,11 +15,12 @@ export async function getRecoveryLog(date: string): Promise<RecoveryLog | null> 
 }
 
 export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
+  const record = { ...log, updated_at: new Date().toISOString() };
   const existing = await getRecoveryLog(log.date);
   if (existing) {
-    await db.update(recoveryLogs).set(log).where(eq(recoveryLogs.date, log.date));
+    await db.update(recoveryLogs).set(record).where(eq(recoveryLogs.date, log.date));
   } else {
-    await db.insert(recoveryLogs).values(log);
+    await db.insert(recoveryLogs).values(record);
   }
 }
 

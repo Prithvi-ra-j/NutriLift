@@ -64,7 +64,7 @@ export async function generateCoachResponse(
   return safeGroqCall(async () => {
     const { dayName, trainingType, date } = getTodayTrainingType();
     
-    const systemPrompt = `You are Apex Coach — a brutally honest, scientifically rigorous personal trainer and nutritionist.
+    const systemPrompt = `You are NutriLift Coach — a brutally honest, scientifically rigorous personal trainer and nutritionist.
 
 TODAY'S DATE: ${date}
 TODAY'S DAY: ${dayName}
@@ -165,7 +165,7 @@ export async function generateDailyInsight(todayData: {
       messages: [
         {
           role: "system",
-          content: `You are Apex Coach. Give a single, specific, actionable insight for today based on the user's current progress. Be direct and reference actual numbers. Keep it to 1-2 sentences max.`,
+          content: `You are NutriLift Coach. Give a single, specific, actionable insight for today based on the user's current progress. Be direct and reference actual numbers. Keep it to 1-2 sentences max.`,
         },
         {
           role: "user",
@@ -216,7 +216,7 @@ export async function generateWeeklySummary(weekData: {
       messages: [
         {
           role: "system",
-          content: `You are Apex Coach. Generate a concise weekly summary (3-4 sentences max) that highlights:
+          content: `You are NutriLift Coach. Generate a concise weekly summary (3-4 sentences max) that highlights:
 1. Key nutrition adherence and patterns
 2. Training performance and volume
 3. Recovery quality
@@ -261,7 +261,7 @@ export async function generateMonthlySummary(monthData: {
       messages: [
         {
           role: "system",
-          content: `You are Apex Coach. Generate a monthly summary (3-4 paragraphs) that:
+          content: `You are NutriLift Coach. Generate a monthly summary (3-4 paragraphs) that:
 1. Synthesizes weekly summaries into monthly trends
 2. Highlights body composition and strength changes
 3. Identifies patterns in nutrition, training, and recovery
@@ -306,7 +306,7 @@ export async function generateQuarterlySummary(quarterData: {
       messages: [
         {
           role: "system",
-          content: `You are Apex Coach. Generate a quarterly summary (4-5 paragraphs) that:
+          content: `You are NutriLift Coach. Generate a quarterly summary (4-5 paragraphs) that:
 1. Synthesizes 3 months into a transformation arc
 2. Analyzes body composition changes and strength progression
 3. Identifies major milestones and pattern shifts
@@ -360,7 +360,7 @@ export async function generateYearlySummary(yearData: {
       messages: [
         {
           role: "system",
-          content: `You are Apex Coach. Generate a yearly transformation summary (5-6 paragraphs) that:
+          content: `You are NutriLift Coach. Generate a yearly transformation summary (5-6 paragraphs) that:
 1. Tells the complete year-long transformation story
 2. Analyzes body composition journey (weight, fat, muscle)
 3. Chronicles strength progression across major lifts

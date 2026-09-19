@@ -158,6 +158,7 @@ export const Progress: React.FC<ProgressProps> = ({
     <View
       style={styles.container}
       accessibilityRole="progressbar"
+      accessible
       accessibilityValue={!indeterminate ? { min: 0, max: 100, now: value * 100 } : {}}
       accessibilityLabel={label || 'Progress'}
     >

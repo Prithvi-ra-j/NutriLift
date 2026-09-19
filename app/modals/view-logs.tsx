@@ -52,14 +52,14 @@ export default function ViewLogsModal() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `apex-logs-${new Date().toISOString()}.txt`;
+        a.download = `nutrilift-logs-${new Date().toISOString()}.txt`;
         a.click();
         URL.revokeObjectURL(url);
       } else {
         // On native, use Share API
         await Share.share({
           message: logs,
-          title: "Apex Logs",
+          title: "NutriLift Logs",
         });
       }
     } catch (error) {

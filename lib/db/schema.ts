@@ -30,6 +30,7 @@ export const dailyNutrition = sqliteTable("daily_nutrition", {
   calorie_target_met: integer("calorie_target_met"),
   adherence_score: real("adherence_score"), // 0-100
   notes: text("notes"),
+  updated_at: text("updated_at"),
 });
 
 // ─── Workout Sessions ─────────────────────────────────────────────────────────
@@ -43,6 +44,7 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   total_volume_kg: real("total_volume_kg"),
   notes: text("notes"),
   rpe: integer("rpe"), // 1-10 rate of perceived exertion
+  updated_at: text("updated_at"),
 });
 
 // ─── Exercise Logs ────────────────────────────────────────────────────────────
@@ -87,6 +89,7 @@ export const personalRecords = sqliteTable("personal_records", {
   achieved_date: text("achieved_date").notNull(),
   previous_best_kg: real("previous_best_kg"),
   improvement_pct: real("improvement_pct"),
+  updated_at: text("updated_at"),
 });
 
 // ─── Body Stats ───────────────────────────────────────────────────────────────
@@ -119,6 +122,7 @@ export const bodyStats = sqliteTable("body_stats", {
   seg_fat_left_leg: real("seg_fat_left_leg"),
   raw_paste: text("raw_paste"), // original pasted InBody text
   source: text("source"), // 'manual' | 'inbody_paste'
+  updated_at: text("updated_at"),
 });
 
 // ─── Recovery Logs ────────────────────────────────────────────────────────────
@@ -134,6 +138,7 @@ export const recoveryLogs = sqliteTable("recovery_logs", {
   muscle_soreness: integer("muscle_soreness"), // 1-5
   stress_level: integer("stress_level"), // 1-5
   notes: text("notes"),
+  updated_at: text("updated_at"),
 });
 
 // ─── Supplement Logs ──────────────────────────────────────────────────────────
@@ -265,6 +270,37 @@ export const customExercises = sqliteTable("custom_exercises", {
   created_at: integer("created_at").notNull(),
 });
 
+// ─── Sync Metadata ──────────────────────────────────────────────────────────
+export const syncTombstones = sqliteTable("sync_tombstones", {
+  id: text("id").primaryKey(),
+  entity_type: text("entity_type").notNull(),
+  entity_id: text("entity_id").notNull(),
+  external_id: text("external_id"),
+  deleted_at: text("deleted_at").notNull(),
+  created_at: text("created_at").notNull(),
+});
+
+export const syncQueue = sqliteTable("sync_queue", {
+  id: text("id").primaryKey(),
+  external_id: text("external_id").notNull().unique(),
+  payload_json: text("payload_json").notNull(),
+  state: text("state").notNull(),
+  attempt_count: integer("attempt_count").notNull().default(0),
+  last_error: text("last_error"),
+  next_retry_at: text("next_retry_at"),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+});
+
+export const syncState = sqliteTable("sync_state", {
+  source_app: text("source_app").primaryKey(),
+  cursor: text("cursor"),
+  last_synced_at: text("last_synced_at"),
+  last_success_at: text("last_success_at"),
+  last_error: text("last_error"),
+  updated_at: text("updated_at").notNull(),
+});
+
 // ─── Type Exports ─────────────────────────────────────────────────────────────
 export type FoodLog = typeof foodLogs.$inferSelect;
 export type NewFoodLog = typeof foodLogs.$inferInsert;
@@ -319,3 +355,12 @@ export type NewPersonalFoodEditHistory = typeof personalFoodsEditHistory.$inferI
 
 export type CustomExercise = typeof customExercises.$inferSelect;
 export type NewCustomExercise = typeof customExercises.$inferInsert;
+
+export type SyncTombstone = typeof syncTombstones.$inferSelect;
+export type NewSyncTombstone = typeof syncTombstones.$inferInsert;
+
+export type SyncQueueEntry = typeof syncQueue.$inferSelect;
+export type NewSyncQueueEntry = typeof syncQueue.$inferInsert;
+
+export type SyncState = typeof syncState.$inferSelect;
+export type NewSyncState = typeof syncState.$inferInsert;

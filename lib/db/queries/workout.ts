@@ -58,14 +58,14 @@ export async function getSessionsInRange(
 export const getSessionsForDateRange = getSessionsInRange;
 
 export async function insertSession(session: NewWorkoutSession): Promise<void> {
-  await db.insert(workoutSessions).values(session);
+  await db.insert(workoutSessions).values({ ...session, updated_at: new Date().toISOString() });
 }
 
 export async function updateSession(
   id: string,
   updates: Partial<NewWorkoutSession>
 ): Promise<void> {
-  await db.update(workoutSessions).set(updates).where(eq(workoutSessions.id, id));
+  await db.update(workoutSessions).set({ ...updates, updated_at: new Date().toISOString() }).where(eq(workoutSessions.id, id));
 }
 
 export async function getSessionById(id: string): Promise<WorkoutSession | null> {
@@ -169,7 +169,7 @@ async function updateSessionVolume(exerciseLogId: string): Promise<void> {
 
   await db
     .update(workoutSessions)
-    .set({ total_volume_kg: totalVolume })
+    .set({ total_volume_kg: totalVolume, updated_at: new Date().toISOString() })
     .where(eq(workoutSessions.id, sessionId));
 }
 
@@ -208,6 +208,7 @@ async function checkAndUpdatePR(set: NewSetLog): Promise<boolean> {
       achieved_date: today,
       previous_best_kg: null,
       improvement_pct: null,
+      updated_at: new Date().toISOString(),
     });
     return true;
   }
@@ -234,6 +235,7 @@ async function checkAndUpdatePR(set: NewSetLog): Promise<boolean> {
         achieved_date: today,
         previous_best_kg: pr.best_weight_kg,
         improvement_pct: improvementPct,
+        updated_at: new Date().toISOString(),
       })
       .where(eq(personalRecords.exercise_name, exerciseName));
   }

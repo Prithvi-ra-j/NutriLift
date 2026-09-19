@@ -1,9 +1,10 @@
 import { eq, and, desc, lte, gte } from "drizzle-orm";
 import { db } from "../client";
 import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
+import { recordTombstone } from "../../integrations/life-os/syncRepository";
 
 export async function insertBodyStat(stat: NewBodyStat): Promise<void> {
-  await db.insert(bodyStats).values(stat);
+  await db.insert(bodyStats).values({ ...stat, updated_at: new Date().toISOString() });
 }
 
 export async function getLatestWeight(): Promise<BodyStat | null> {
@@ -72,6 +73,7 @@ export async function getBodyStatForDate(date: string): Promise<BodyStat | null>
 
 export async function deleteBodyStat(id: string): Promise<void> {
   await db.delete(bodyStats).where(eq(bodyStats.id, id));
+  await recordTombstone("body_stat", id);
 }
 
 // ─── 7-day rolling average ────────────────────────────────────────────────────

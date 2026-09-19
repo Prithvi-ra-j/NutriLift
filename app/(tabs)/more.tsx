@@ -20,6 +20,8 @@ import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { Card } from "../../components/ui/Card";
 import type { SupplementLog, MonthlyReport } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
+import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
+import { isSupabaseConfigured } from "../../lib/supabase/client";
 
 type MoreSection = "body" | "supplements" | "recovery" | "reports" | "settings";
 
@@ -46,6 +48,8 @@ export default function MoreScreen() {
 
   // Reports
   const [reports, setReports] = useState<MonthlyReport[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("Not synced yet");
 
   const loadData = useCallback(async () => {
     const [weight, suppLogs, recoveryLog, reportsData] = await Promise.all([
@@ -134,6 +138,21 @@ export default function MoreScreen() {
     });
     setRecoverySaved(true);
     Alert.alert("Saved", "Recovery log saved.");
+  };
+
+  const syncNow = async () => {
+    setIsSyncing(true);
+    const result = await syncToSupabase();
+    setIsSyncing(false);
+
+    if (result.error) {
+      setSyncStatus(result.error);
+      Alert.alert("Sync unavailable", result.error);
+      return;
+    }
+
+    setSyncStatus(`Uploaded ${result.uploaded}, skipped ${result.skipped}`);
+    Alert.alert("Sync complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
   };
 
   const sections: { key: MoreSection; label: string; icon: React.ComponentProps<typeof Feather>["name"] }[] = [
@@ -563,6 +582,35 @@ export default function MoreScreen() {
               </View>
             </Card>
 
+            <Card>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <View>
+                  <Text style={{ color: "#F0F0F5", fontSize: 15, fontFamily: "DMSans_700Bold" }}>NutriLift Sync</Text>
+                  <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 3 }}>
+                    {isSupabaseConfigured ? syncStatus : "Supabase is not configured"}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  accessibilityLabel="Sync NutriLift data now"
+                  disabled={!isSupabaseConfigured || isSyncing}
+                  onPress={syncNow}
+                  style={{
+                    backgroundColor: isSupabaseConfigured ? "#00D4AA" : "#252535",
+                    borderRadius: 8,
+                    paddingHorizontal: 14,
+                    paddingVertical: 10,
+                  }}
+                >
+                  <Text style={{ color: isSupabaseConfigured ? "#0A0A0F" : "#8080A0", fontSize: 12, fontFamily: "DMSans_700Bold" }}>
+                    {isSyncing ? "Syncing" : "Sync now"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={{ color: "#4A4A6A", fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                Sign in with your shared Supabase account before syncing.
+              </Text>
+            </Card>
+
             <TouchableOpacity
               onPress={async () => {
                 Alert.alert(
@@ -638,7 +686,7 @@ export default function MoreScreen() {
 
             <View style={{ alignItems: "center", paddingVertical: 16 }}>
               <Text style={{ color: "#4A4A6A", fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-                Apex v1.0 · Built for Prithvi · May 2026
+                NutriLift v1.0 · Built for Prithvi · May 2026
               </Text>
             </View>
           </>

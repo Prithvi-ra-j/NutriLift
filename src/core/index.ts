@@ -36,12 +36,8 @@ export type {
   MenuProps,
   TooltipProps,
   ListItem,
-  ListProps,
   Column,
   Row,
-  DataTableProps,
-  ProgressProps,
-  BadgeProps,
 } from './types/component';
 
 // Utilities

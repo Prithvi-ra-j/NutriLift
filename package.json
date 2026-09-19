@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",
@@ -16,6 +17,7 @@
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "^3.1.1",
     "@shopify/react-native-skia": "^2.2.12",
+    "@supabase/supabase-js": "^2.56.0",
     "babel-preset-expo": "~54.0.10",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
@@ -53,13 +55,13 @@
   },
   "devDependencies": {
     "@testing-library/jest-native": "^5.4.3",
-    "@testing-library/react-native": "^14.0.1",
+    "@testing-library/react-native": "^13.3.0",
     "@types/jest": "^30.0.0",
     "@types/react": "~19.1.0",
     "drizzle-kit": "^0.31.10",
     "jest": "^30.5.1",
     "jest-expo": "^57.0.5",
-    "react-test-renderer": "^19.0.0",
+    "react-test-renderer": "^19.1.0",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.2"
   },
@@ -70,6 +72,7 @@
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|@testing-library/react-native)"
     ],
     "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js",
       "@testing-library/jest-native/extend-expect"
     ]
   }

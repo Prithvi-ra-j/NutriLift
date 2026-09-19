@@ -1,5 +1,5 @@
 /**
- * Material 3 Design Tokens — Apex Dark Theme
+ * Material 3 Design Tokens — NutriLift Dark Theme
  *
  * Seed color: #00D4AA (Primary Teal)
  * Generated following M3 tonal palette spec for dark schemes.

@@ -24,17 +24,16 @@ const IntegrationFlow = () => {
         onDismiss={() => setDialogOpen(false)}
         title="Confirm Action"
         content="Are you sure you want to perform this action?"
-        actions={
-          <Button 
-            testID="confirm-dialog"
-            onPress={() => {
+        actions={[
+          {
+            label: 'Confirm',
+            onPress: () => {
               setDialogOpen(false);
               setSnackbarOpen(true);
-            }}
-          >
-            Confirm
-          </Button>
-        }
+            },
+            testID: 'confirm-dialog',
+          },
+        ]}
       />
 
       <Snackbar
@@ -70,7 +69,7 @@ describe('End-to-End Component Integration', () => {
 
     // 2. Confirm Dialog
     await act(async () => {
-      fireEvent.press(getByTestId('confirm-dialog'));
+      fireEvent.press(getByText('Confirm'));
     });
     // Dialog should be closed, Snackbar should be visible
     expect(queryByText('Confirm Action')).toBeNull();
@@ -81,6 +80,6 @@ describe('End-to-End Component Integration', () => {
       fireEvent.press(getByTestId('toggle-theme'));
     });
     // Shouldn't crash, and context should update
-    expect(getByTestId('toggle-theme').props.children).toContain('Light'); // because it switched to dark
+    expect(getByText('Light')).toBeTruthy();
   });
 });

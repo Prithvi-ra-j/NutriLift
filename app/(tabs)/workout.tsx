@@ -241,6 +241,7 @@ export default function WorkoutScreen() {
       total_volume_kg: 0,
       notes: null,
       rpe: null,
+      updated_at: new Date().toISOString(),
     };
     await insertSession(newSession);
     setSession(newSession);

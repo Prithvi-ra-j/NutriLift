@@ -121,6 +121,25 @@ import {
   getFocusIndicatorColor,
 } from '../../core/utils/theme';
 
+// True when children are plain text (string/number, or an interpolated
+// mix of those with nulls/booleans), so they can be wrapped in a <Text>.
+function isTextContent(children: React.ReactNode): boolean {
+  if (typeof children === 'string' || typeof children === 'number') {
+    return true;
+  }
+  if (Array.isArray(children)) {
+    return children.every(
+      (child) =>
+        typeof child === 'string' ||
+        typeof child === 'number' ||
+        child === null ||
+        child === undefined ||
+        typeof child === 'boolean'
+    );
+  }
+  return false;
+}
+
 /**
  * Material Design 3 Button Component
  *
@@ -312,7 +331,7 @@ export const Button = React.forwardRef<typeof Pressable, ButtonProps>(
         )}
 
         {/* Text Content */}
-        {typeof children === 'string' ? (
+        {isTextContent(children) ? (
           <Text
             style={[
               textStyles.base,

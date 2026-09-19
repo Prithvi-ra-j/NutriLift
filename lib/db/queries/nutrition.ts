@@ -108,6 +108,7 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
   const adherenceScore = proteinScore * 0.6 + calorieScore * 0.4;
 
   const existing = await getDailyNutrition(date);
+  const updatedAt = new Date().toISOString();
 
   if (existing) {
     await db
@@ -120,6 +121,7 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
         protein_target_met: proteinTargetMet,
         calorie_target_met: calorieTargetMet,
         adherence_score: adherenceScore,
+        updated_at: updatedAt,
       })
       .where(eq(dailyNutrition.date, date));
   } else {
@@ -132,6 +134,7 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
       protein_target_met: proteinTargetMet,
       calorie_target_met: calorieTargetMet,
       adherence_score: adherenceScore,
+      updated_at: updatedAt,
     });
   }
 }

@@ -29,7 +29,7 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="apex"/>
+        <data android:scheme="nutrilift"/>
       </intent-filter>
     </activity>
   </application>

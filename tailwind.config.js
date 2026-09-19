@@ -10,7 +10,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Apex Design System
+        // NutriLift Design System
         background: "#0A0A0F",
         surface: "#12121A",
         "surface-elevated": "#1A1A26",

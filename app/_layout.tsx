@@ -18,6 +18,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
 import { M3 } from "../design-system/tokens";
+import { syncToSupabase } from "../lib/integrations/life-os/syncClient";
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
@@ -39,6 +40,13 @@ export default function RootLayout() {
       .then(() => {
         logger.info("Database migrations completed successfully");
         setDbReady(true);
+        syncToSupabase().then((result) => {
+          if (result.error && result.error !== "Supabase is not configured.") {
+            logger.warn("NutriLift sync did not complete", { error: result.error });
+          }
+        }).catch((error) => {
+          logger.warn("NutriLift sync failed", { error: error.message });
+        });
       })
       .catch((err) => {
         logger.error("DB migration failed", {
@@ -56,7 +64,7 @@ export default function RootLayout() {
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: M3.colors.background }}>
         <ActivityIndicator color={M3.colors.primary} size="large" />
         <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", marginTop: 12, fontSize: 14 }}>
-          Initializing Apex...
+          Initializing NutriLift...
         </Text>
       </View>
     );

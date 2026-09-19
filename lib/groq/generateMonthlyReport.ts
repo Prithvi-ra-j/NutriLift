@@ -63,7 +63,7 @@ export async function generateMonthlyReport(
       messages: [
         {
           role: "system",
-          content: `You are Apex Coach. Generate a brutally honest, scientifically rigorous monthly report.
+          content: `You are NutriLift Coach. Generate a brutally honest, scientifically rigorous monthly report.
 
 ALWAYS respond with valid JSON only, no markdown, no explanation, no code blocks.
 

@@ -11,7 +11,7 @@
  * 5. useTheme hook works correctly
  */
 
-import { lightThemeColors, darkThemeColors } from '../core/theme/colors';
+import { darkThemeColors, getRelativeLuminance, lightThemeColors } from '../core/theme/colors';
 import { typographyScales, spacingScale } from '../core/theme/typography';
 import type { ThemeContext as ThemeContextType, ThemeTokens } from '../core/types/component';
 
@@ -77,13 +77,9 @@ describe('Core Infrastructure - Colors', () => {
   });
 
   it('light and dark theme should have contrasting colors', () => {
-    // Light theme background should be light
-    const lightBg = lightThemeColors.background.toLowerCase();
-    expect(lightBg).toMatch(/^#[f-e]{2}[f-e]{2}[f-e]{2}$/i); // Light hex values
-
-    // Dark theme background should be dark
-    const darkBg = darkThemeColors.background.toLowerCase();
-    expect(darkBg).toMatch(/^#[0-2a-f]{2}[0-2a-f]{2}[0-2a-f]{2}$/i); // Dark hex values
+    expect(getRelativeLuminance(lightThemeColors.background)).toBeGreaterThan(
+      getRelativeLuminance(darkThemeColors.background)
+    );
   });
 });
 
