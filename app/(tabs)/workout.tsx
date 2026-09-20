@@ -39,6 +39,7 @@ import { Card } from "../../components/ui/Card";
 import { PRBadge } from "../../components/ui/PRBadge";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
@@ -784,28 +785,13 @@ export default function WorkoutScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={{ color: M3.colors.onSurface, fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-            WORKOUT
-          </Text>
-          <TouchableOpacity
-            onPress={() => setShowAddExercise(true)}
-            style={{
-              backgroundColor: M3.colors.primary,
-              borderRadius: 8,
-              paddingHorizontal: 14,
-              paddingVertical: 8,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <Feather name="plus" size={16} color={M3.colors.background} />
-            <Text style={{ color: M3.colors.background, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-              Add Exercise
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="WORKOUT"
+          subtitle={selectedDayType}
+          actionIcon="plus"
+          actionLabel="Add Exercise"
+          onAction={() => setShowAddExercise(true)}
+        />
 
         {/* ── Date Navigator ── */}
         <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />

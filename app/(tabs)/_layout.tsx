@@ -23,27 +23,25 @@ function TabIcon({ name, focused, label }: TabIconProps) {
       style={{
         alignItems: "center",
         justifyContent: "center",
-        paddingTop: 8,
-        gap: 4,
-        width: 64,
+        flex: 1,
+        gap: 3,
       }}
     >
       {/* M3 active indicator pill */}
       <View
         style={{
-          width: 64,
-          height: 32,
+          width: 44,
+          height: 28,
           borderRadius: M3.shape.full,
           backgroundColor: focused ? M3.colors.primaryContainer : "transparent",
           alignItems: "center",
           justifyContent: "center",
-          // Smooth layout without animation lib
           overflow: "hidden",
         }}
       >
         <Feather
           name={name}
-          size={20}
+          size={19}
           color={focused ? M3.colors.primary : M3.colors.onSurfaceVariant}
         />
       </View>
@@ -51,11 +49,11 @@ function TabIcon({ name, focused, label }: TabIconProps) {
       {/* Label — always visible per M3 nav bar spec */}
       <Text
         style={{
-          fontSize: 10,
+          fontSize: 9,
           color: focused ? M3.colors.primary : M3.colors.onSurfaceVariant,
           fontFamily: focused ? "DMSans_700Bold" : "DMSans_500Medium",
           textAlign: "center",
-          letterSpacing: 0.4,
+          letterSpacing: 0.3,
         }}
         numberOfLines={1}
         adjustsFontSizeToFit
@@ -72,19 +70,27 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
+          position: "absolute",
+          left: 16,
+          right: 16,
+          bottom: Platform.OS === "ios" ? 28 : 16,
           backgroundColor: M3.colors.surfaceContainer,
-          borderTopColor: M3.colors.outline,
-          borderTopWidth: 1,
-          // M3 nav bar: 80px on Android, taller on iOS to account for home indicator
-          height: Platform.OS === "ios" ? 88 : 80,
-          paddingBottom: Platform.OS === "ios" ? 24 : 8,
-          paddingTop: 8,
-          // Subtle elevation via shadow
-          shadowColor: M3.colors.primary,
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-          elevation: 8,
+          borderTopWidth: 0,
+          borderRadius: M3.shape.extraLarge,
+          borderWidth: 1,
+          borderColor: M3.colors.outline,
+          // Floating pill nav bar
+          height: 64,
+          paddingBottom: 0,
+          paddingTop: 0,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 8 },
+          shadowOpacity: 0.35,
+          shadowRadius: 16,
+          elevation: 12,
+        },
+        tabBarItemStyle: {
+          height: 64,
         },
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,

@@ -17,6 +17,7 @@ import { getSupplementLogsForDate, upsertSupplementLog, getRecoveryLog, upsertRe
 import { getAllReports } from "../../lib/db/queries/reports";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { Card } from "../../components/ui/Card";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import type { SupplementLog, MonthlyReport } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
@@ -233,42 +234,49 @@ export default function MoreScreen() {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Header ── */}
-        <Text style={{ color: "#F0F0F5", fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-          MORE
-        </Text>
+        <ScreenHeader title="MORE" subtitle="Body, recovery, reports & settings" />
 
         {/* ── Section Tabs ── */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, paddingHorizontal: 20 }}>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            {sections.map((s) => (
-              <TouchableOpacity
-                key={s.key}
-                onPress={() => setActiveSection(s.key)}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  backgroundColor: activeSection === s.key ? "#00D4AA22" : "#12121A",
-                  borderWidth: 1,
-                  borderColor: activeSection === s.key ? "#00D4AA" : "#252535",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                <Feather name={s.icon} size={14} color={activeSection === s.key ? "#00D4AA" : "#8080A0"} />
-                <Text style={{ color: activeSection === s.key ? "#00D4AA" : "#8080A0", fontSize: 13, fontFamily: "DMSans_500Medium" }}>
-                  {s.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+            {sections.map((s) => {
+              const isActive = activeSection === s.key;
+              return (
+                <TouchableOpacity
+                  key={s.key}
+                  onPress={() => setActiveSection(s.key)}
+                  activeOpacity={0.75}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 9,
+                    borderRadius: M3.shape.large,
+                    backgroundColor: isActive ? M3.colors.primary : M3.colors.surface,
+                    borderWidth: 1,
+                    borderColor: isActive ? M3.colors.primary : M3.colors.outline,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    shadowColor: isActive ? M3.colors.primary : "transparent",
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: isActive ? 0.3 : 0,
+                    shadowRadius: 4,
+                    elevation: isActive ? 3 : 0,
+                  }}
+                >
+                  <Feather name={s.icon} size={14} color={isActive ? M3.colors.onPrimary : M3.colors.onSurfaceVariant} />
+                  <Text style={{ color: isActive ? M3.colors.onPrimary : M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: isActive ? "DMSans_700Bold" : "DMSans_500Medium" }}>
+                    {s.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
 

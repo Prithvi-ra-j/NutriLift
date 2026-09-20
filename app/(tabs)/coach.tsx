@@ -152,12 +152,12 @@ export default function CoachScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, paddingBottom: 12 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: M3.colors.onSurface, fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-              NUTRILIFT COACH
+            <Text style={{ color: M3.colors.onSurface, fontSize: 17, fontFamily: "DMSans_700Bold" }}>
+              NutriLift Coach
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
               <View style={{
                 width: 6,
                 height: 6,
@@ -165,23 +165,28 @@ export default function CoachScreen() {
                 backgroundColor: groqConfigured === true ? M3.colors.success : groqConfigured === false ? M3.colors.error : M3.colors.warning,
               }} />
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-                {groqConfigured === true ? "Groq API ready" : groqConfigured === false ? "API key missing" : "Checking..."}
+                {groqConfigured === true ? "Ready" : groqConfigured === false ? "API key missing" : "Checking..."}
+                {requestCount > 0 ? ` · ${requestCount} sent` : ""}
               </Text>
             </View>
           </View>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{ alignItems: "flex-end" }}>
-              <Text style={{ color: M3.colors.primary, fontSize: 16, fontFamily: "BebasNeue_400Regular" }}>
-                {requestCount}
-              </Text>
-              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
-                requests
-              </Text>
-            </View>
-            <TouchableOpacity onPress={handleClear} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
-              <Feather name="trash-2" size={18} color={M3.colors.onSurfaceMuted} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={handleClear}
+            activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: M3.colors.surface,
+              borderWidth: 1,
+              borderColor: M3.colors.outline,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Feather name="edit" size={15} color={M3.colors.onSurfaceVariant} />
+          </TouchableOpacity>
         </View>
 
         {/* ── Groq API warning ── */}
@@ -198,146 +203,171 @@ export default function CoachScreen() {
         <ScrollView
           ref={scrollRef}
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, paddingTop: 0, gap: 12, paddingBottom: 16 }}
+          contentContainerStyle={{ padding: 20, paddingTop: messages.length === 0 ? 24 : 0, gap: 20, paddingBottom: 16, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
         >
           {messages.length === 0 && (
-            <View style={{ alignItems: "center", paddingVertical: 32, gap: 12 }}>
-              <View style={{
-                width: 64,
-                height: 64,
-                borderRadius: 32,
-                backgroundColor: M3.colors.primaryContainer,
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                <Feather name="cpu" size={28} color={M3.colors.primary} />
+            <View style={{ flex: 1, justifyContent: "center", gap: 28 }}>
+              <View style={{ alignItems: "center", gap: 14 }}>
+                <View style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  backgroundColor: M3.colors.primaryContainer,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}>
+                  <Feather name="cpu" size={26} color={M3.colors.primary} />
+                </View>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 19, fontFamily: "DMSans_700Bold", textAlign: "center" }}>
+                  How can I help your training today?
+                </Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", lineHeight: 20 }}>
+                  Brutally honest. Scientifically rigorous.
+                </Text>
               </View>
-              <Text style={{ color: M3.colors.onSurface, fontSize: 17, fontFamily: "DMSans_700Bold", textAlign: "center" }}>
-                NutriLift Coach
-              </Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", lineHeight: 20 }}>
-                Brutally honest. Scientifically rigorous.{"\n"}Ask me anything about your training.
-              </Text>
+
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between" }}>
+                {COACH_SUGGESTED_PROMPTS.map((prompt) => (
+                  <TouchableOpacity
+                    key={prompt}
+                    onPress={() => sendMessage(prompt)}
+                    activeOpacity={0.7}
+                    style={{
+                      width: "48%",
+                      backgroundColor: M3.colors.surface,
+                      borderRadius: M3.shape.large,
+                      borderWidth: 1,
+                      borderColor: M3.colors.outline,
+                      padding: 14,
+                      gap: 10,
+                      minHeight: 88,
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Feather name="message-circle" size={15} color={M3.colors.primary} />
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12.5, fontFamily: "DMSans_500Medium", lineHeight: 17 }}>
+                      {prompt}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
 
-          {messages.map((msg) => (
-            <View
-              key={msg.id}
-              style={{
-                alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                maxWidth: "85%",
-              }}
-            >
-              {msg.role === "assistant" && (
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                  <View style={{ width: 18, height: 18, borderRadius: 9, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
-                    <Feather name="cpu" size={10} color={M3.colors.primary} />
-                  </View>
-                  <Text style={{ color: M3.colors.primary, fontSize: 10, fontFamily: "DMSans_700Bold", letterSpacing: 0.5 }}>
-                    NUTRILIFT COACH
-                  </Text>
-                </View>
-              )}
+          {messages.map((msg) => {
+            const isUser = msg.role === "user";
+            return (
               <View
+                key={msg.id}
                 style={{
-                  backgroundColor: msg.role === "user" ? M3.colors.primaryContainer : M3.colors.surface,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: msg.role === "user" ? "#00D4AA44" : M3.colors.surfaceContainer,
-                  padding: 12,
+                  alignSelf: isUser ? "flex-end" : "stretch",
+                  maxWidth: isUser ? "88%" : "100%",
                 }}
               >
-                <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 21 }}>
-                  {msg.content === "..." && isGenerating ? (
-                    <ActivityIndicator size="small" color={M3.colors.primary} />
-                  ) : (
-                    msg.content
-                  )}
-                </Text>
+                {!isUser && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
+                      <Feather name="cpu" size={11} color={M3.colors.primary} />
+                    </View>
+                    <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold", letterSpacing: 0.5 }}>
+                      COACH
+                    </Text>
+                  </View>
+                )}
+                <View
+                  style={
+                    isUser
+                      ? {
+                          backgroundColor: M3.colors.primaryContainer,
+                          borderRadius: 18,
+                          borderBottomRightRadius: 4,
+                          paddingHorizontal: 14,
+                          paddingVertical: 10,
+                        }
+                      : { paddingLeft: 28 }
+                  }
+                >
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 14.5, fontFamily: "DMSans_400Regular", lineHeight: 22 }}>
+                    {msg.content === "..." && isGenerating ? (
+                      <ActivityIndicator size="small" color={M3.colors.primary} />
+                    ) : (
+                      msg.content
+                    )}
+                  </Text>
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
 
           {isGenerating && messages[messages.length - 1]?.role !== "assistant" && (
-            <View style={{ alignSelf: "flex-start" }}>
-              <View style={{ backgroundColor: M3.colors.surface, borderRadius: 12, borderWidth: 1, borderColor: M3.colors.surfaceContainer, padding: 12 }}>
-                <ActivityIndicator size="small" color={M3.colors.primary} />
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingLeft: 4 }}>
+              <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
+                <Feather name="cpu" size={11} color={M3.colors.primary} />
               </View>
+              <ActivityIndicator size="small" color={M3.colors.primary} />
             </View>
           )}
         </ScrollView>
 
-        {/* ── Suggested Prompts ── */}
-        {messages.length === 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ maxHeight: 44 }}
-            contentContainerStyle={{ paddingHorizontal: 20, gap: 8 }}
-          >
-            {COACH_SUGGESTED_PROMPTS.map((prompt) => (
-              <TouchableOpacity
-                key={prompt}
-                onPress={() => sendMessage(prompt)}
-                style={{
-                  backgroundColor: M3.colors.surface,
-                  borderRadius: 20,
-                  borderWidth: 1,
-                  borderColor: M3.colors.surfaceContainer,
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                }}
-              >
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                  {prompt}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-
-        {/* ── Input ── */}
-        <View style={{
-          flexDirection: "row",
-          alignItems: "flex-end",
-          gap: 10,
-          padding: 20,
-          paddingTop: 12,
-          borderTopWidth: 1,
-          borderTopColor: M3.colors.surfaceContainer,
-        }}>
-          <Input
-            value={input}
-            onChangeText={setInput}
-            placeholder="Ask your coach..."
-            multiline
-            maxLength={500}
+        {/* ── Composer ── */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Platform.OS === "ios" ? 8 : 16 }}>
+          <View
             style={{
-              flex: 1,
+              flexDirection: "row",
+              alignItems: "flex-end",
               backgroundColor: M3.colors.surface,
-              maxHeight: 100,
-            }}
-          />
-          <TouchableOpacity
-            onPress={() => sendMessage(input)}
-            disabled={!input.trim() || isGenerating}
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
-              backgroundColor: input.trim() && !isGenerating ? M3.colors.primary : M3.colors.surfaceVariant,
-              alignItems: "center",
-              justifyContent: "center",
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: M3.colors.outline,
+              paddingLeft: 16,
+              paddingRight: 6,
+              paddingVertical: 6,
+              gap: 8,
+              shadowColor: "#000",
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 10,
+              elevation: 6,
             }}
           >
-            {isGenerating ? (
-              <ActivityIndicator size="small" color={M3.colors.primary} />
-            ) : (
-              <Feather name="send" size={18} color={input.trim() ? M3.colors.background : M3.colors.onSurfaceMuted} />
-            )}
-          </TouchableOpacity>
+            <Input
+              value={input}
+              onChangeText={setInput}
+              placeholder="Ask your coach anything..."
+              multiline
+              maxLength={500}
+              style={{
+                flex: 1,
+                backgroundColor: "transparent",
+                borderWidth: 0,
+                padding: 0,
+                paddingVertical: 10,
+                maxHeight: 110,
+                fontSize: 14.5,
+              }}
+            />
+            <TouchableOpacity
+              onPress={() => sendMessage(input)}
+              disabled={!input.trim() || isGenerating}
+              activeOpacity={0.75}
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 19,
+                marginBottom: 2,
+                backgroundColor: input.trim() && !isGenerating ? M3.colors.primary : M3.colors.surfaceVariant,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {isGenerating ? (
+                <ActivityIndicator size="small" color={M3.colors.primary} />
+              ) : (
+                <Feather name="arrow-up" size={18} color={input.trim() ? M3.colors.onPrimary : M3.colors.onSurfaceMuted} />
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

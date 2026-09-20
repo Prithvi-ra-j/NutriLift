@@ -195,13 +195,29 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
               {formatDate(new Date())}
             </Text>
             <Text style={{ color: M3.colors.onSurface, fontSize: 26, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
               {getGreeting()}, {USER_PROFILE.name}
+            </Text>
+          </View>
+          <View
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: M3.colors.primaryContainer,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1,
+              borderColor: M3.colors.primary + "55",
+            }}
+          >
+            <Text style={{ color: M3.colors.primary, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
+              {USER_PROFILE.name?.charAt(0).toUpperCase() ?? "N"}
             </Text>
           </View>
         </View>
@@ -248,20 +264,32 @@ export default function DashboardScreen() {
         {/* ── Stats Row ── */}
         <View style={{ flexDirection: "row", gap: 12 }}>
           {[
-            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${USER_PROFILE.targets.protein_g}g`, color: M3.colors.secondary },
-            { label: "Calories", value: calories.toFixed(0), sub: `/ ${USER_PROFILE.targets.calories}`, color: M3.colors.primary },
-            { label: "Volume", value: session?.total_volume_kg ? `${(session.total_volume_kg / 1000).toFixed(1)}t` : "—", sub: "today", color: M3.colors.tertiary },
-            { label: "Recovery", value: recoveryScore ? `${recoveryScore}` : "—", sub: "/ 100", color: M3.colors.success },
+            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${USER_PROFILE.targets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
+            { label: "Calories", value: calories.toFixed(0), sub: `/ ${USER_PROFILE.targets.calories}`, color: M3.colors.primary, icon: "zap" as const },
+            { label: "Volume", value: session?.total_volume_kg ? `${(session.total_volume_kg / 1000).toFixed(1)}t` : "—", sub: "today", color: M3.colors.tertiary, icon: "trending-up" as const },
+            { label: "Recovery", value: recoveryScore ? `${recoveryScore}` : "—", sub: "/ 100", color: M3.colors.success, icon: "heart" as const },
           ].map((stat) => (
-            <Card key={stat.label} style={{ flex: 1, padding: 12, alignItems: "center" }}>
-              <Text style={{ color: stat.color, fontSize: 18, fontFamily: "DMSans_700Bold" }}>
+            <Card key={stat.label} style={{ flex: 1, padding: 12, alignItems: "center", gap: 6 }}>
+              <View
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: 14,
+                  backgroundColor: stat.color + "22",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Feather name={stat.icon} size={13} color={stat.color} />
+              </View>
+              <Text style={{ color: stat.color, fontSize: 17, fontFamily: "DMSans_700Bold" }}>
                 {stat.value}
               </Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
                 {stat.sub}
               </Text>
-              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular", marginTop: 1 }}>
-                {stat.label}
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_500Medium", letterSpacing: 0.3 }}>
+                {stat.label.toUpperCase()}
               </Text>
             </Card>
           ))}

@@ -19,6 +19,8 @@ import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
 
@@ -153,28 +155,13 @@ export default function ProgressScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={{ color: M3.colors.onSurface, fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-            PROGRESS
-          </Text>
-          {!isCurrentWeek && (
-            <TouchableOpacity
-              onPress={goToToday}
-              style={{
-                backgroundColor: M3.colors.primaryContainer,
-                borderRadius: 6,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderWidth: 1,
-                borderColor: M3.colors.primary,
-              }}
-            >
-              <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold" }}>
-                THIS WEEK
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <ScreenHeader
+          title="PROGRESS"
+          subtitle={isCurrentWeek ? "This week" : `Week of ${weekRange.monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
+          actionIcon={!isCurrentWeek ? "calendar" : undefined}
+          actionLabel={!isCurrentWeek ? "Today" : undefined}
+          onAction={!isCurrentWeek ? goToToday : undefined}
+        />
 
         {/* ── Week Navigation ── */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
@@ -224,29 +211,7 @@ export default function ProgressScreen() {
           </View>
 
         {/* ── Section Tabs ── */}
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {sections.map((s) => (
-            <TouchableOpacity
-              key={s.key}
-              onPress={() => setActiveSection(s.key)}
-              style={{
-                flex: 1,
-                backgroundColor: activeSection === s.key ? M3.colors.primaryContainer : M3.colors.surface,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: activeSection === s.key ? M3.colors.primary : M3.colors.surfaceContainer,
-                padding: 10,
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              <Feather name={s.icon} size={16} color={activeSection === s.key ? M3.colors.primary : M3.colors.onSurfaceVariant} />
-              <Text style={{ color: activeSection === s.key ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium" }}>
-                {s.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <SegmentedControl segments={sections} active={activeSection} onChange={setActiveSection} />
 
         {/* ── Body Composition ── */}
         {activeSection === "body" && (

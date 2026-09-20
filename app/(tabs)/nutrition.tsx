@@ -22,6 +22,7 @@ import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
 
@@ -122,28 +123,13 @@ export default function NutritionScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <Text style={{ color: M3.colors.onSurface, fontSize: 28, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-            NUTRITION
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.push("/modals/log-food")}
-            style={{
-              backgroundColor: M3.colors.primary,
-              borderRadius: 8,
-              paddingHorizontal: 14,
-              paddingVertical: 8,
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
-            <Feather name="plus" size={16} color={M3.colors.background} />
-            <Text style={{ color: M3.colors.background, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-              Log Food
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <ScreenHeader
+          title="NUTRITION"
+          subtitle={new Date(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+          actionIcon="plus"
+          actionLabel="Log Food"
+          onAction={() => router.push("/modals/log-food")}
+        />
 
         {/* ── Date Navigator ── */}
         <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />
@@ -199,27 +185,44 @@ export default function NutritionScreen() {
               style={{
                 flex: 1,
                 backgroundColor: M3.colors.surface,
-                borderRadius: 8,
+                borderRadius: M3.shape.medium,
                 borderWidth: 1,
-                borderColor: M3.colors.surfaceContainer,
-                padding: 10,
+                borderColor: M3.colors.outline,
+                paddingVertical: 12,
                 alignItems: "center",
-                gap: 4,
+                gap: 6,
+                shadowColor: "#000",
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.12,
+                shadowRadius: 4,
+                elevation: 2,
               }}
+              activeOpacity={0.7}
             >
-              <Feather
-                name={
-                  mode === "type"
-                    ? "edit-3"
-                    : mode === "voice"
-                    ? "mic"
-                    : mode === "paste"
-                    ? "clipboard"
-                    : "camera"
-                }
-                size={16}
-                color={M3.colors.onSurfaceVariant}
-              />
+              <View
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  backgroundColor: M3.colors.primaryContainer,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Feather
+                  name={
+                    mode === "type"
+                      ? "edit-3"
+                      : mode === "voice"
+                      ? "mic"
+                      : mode === "paste"
+                      ? "clipboard"
+                      : "camera"
+                  }
+                  size={15}
+                  color={M3.colors.primary}
+                />
+              </View>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
                 {mode}
               </Text>

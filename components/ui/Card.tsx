@@ -35,6 +35,11 @@ export function Card({
           backgroundColor: M3.colors.surfaceVariant,
           borderWidth: 1,
           borderColor: M3.colors.outline,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.28,
+          shadowRadius: 12,
+          elevation: 6,
         };
       case "outlined":
         return {
@@ -48,6 +53,11 @@ export function Card({
           backgroundColor: M3.colors.surface,
           borderWidth: 1,
           borderColor: M3.colors.outline,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.18,
+          shadowRadius: 6,
+          elevation: 3,
         };
     }
   })();
