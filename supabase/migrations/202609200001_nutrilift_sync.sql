@@ -51,7 +51,14 @@ alter table public.sync_records enable row level security;
 alter table public.sync_cursors enable row level security;
 alter table public.sync_events enable row level security;
 
+drop policy if exists "Users manage their own profile" on public.profiles;
 create policy "Users manage their own profile" on public.profiles for all using (id = auth.uid()) with check (id = auth.uid());
+
+drop policy if exists "Users manage their own sync records" on public.sync_records;
 create policy "Users manage their own sync records" on public.sync_records for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "Users manage their own sync cursors" on public.sync_cursors;
 create policy "Users manage their own sync cursors" on public.sync_cursors for all using (user_id = auth.uid()) with check (user_id = auth.uid());
+
+drop policy if exists "Users manage their own sync events" on public.sync_events;
 create policy "Users manage their own sync events" on public.sync_events for all using (user_id = auth.uid()) with check (user_id = auth.uid());

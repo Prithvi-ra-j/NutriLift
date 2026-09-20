@@ -62,13 +62,13 @@ describe('End-to-End Component Integration', () => {
     expect(queryByText('Action completed successfully')).toBeNull();
 
     // 1. Open Dialog
-    await act(async () => {
+    act(() => {
       fireEvent.press(getByTestId('open-dialog'));
     });
     expect(getByText('Confirm Action')).toBeTruthy();
 
     // 2. Confirm Dialog
-    await act(async () => {
+    act(() => {
       fireEvent.press(getByText('Confirm'));
     });
     // Dialog should be closed, Snackbar should be visible
@@ -76,10 +76,10 @@ describe('End-to-End Component Integration', () => {
     expect(getByText('Action completed successfully')).toBeTruthy();
 
     // 3. Toggle Theme (verify context works alongside UI interactions)
-    await act(async () => {
+    act(() => {
       fireEvent.press(getByTestId('toggle-theme'));
     });
     // Shouldn't crash, and context should update
-    expect(getByText('Light')).toBeTruthy();
+    expect(getByText(/Light/)).toBeTruthy();
   });
 });

@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** Nutrition OS
+**Project:** NutriLift
 **Generated:** 2026-05-10 15:23:20
 **Category:** Fitness/Gym App
 
