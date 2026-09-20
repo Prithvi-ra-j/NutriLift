@@ -23,6 +23,7 @@ import uuid from "react-native-uuid";
 import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentUser, signInWithEmail, signOut } from "../../lib/supabase/auth";
+import { M3 } from "../../design-system/tokens";
 
 type MoreSection = "body" | "supplements" | "recovery" | "reports" | "settings";
 
