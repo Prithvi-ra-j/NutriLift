@@ -205,8 +205,7 @@ export default function MoreScreen() {
       Alert.alert("Sign-out failed", error.message);
       return;
     }
-account", label: "Account", icon: "cloud" },
-    { key: "
+
     setSignedInEmail(null);
     setSyncStatus("Sign in before syncing");
   };
@@ -216,6 +215,7 @@ account", label: "Account", icon: "cloud" },
     { key: "supplements", label: "Supps", icon: "package" },
     { key: "recovery", label: "Recovery", icon: "moon" },
     { key: "reports", label: "Reports", icon: "file-text" },
+    { key: "account", label: "Account", icon: "cloud" },
     { key: "settings", label: "Settings", icon: "settings" },
   ];
 
