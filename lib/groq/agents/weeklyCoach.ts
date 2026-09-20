@@ -1,4 +1,5 @@
 import { groq } from "../client";
+import { AI_MODELS } from "../model-config";
 import { safeGroqCall } from "../safeCall";
 
 export interface WeeklyContext {
@@ -44,7 +45,7 @@ export async function generateWeeklyReport(
 ): Promise<WeeklyReport> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.weekly_review,
       messages: [
         {
           role: "system",
@@ -118,7 +119,7 @@ export async function generateDailyInsight(
 ): Promise<string> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.daily_insight,
       messages: [
         {
           role: "system",

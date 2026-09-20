@@ -31,7 +31,7 @@ The app remains fully usable without a network connection. User data is stored l
 - Node.js 18 or later
 - npm
 - Android Studio and an emulator for native Android builds, or Expo Go for development
-- A Groq API key for AI features
+- A Supabase project and authenticated account for AI features
 
 ## Install And Run
 
@@ -60,12 +60,21 @@ The `--legacy-peer-deps` flag is currently required because of the Expo/Jest pee
 Create `.env` from `.env.example` and configure the values required by the features you use.
 
 ```dotenv
-GROQ_API_KEY=your_groq_api_key
 EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-Never put a Supabase service-role key in the mobile app. The client only uses the project URL and public anon key. Sync stays disabled until both values are valid.
+Never put a Groq API key or Supabase service-role key in the mobile app. The client only uses the project URL and public anon key. Sync stays disabled until both values are valid.
+
+AI calls go through the authenticated `ai-chat` Edge Function. Apply the gateway migration, set the server-side secret, then deploy the function:
+
+```bash
+supabase db push
+supabase secrets set GROQ_API_KEY=your_groq_api_key
+supabase functions deploy ai-chat
+```
+
+The function verifies the Supabase JWT, accepts only the configured model, and enforces request-size, output-token, and daily per-user limits.
 
 ## Local Data And Sync
 
@@ -99,6 +108,7 @@ lib/integrations/life-os/    Sync contract, mappers, queue, and client
 lib/supabase/                Supabase client and authentication helpers
 lib/groq/                    AI prompts and Groq services
 supabase/migrations/         Cloud schema and RLS policies
+supabase/functions/          Authenticated server-side integrations
 src/__tests__/               Focused sync contract tests
 android/                     Native Android project
 ```
@@ -131,4 +141,4 @@ NutriLift uses `com.prithvi.nutrilift` as its Android application ID and native 
 
 - Live Supabase deployment and end-to-end authentication still require a real Supabase project and configured environment variables.
 - Sync is designed for native SQLite. It is unavailable on web when the native database is not present.
-- AI capabilities require a configured Groq API key and network access.
+- AI capabilities require a deployed `ai-chat` Edge Function, an authenticated Supabase user, and network access.

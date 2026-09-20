@@ -103,11 +103,7 @@ export default function CoachScreen() {
 
       // Generate response with Groq
       responseContent = await generateCoachResponse(
-        {
-          user_profile: context.user_profile,
-          today_nutrition: context.today_nutrition,
-          today_workout: context.today_workout,
-        },
+        context,
         conversationMessages
       );
 

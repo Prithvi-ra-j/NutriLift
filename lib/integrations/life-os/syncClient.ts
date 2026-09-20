@@ -1,3 +1,4 @@
+import { Platform } from "react-native";
 import { getCurrentUser } from "../../supabase/auth";
 import { isSupabaseConfigured, supabase } from "../../supabase/client";
 import { type SyncRecord, validateSyncRecord } from "./exportSchema";
@@ -39,6 +40,10 @@ export function toSupabaseSyncRow(record: SyncRecord, userId: string): SupabaseS
 }
 
 export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
+  if (Platform.OS === "web") {
+    return { uploaded: 0, queued: 0, skipped: 0, cursor: null, error: "Sync is available in the Android app. Web does not have the local SQLite database required for sync." };
+  }
+
   if (!isSupabaseConfigured) {
     return { uploaded: 0, queued: 0, skipped: 0, cursor: null, error: "Supabase is not configured." };
   }

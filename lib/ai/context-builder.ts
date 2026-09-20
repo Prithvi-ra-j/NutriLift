@@ -10,6 +10,9 @@ import { getPreviousYearsAISummaries } from "./yearly-summary-service";
 import type { DailyNutrition, WorkoutSession, PersonalRecord, BodyStat, RecoveryLog } from "../db/schema";
 
 export interface CoachContext {
+  context_version: "1.0";
+  generated_at: string;
+  missing_data: string[];
   user_profile: typeof USER_PROFILE;
   last_7_days_nutrition: DailyNutrition[];
   previous_weeks_ai_summaries: Array<{ week_start: string; week_end: string; summary: string }>;
@@ -35,11 +38,10 @@ export interface CoachContext {
  * Context strategy:
  * - Last 7 days: Full detailed daily data (~2,500 tokens)
  * - Previous 3 weeks: AI-generated weekly summaries (~450 tokens)
- * - Previous 2 months: AI-generated monthly summaries (~700 tokens)
- * - Previous quarter: AI-generated quarterly summary (~900 tokens)
- * - Previous years: AI-generated yearly summaries (~1,200 tokens per year)
+ * - Previous 3 weeks: compact AI summaries for near-term continuity
  * 
- * This keeps token usage under 7,000 even with years of data
+ * Longer-horizon reviews must query deterministic metrics directly instead of
+ * passing nested historical narratives into an interactive coach request.
  */
 
 export async function buildCoachContext(
@@ -49,9 +51,6 @@ export async function buildCoachContext(
   const [
     last7DaysNutrition,
     previousWeeksAISummaries,
-    previousMonthsAISummaries,
-    previousQuartersAISummaries,
-    previousYearsAISummaries,
     recentWorkouts,
     currentPRs,
     latestWeight,
@@ -62,9 +61,6 @@ export async function buildCoachContext(
   ] = await Promise.all([
     getLast7DaysNutrition(),
     getPreviousWeeksAISummaries(), // Last 3 weeks
-    getPreviousMonthsAISummaries(), // Last 2 months
-    getPreviousQuartersAISummaries(), // Last 1 quarter
-    getPreviousYearsAISummaries(), // Last 5 years
     getRecentSessions(2),
     getAllPRs(),
     getLatestWeight(),
@@ -74,13 +70,30 @@ export async function buildCoachContext(
     getProteinHitRate(30),
   ]);
 
+  const missingData: string[] = [];
+  if (last7DaysNutrition.length < 7) {
+    missingData.push(`Nutrition is logged for ${last7DaysNutrition.length} of the last 7 days.`);
+  }
+  if (recentWorkouts.length === 0) {
+    missingData.push("No recent workout is logged.");
+  }
+  if (recoveryLogs.length === 0) {
+    missingData.push("No recent recovery data is logged.");
+  }
+  if (!latestWeight) {
+    missingData.push("No bodyweight is logged.");
+  }
+  if (!todayNutrition) {
+    missingData.push("Today has no nutrition summary yet.");
+  }
+
   return {
+    context_version: "1.0",
+    generated_at: new Date().toISOString(),
+    missing_data: missingData,
     user_profile: USER_PROFILE,
     last_7_days_nutrition: last7DaysNutrition,
     previous_weeks_ai_summaries: previousWeeksAISummaries,
-    previous_months_ai_summaries: previousMonthsAISummaries.length > 0 ? previousMonthsAISummaries : undefined,
-    previous_quarters_ai_summaries: previousQuartersAISummaries.length > 0 ? previousQuartersAISummaries : undefined,
-    previous_years_ai_summaries: previousYearsAISummaries.length > 0 ? previousYearsAISummaries : undefined,
     last_30_days_adherence: {
       protein_hit_rate: proteinHitRate,
     },

@@ -1,4 +1,5 @@
 import { groq } from "./client";
+import { AI_MODELS } from "./model-config";
 import { safeGroqCall } from "./safeCall";
 
 export interface MonthlyReportData {
@@ -59,7 +60,7 @@ export async function generateMonthlyReport(
 ): Promise<MonthlyReport> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.periodic_report,
       messages: [
         {
           role: "system",

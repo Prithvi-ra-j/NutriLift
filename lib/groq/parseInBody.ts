@@ -1,4 +1,5 @@
 import { groq } from "./client";
+import { AI_MODELS } from "./model-config";
 import { safeGroqCall } from "./safeCall";
 
 export interface InBodyParseResult {
@@ -37,7 +38,7 @@ export interface InBodyParseResult {
 export async function parseInBodyText(text: string): Promise<InBodyParseResult> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.inbody_parse,
       messages: [
         {
           role: "system",

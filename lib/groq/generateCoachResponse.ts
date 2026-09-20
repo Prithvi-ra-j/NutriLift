@@ -1,12 +1,9 @@
 import { groq } from "./client";
+import { AI_MODELS } from "./model-config";
 import { safeGroqCall } from "./safeCall";
+import type { CoachContext } from "../ai/context-builder";
 
-export interface CoachContext {
-  user_profile: any;
-  today_nutrition: any;
-  today_workout: any;
-  recent_history?: any;
-}
+export type { CoachContext } from "../ai/context-builder";
 
 export interface CoachMessage {
   role: "system" | "user" | "assistant";
@@ -16,32 +13,13 @@ export interface CoachMessage {
 /**
  * Get today's training type based on the PPL split schedule
  */
-function getTodayTrainingType(): { dayName: string; trainingType: string; date: string } {
+function getTodayTrainingType(todayWorkout: CoachContext["today_workout"]): { dayName: string; trainingType: string; date: string } {
   const now = new Date();
   const dayOfWeek = now.getDay();
   
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
   const dayName = dayNames[dayOfWeek];
-  
-  // PPL x2 Schedule:
-  // Sunday = Marathon (Cardio/Recovery)
-  // Monday = Push A
-  // Tuesday = Pull A
-  // Wednesday = Legs A
-  // Thursday = Push B
-  // Friday = Pull B
-  // Saturday = Legs B
-  const trainingTypeMap: Record<number, string> = {
-    0: "Marathon (Cardio/Recovery)",
-    1: "Push A",
-    2: "Pull A",
-    3: "Legs A",
-    4: "Push B",
-    5: "Pull B",
-    6: "Legs B",
-  };
-  
-  const trainingType = trainingTypeMap[dayOfWeek];
+  const trainingType = todayWorkout?.day_type ?? "No workout logged for today";
   
   // Format date as "May 10, 2026"
   const date = now.toLocaleDateString("en-US", { 
@@ -62,7 +40,7 @@ export async function generateCoachResponse(
   onChunk?: (chunk: string) => void
 ): Promise<string> {
   return safeGroqCall(async () => {
-    const { dayName, trainingType, date } = getTodayTrainingType();
+    const { dayName, trainingType, date } = getTodayTrainingType(context.today_workout);
     
     const systemPrompt = `You are NutriLift Coach — a brutally honest, scientifically rigorous personal trainer and nutritionist.
 
@@ -75,15 +53,6 @@ You have access to the user's health data:
 - Previous 3 weeks: Weekly summaries (averages, hit rates, adherence)
 - Current PRs and body composition
 - Recent recovery logs and supplement adherence
-
-TRAINING SCHEDULE (PPL x2):
-- Sunday: Marathon (Cardio/Recovery) — 20min treadmill, stretching, mobility
-- Monday: Push A — Chest, Shoulders, Triceps
-- Tuesday: Pull A — Back, Biceps, Rear Delts
-- Wednesday: Legs A — Quads, Hamstrings, Glutes, Calves
-- Thursday: Push B — Chest, Shoulders, Triceps (different exercises)
-- Friday: Pull B — Back, Biceps, Rear Delts (different exercises)
-- Saturday: Legs B — Quads, Hamstrings, Glutes, Calves (different exercises)
 
 LIMITATIONS:
 - You CANNOT modify workout plans or add exercises directly
@@ -100,7 +69,7 @@ PERSONA — BRUTALLY HONEST:
 
 RULES:
 - Give specific, actionable answers with numbers.
-- Reference actual data in EVERY response (check last_7_days_nutrition, previous_weeks_summary, today_workout, current_prs).
+- Reference only data present in Current Context. Treat missing_data as unknown, not as evidence that something did not happen.
 - Apply double progression: compound lifts progress when 3×12 hit twice.
 - Consider structural notes (APT, TFL overactivation, ankle restriction) when recommending exercises.
 - Keep responses concise (2-4 paragraphs max unless detail requested).
@@ -114,37 +83,16 @@ ${JSON.stringify(context, null, 2)}`;
       ...messages,
     ];
 
-    if (onChunk) {
-      // Streaming mode
-      const stream = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        messages: allMessages,
-        temperature: 0.3,
-        max_tokens: 1000,
-        stream: true,
-      });
+    const completion = await groq.chat.completions.create({
+      model: AI_MODELS.coach_chat,
+      messages: allMessages,
+      temperature: 0.3,
+      max_tokens: 1000,
+    });
 
-      let fullContent = "";
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content || "";
-        if (content) {
-          fullContent += content;
-          onChunk(content);
-        }
-      }
-
-      return fullContent;
-    } else {
-      // Non-streaming mode
-      const completion = await groq.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
-        messages: allMessages,
-        temperature: 0.3,
-        max_tokens: 1000,
-      });
-
-      return completion.choices[0]?.message?.content || "";
-    }
+    const content = completion.choices[0]?.message?.content || "";
+    if (onChunk && content) onChunk(content);
+    return content;
   }) as Promise<string>;
 }
 
@@ -161,7 +109,7 @@ export async function generateDailyInsight(todayData: {
 }): Promise<string> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.daily_insight,
       messages: [
         {
           role: "system",
@@ -212,7 +160,7 @@ export async function generateWeeklySummary(weekData: {
 }): Promise<string> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.weekly_review,
       messages: [
         {
           role: "system",
@@ -257,7 +205,7 @@ export async function generateMonthlySummary(monthData: {
 }): Promise<string> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.periodic_report,
       messages: [
         {
           role: "system",
@@ -302,7 +250,7 @@ export async function generateQuarterlySummary(quarterData: {
 }): Promise<string> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.periodic_report,
       messages: [
         {
           role: "system",
@@ -356,7 +304,7 @@ export async function generateYearlySummary(yearData: {
 }): Promise<string> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.periodic_report,
       messages: [
         {
           role: "system",

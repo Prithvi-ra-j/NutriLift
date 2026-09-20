@@ -6,13 +6,12 @@ import {
   TouchableOpacity,
   Alert,
   Switch,
-  TextInput,
+  Platform,
 } from "react-native";
 import { Input } from "../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { getGroqApiKey, setGroqApiKey } from "../../lib/groq/client";
 import { insertBodyStat, getLatestWeight } from "../../lib/db/queries/body";
 import { getSupplementLogsForDate, upsertSupplementLog, getRecoveryLog, upsertRecoveryLog } from "../../lib/db/queries/recovery";
 import { getAllReports } from "../../lib/db/queries/reports";
@@ -22,14 +21,13 @@ import type { SupplementLog, MonthlyReport } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
+import { getCurrentUser, signInWithEmail, signOut } from "../../lib/supabase/auth";
 
 type MoreSection = "body" | "supplements" | "recovery" | "reports" | "settings";
 
 export default function MoreScreen() {
   const today = new Date().toISOString().split("T")[0];
   const [activeSection, setActiveSection] = useState<MoreSection>("body");
-  const [apiKeyInput, setApiKeyInput] = useState(getGroqApiKey() || "");
-
   // Body stats
   const [weightInput, setWeightInput] = useState("");
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
@@ -50,6 +48,11 @@ export default function MoreScreen() {
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState("Not synced yet");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const isWeb = Platform.OS === "web";
 
   const loadData = useCallback(async () => {
     const [weight, suppLogs, recoveryLog, reportsData] = await Promise.all([
@@ -77,6 +80,10 @@ export default function MoreScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    getCurrentUser().then(({ user }) => setSignedInEmail(user?.email ?? null));
+  }, []);
 
   const logWeight = async () => {
     const weight = parseFloat(weightInput);
@@ -153,6 +160,37 @@ export default function MoreScreen() {
 
     setSyncStatus(`Uploaded ${result.uploaded}, skipped ${result.skipped}`);
     Alert.alert("Sync complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
+  };
+
+  const handleSignIn = async () => {
+    if (!email.trim() || !password) {
+      Alert.alert("Missing details", "Enter your Supabase email and password.");
+      return;
+    }
+
+    setIsAuthenticating(true);
+    const { data, error } = await signInWithEmail(email.trim(), password);
+    setIsAuthenticating(false);
+
+    if (error || !data.user) {
+      Alert.alert("Sign-in failed", error?.message || "Could not start a Supabase session.");
+      return;
+    }
+
+    setPassword("");
+    setSignedInEmail(data.user.email ?? email.trim());
+    setSyncStatus("Ready to sync");
+  };
+
+  const handleSignOut = async () => {
+    const { error } = await signOut();
+    if (error) {
+      Alert.alert("Sign-out failed", error.message);
+      return;
+    }
+
+    setSignedInEmail(null);
+    setSyncStatus("Sign in before syncing");
   };
 
   const sections: { key: MoreSection; label: string; icon: React.ComponentProps<typeof Feather>["name"] }[] = [
@@ -538,48 +576,41 @@ export default function MoreScreen() {
 
             <Card>
               <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-                API CONFIGURATION
+                SUPABASE ACCOUNT
+              </Text>
+              {signedInEmail ? (
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                  <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>
+                    Signed in as {signedInEmail}
+                  </Text>
+                  <TouchableOpacity onPress={handleSignOut}>
+                    <Text style={{ color: "#FF6B6B", fontSize: 13, fontFamily: "DMSans_700Bold" }}>Sign out</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={{ gap: 10 }}>
+                  <Input value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" placeholder="Email" />
+                  <Input value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" />
+                  <TouchableOpacity
+                    onPress={handleSignIn}
+                    disabled={!isSupabaseConfigured || isAuthenticating}
+                    style={{ backgroundColor: isSupabaseConfigured ? "#00D4AA" : "#252535", borderRadius: 8, paddingVertical: 10, alignItems: "center" }}
+                  >
+                    <Text style={{ color: isSupabaseConfigured ? "#0A0A0F" : "#8080A0", fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                      {isAuthenticating ? "Signing in" : "Sign in"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </Card>
+
+            <Card>
+              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                AI GATEWAY
               </Text>
               <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
-                Groq API Key
+                {isSupabaseConfigured ? "Authenticated AI gateway available" : "Configure Supabase to enable AI"}
               </Text>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <TextInput
-                  value={apiKeyInput}
-                  onChangeText={setApiKeyInput}
-                  placeholder="gsk_..."
-                  placeholderTextColor="#4A4A6A"
-                  secureTextEntry={true}
-                  style={{
-                    flex: 1,
-                    backgroundColor: "#1A1A26",
-                    borderRadius: 8,
-                    padding: 12,
-                    color: "#F0F0F5",
-                    fontSize: 14,
-                    fontFamily: "DMSans_400Regular",
-                    borderWidth: 1,
-                    borderColor: "#252535",
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    setGroqApiKey(apiKeyInput);
-                    Alert.alert("Saved", "Groq API Key updated successfully.");
-                  }}
-                  style={{
-                    backgroundColor: "#00D4AA",
-                    borderRadius: 8,
-                    paddingHorizontal: 16,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text style={{ color: "#0A0A0F", fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                    Save
-                  </Text>
-                </TouchableOpacity>
-              </View>
             </Card>
 
             <Card>
@@ -587,27 +618,27 @@ export default function MoreScreen() {
                 <View>
                   <Text style={{ color: "#F0F0F5", fontSize: 15, fontFamily: "DMSans_700Bold" }}>NutriLift Sync</Text>
                   <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 3 }}>
-                    {isSupabaseConfigured ? syncStatus : "Supabase is not configured"}
+                    {isWeb ? "Sync is available in the Android app" : isSupabaseConfigured ? syncStatus : "Supabase is not configured"}
                   </Text>
                 </View>
                 <TouchableOpacity
                   accessibilityLabel="Sync NutriLift data now"
-                  disabled={!isSupabaseConfigured || isSyncing}
+                  disabled={isWeb || !isSupabaseConfigured || !signedInEmail || isSyncing}
                   onPress={syncNow}
                   style={{
-                    backgroundColor: isSupabaseConfigured ? "#00D4AA" : "#252535",
+                    backgroundColor: !isWeb && isSupabaseConfigured && signedInEmail ? "#00D4AA" : "#252535",
                     borderRadius: 8,
                     paddingHorizontal: 14,
                     paddingVertical: 10,
                   }}
                 >
-                  <Text style={{ color: isSupabaseConfigured ? "#0A0A0F" : "#8080A0", fontSize: 12, fontFamily: "DMSans_700Bold" }}>
-                    {isSyncing ? "Syncing" : "Sync now"}
+                  <Text style={{ color: !isWeb && isSupabaseConfigured && signedInEmail ? "#0A0A0F" : "#8080A0", fontSize: 12, fontFamily: "DMSans_700Bold" }}>
+                    {isSyncing ? "Syncing" : isWeb ? "Android only" : "Sync now"}
                   </Text>
                 </TouchableOpacity>
               </View>
               <Text style={{ color: "#4A4A6A", fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-                Sign in with your shared Supabase account before syncing.
+                {isWeb ? "Web uses a no-op database; use Android for local-first sync." : signedInEmail ? "Sync uploads locally queued changes to your Supabase account." : "Sign in above before syncing."}
               </Text>
             </Card>
 

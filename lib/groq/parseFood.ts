@@ -1,4 +1,5 @@
 import { groq } from "./client";
+import { AI_MODELS } from "./model-config";
 import { safeGroqCall } from "./safeCall";
 
 export interface ParsedFoodItem {
@@ -25,7 +26,7 @@ export interface FoodParseResult {
 export async function parseFoodFromText(text: string): Promise<FoodParseResult> {
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: AI_MODELS.food_parse,
       messages: [
         {
           role: "system",

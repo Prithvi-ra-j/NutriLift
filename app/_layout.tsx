@@ -1,7 +1,6 @@
 import "../global.css";
 import { useEffect, useState } from "react";
-import { loadGroqApiKey } from "../lib/groq/client";
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, Text, ActivityIndicator, Platform } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -33,15 +32,14 @@ export default function RootLayout() {
 
   useEffect(() => {
     logger.info("App starting - initializing database");
-    Promise.all([
-      runMigrations(),
-      loadGroqApiKey()
-    ])
+    runMigrations()
       .then(() => {
         logger.info("Database migrations completed successfully");
         setDbReady(true);
+        if (Platform.OS === "web") return;
+
         syncToSupabase().then((result) => {
-          if (result.error && result.error !== "Supabase is not configured.") {
+          if (result.error && result.error !== "Supabase is not configured." && result.error !== "Sign in before syncing NutriLift.") {
             logger.warn("NutriLift sync did not complete", { error: result.error });
           }
         }).catch((error) => {
