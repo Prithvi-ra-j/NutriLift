@@ -40,6 +40,7 @@ import { PRBadge } from "../../components/ui/PRBadge";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
+import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
@@ -148,6 +149,7 @@ export default function WorkoutScreen() {
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [exercises, setExercises] = useState<ExerciseLog[]>([]);
   const [sets, setSets] = useState<Record<string, SetLog[]>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
   const [selectedDayType, setSelectedDayType] = useState<DayType>(getDefaultDayType(todayStr));
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -211,6 +213,7 @@ export default function WorkoutScreen() {
     setCustomExercises(custom);
 
     await loadCompletedDayTypes();
+    setIsLoading(false);
   }, [selectedDate]);
 
   const loadCompletedDayTypes = async () => {
@@ -776,6 +779,18 @@ export default function WorkoutScreen() {
   };
 
   // ─── Main Render ───────────────────────────────────────────────────────────
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+        <View style={{ padding: 20, gap: 16 }}>
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>

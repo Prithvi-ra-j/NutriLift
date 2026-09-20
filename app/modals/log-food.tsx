@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -17,6 +16,8 @@ import { parseFoodInput, type ParsedFoodItem } from "../../lib/ai/parsers";
 import { insertFoodLog } from "../../lib/db/queries/nutrition";
 import { useUIStore } from "../../lib/stores/ui.store";
 import { Card } from "../../components/ui/Card";
+import { ModalHeader } from "../../components/ui/ModalHeader";
+import { Button } from "../../components/ui/Button";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 
@@ -140,15 +141,7 @@ export default function LogFoodModal() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
-        {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, paddingBottom: 12 }}>
-          <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-            LOG FOOD
-          </Text>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-          </TouchableOpacity>
-        </View>
+        <ModalHeader title="LOG FOOD" />
 
         <ScrollView
           contentContainerStyle={{ padding: 20, paddingTop: 0, gap: 16, paddingBottom: 40 }}
@@ -233,28 +226,13 @@ export default function LogFoodModal() {
             />
           </View>
 
-          <TouchableOpacity
+          <Button
+            label={isParsing ? "Parsing..." : "Parse with AI"}
+            icon="cpu"
+            loading={isParsing}
+            disabled={!input.trim()}
             onPress={handleParse}
-            disabled={!input.trim() || isParsing}
-            style={{
-              backgroundColor: input.trim() && !isParsing ? M3.colors.primary : M3.colors.surfaceVariant,
-              borderRadius: 8,
-              padding: 14,
-              flexDirection: "row",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-            }}
-          >
-            {isParsing ? (
-              <ActivityIndicator size="small" color={M3.colors.background} />
-            ) : (
-              <Feather name="cpu" size={16} color={input.trim() ? M3.colors.background : M3.colors.onSurfaceMuted} />
-            )}
-            <Text style={{ color: input.trim() && !isParsing ? M3.colors.background : M3.colors.onSurfaceMuted, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-              {isParsing ? "Parsing..." : "Parse with AI"}
-            </Text>
-          </TouchableOpacity>
+          />
 
           {/* ── Parse Notes ── */}
           {parseNotes && (
@@ -301,7 +279,7 @@ export default function LogFoodModal() {
                       { label: "Kcal", field: "calories" as const, color: M3.colors.primary },
                       { label: "P(g)", field: "protein_g" as const, color: M3.colors.secondary },
                       { label: "C(g)", field: "carbs_g" as const, color: M3.colors.success },
-                      { label: "F(g)", field: "fat_g" as const, color: "#F59E0B" },
+                      { label: "F(g)", field: "fat_g" as const, color: M3.macroColors.fat },
                     ].map(({ label, field, color }) => (
                       <View key={field} style={{ flex: 1 }}>
                         <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular", marginBottom: 3, textAlign: "center" }}>
@@ -345,35 +323,19 @@ export default function LogFoodModal() {
                     <Text style={{ color: M3.colors.success, fontSize: 18, fontFamily: "BebasNeue_400Regular" }}>
                       C: {totalMacros.carbs.toFixed(0)}g
                     </Text>
-                    <Text style={{ color: "#F59E0B", fontSize: 18, fontFamily: "BebasNeue_400Regular" }}>
+                    <Text style={{ color: M3.macroColors.fat, fontSize: 18, fontFamily: "BebasNeue_400Regular" }}>
                       F: {totalMacros.fat.toFixed(0)}g
                     </Text>
                   </View>
                 </Card>
               )}
 
-              <TouchableOpacity
+              <Button
+                label={isSaving ? "Saving..." : `Log to ${selectedMeal}`}
+                icon="check"
+                loading={isSaving}
                 onPress={handleSave}
-                disabled={isSaving}
-                style={{
-                  backgroundColor: M3.colors.primary,
-                  borderRadius: 8,
-                  padding: 16,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                }}
-              >
-                {isSaving ? (
-                  <ActivityIndicator size="small" color={M3.colors.background} />
-                ) : (
-                  <Feather name="check" size={18} color={M3.colors.background} />
-                )}
-                <Text style={{ color: M3.colors.background, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
-                  {isSaving ? "Saving..." : `Log to ${selectedMeal}`}
-                </Text>
-              </TouchableOpacity>
+              />
             </>
           )}
         </ScrollView>

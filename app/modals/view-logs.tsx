@@ -8,10 +8,13 @@ import {
   Share,
   Alert,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { logger } from "../../lib/logger";
 import * as FileSystem from "expo-file-system/legacy";
+import { ModalHeader } from "../../components/ui/ModalHeader";
+import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 
 export default function ViewLogsModal() {
@@ -86,49 +89,52 @@ export default function ViewLogsModal() {
   };
 
   return (
-    <View className="flex-1 bg-[#0A0A0F]">
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-6 pt-14 pb-4 border-b border-gray-800">
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="close" size={28} color={M3.colors.onSurfaceVariant} />
-        </TouchableOpacity>
-        <Text className="text-white font-bebas text-2xl">App Logs</Text>
-        <View className="flex-row gap-4">
-          {Platform.OS === "web" && (
-            <TouchableOpacity onPress={handleClear}>
-              <Ionicons name="trash-outline" size={24} color={M3.colors.onSurfaceVariant} />
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity onPress={handleShare}>
-            <Ionicons name="share-outline" size={24} color={M3.colors.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+      <ModalHeader
+        title="APP LOGS"
+        rightIcon={Platform.OS === "web" ? "trash-2" : "share"}
+        onRightPress={Platform.OS === "web" ? handleClear : handleShare}
+      />
 
       {/* Content */}
       {loading ? (
-        <View className="flex-1 items-center justify-center">
-          <Text className="text-gray-400 font-dm">Loading logs...</Text>
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <Text style={{ color: M3.colors.onSurfaceVariant, ...M3.typescale.bodyLarge }}>
+            Loading logs...
+          </Text>
         </View>
       ) : (
-        <ScrollView className="flex-1 px-6 py-4">
-          <View className="bg-black/50 rounded-lg p-4">
-            <Text className="text-gray-300 font-mono text-xs leading-5">
+        <ScrollView style={{ flex: 1, paddingHorizontal: 20, paddingTop: 4 }}>
+          <View
+            style={{
+              backgroundColor: M3.colors.surface,
+              borderRadius: M3.shape.medium,
+              padding: M3.spacing.lg,
+              borderWidth: 1,
+              borderColor: M3.colors.outline,
+            }}
+          >
+            <Text
+              style={{
+                color: M3.colors.onSurfaceVariant,
+                fontSize: 11,
+                fontFamily: "DMSans_400Regular",
+                lineHeight: 18,
+              }}
+            >
               {logs}
             </Text>
           </View>
         </ScrollView>
       )}
 
-      {/* Refresh Button */}
-      <View className="px-6 pb-8">
-        <TouchableOpacity
-          onPress={loadLogs}
-          className="bg-[#00D4AA] rounded-lg py-4 items-center"
-        >
-          <Text className="text-black font-dm-bold text-base">Refresh Logs</Text>
-        </TouchableOpacity>
+      {/* Actions */}
+      <View style={{ paddingHorizontal: 20, paddingBottom: 24, gap: 8, paddingTop: 12 }}>
+        {Platform.OS === "web" && (
+          <Button label="Share / Download" icon="share" variant="secondary" onPress={handleShare} />
+        )}
+        <Button label="Refresh Logs" icon="refresh-cw" onPress={loadLogs} />
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

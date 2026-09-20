@@ -74,7 +74,7 @@ export function MacroRing({
             left: 0,
             right: 0,
             height: "33.34%",
-            backgroundColor: "#F59E0B",
+            backgroundColor: M3.macroColors.fat,
             opacity: fatPct / 100,
           }}
         />
@@ -115,7 +115,7 @@ export function MacroRing({
           </Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#F59E0B" }} />
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: M3.macroColors.fat }} />
           <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
             F {fatPct.toFixed(0)}%
           </Text>

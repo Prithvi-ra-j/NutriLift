@@ -13,6 +13,8 @@ import { CameraView, Camera } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { lookupBarcode } from "../../lib/services/barcodeScanner";
 import { logger } from "../../lib/logger";
+import { Button } from "../../components/ui/Button";
+import { M3 } from "../../design-system/tokens";
 
 type ScanState = "scanning" | "detecting" | "found" | "not_found" | "error" | "offline";
 
@@ -167,7 +169,7 @@ export default function BarcodeScannerModal() {
   if (hasPermission === null) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#00D4AA" />
+        <ActivityIndicator size="large" color={M3.colors.primary} />
         <Text style={styles.loadingText}>Requesting camera permission...</Text>
       </View>
     );
@@ -176,23 +178,14 @@ export default function BarcodeScannerModal() {
   if (hasPermission === false) {
     return (
       <View style={styles.container}>
-        <Ionicons name={"camera-off" as any} size={64} color="#8080A0" />
+        <Ionicons name={"camera-off" as any} size={64} color={M3.colors.onSurfaceMuted} />
         <Text style={styles.errorTitle}>Camera Access Denied</Text>
         <Text style={styles.errorText}>
           Camera permission is required to scan barcodes.
         </Text>
-        <TouchableOpacity style={styles.settingsButton} onPress={openSettings}>
-          <Text style={styles.settingsButtonText}>Open Settings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.manualButton}
-          onPress={() => setManualEntry(true)}
-        >
-          <Text style={styles.manualButtonText}>Enter Barcode Manually</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
+        <Button label="Open Settings" onPress={openSettings} style={{ marginTop: 24 }} />
+        <Button label="Enter Barcode Manually" variant="ghost" onPress={() => setManualEntry(true)} style={{ marginTop: 12 }} />
+        <Button label="Cancel" variant="ghost" onPress={() => router.back()} style={{ marginTop: 4 }} />
       </View>
     );
   }
@@ -211,28 +204,26 @@ export default function BarcodeScannerModal() {
             value={manualBarcode}
             onChangeText={setManualBarcode}
             placeholder="e.g., 8901234567890"
-            placeholderTextColor="#4A4A6A"
+            placeholderTextColor={M3.colors.onSurfaceMuted}
             keyboardType="number-pad"
             autoFocus
           />
           
           <View style={styles.manualButtons}>
-            <TouchableOpacity
-              style={[styles.button, styles.cancelBtn]}
+            <Button
+              label="Cancel"
+              variant="secondary"
               onPress={() => {
                 setManualEntry(false);
                 setManualBarcode("");
               }}
-            >
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.button, styles.lookupBtn]}
+              style={{ flex: 1 }}
+            />
+            <Button
+              label="Lookup"
               onPress={handleManualEntry}
-            >
-              <Text style={styles.lookupBtnText}>Lookup</Text>
-            </TouchableOpacity>
+              style={{ flex: 1 }}
+            />
           </View>
         </View>
       </View>
@@ -257,13 +248,14 @@ export default function BarcodeScannerModal() {
           ],
         }}
       >
-        {/* Header */}
+        {/* Header — semi-transparent overlay on camera */}
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="close" size={28} color="#FFF" />
+            <Ionicons name="close" size={28} color={M3.colors.onSurface} />
           </TouchableOpacity>
           
           <Text style={styles.headerTitle}>Scan Barcode</Text>
@@ -271,11 +263,12 @@ export default function BarcodeScannerModal() {
           <TouchableOpacity
             style={styles.torchButton}
             onPress={() => setTorchOn(!torchOn)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <Ionicons
               name={torchOn ? "flash" : "flash-off"}
               size={24}
-              color="#FFF"
+              color={M3.colors.onSurface}
             />
           </TouchableOpacity>
         </View>
@@ -296,19 +289,19 @@ export default function BarcodeScannerModal() {
             )}
             
             {scanState === "detecting" && (
-              <ActivityIndicator size="large" color="#00D4AA" />
+              <ActivityIndicator size="large" color={M3.colors.primary} />
             )}
             
             {scanState === "found" && (
-              <Ionicons name="checkmark-circle" size={64} color="#00C875" />
+              <Ionicons name="checkmark-circle" size={64} color={M3.colors.success} />
             )}
             
             {scanState === "not_found" && (
-              <Ionicons name="close-circle" size={64} color="#FF6B6B" />
+              <Ionicons name="close-circle" size={64} color={M3.colors.error} />
             )}
             
             {scanState === "error" && (
-              <Ionicons name="alert-circle" size={64} color="#FFB800" />
+              <Ionicons name="alert-circle" size={64} color={M3.colors.warning} />
             )}
           </View>
           
@@ -327,7 +320,7 @@ export default function BarcodeScannerModal() {
             style={styles.manualEntryButton}
             onPress={() => setManualEntry(true)}
           >
-            <Ionicons name="keypad" size={20} color="#00D4AA" />
+            <Ionicons name="keypad" size={20} color={M3.colors.primary} />
             <Text style={styles.manualEntryText}>
               Can't scan? Enter barcode manually
             </Text>
@@ -341,7 +334,7 @@ export default function BarcodeScannerModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0A0F",
+    backgroundColor: M3.colors.background,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -349,6 +342,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
   },
+  // Camera overlay header — kept semi-transparent so camera is visible behind
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -367,9 +361,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   headerTitle: {
-    color: "#FFF",
-    fontSize: 18,
-    fontFamily: "DMSans_700Bold",
+    color: M3.colors.onSurface,
+    ...M3.typescale.headlineMedium,
   },
   torchButton: {
     width: 40,
@@ -388,46 +381,46 @@ const styles = StyleSheet.create({
     width: 280,
     height: 180,
     borderWidth: 3,
-    borderColor: "#00D4AA",
-    borderRadius: 12,
+    borderColor: M3.colors.primary,
+    borderRadius: M3.shape.medium,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0, 212, 170, 0.1)",
+    backgroundColor: `${M3.colors.primary}1A`, // 10% opacity of primary
   },
   reticleDetecting: {
-    borderColor: "#FFB800",
-    backgroundColor: "rgba(255, 184, 0, 0.1)",
+    borderColor: M3.colors.warning,
+    backgroundColor: `${M3.colors.warning}1A`,
   },
   reticleFound: {
-    borderColor: "#00C875",
-    backgroundColor: "rgba(0, 200, 117, 0.1)",
+    borderColor: M3.colors.success,
+    backgroundColor: `${M3.colors.success}1A`,
   },
   reticleNotFound: {
-    borderColor: "#FF6B6B",
-    backgroundColor: "rgba(255, 107, 107, 0.1)",
+    borderColor: M3.colors.error,
+    backgroundColor: `${M3.colors.error}1A`,
   },
   reticleError: {
-    borderColor: "#FFB800",
-    backgroundColor: "rgba(255, 184, 0, 0.1)",
+    borderColor: M3.colors.warning,
+    backgroundColor: `${M3.colors.warning}1A`,
   },
   scanningLine: {
     width: "100%",
     height: 2,
-    backgroundColor: "#00D4AA",
+    backgroundColor: M3.colors.primary,
     position: "absolute",
     top: "50%",
   },
   reticleText: {
     marginTop: 20,
-    color: "#FFF",
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
+    color: M3.colors.onSurface,
+    ...M3.typescale.titleMedium,
     textAlign: "center",
     backgroundColor: "rgba(0, 0, 0, 0.7)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: M3.spacing.lg,
+    paddingVertical: M3.spacing.sm,
+    borderRadius: M3.shape.small,
   },
+  // Camera overlay footer — semi-transparent
   footer: {
     paddingBottom: 40,
     paddingHorizontal: 20,
@@ -441,119 +434,57 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   manualEntryText: {
-    color: "#00D4AA",
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
+    color: M3.colors.primary,
+    ...M3.typescale.titleMedium,
   },
   loadingText: {
-    marginTop: 16,
-    color: "#8080A0",
-    fontSize: 14,
-    fontFamily: "DMSans_400Regular",
+    marginTop: M3.spacing.lg,
+    color: M3.colors.onSurfaceMuted,
+    ...M3.typescale.bodyLarge,
   },
   errorTitle: {
-    marginTop: 16,
-    color: "#F0F0F5",
-    fontSize: 18,
-    fontFamily: "DMSans_700Bold",
+    marginTop: M3.spacing.lg,
+    color: M3.colors.onSurface,
+    ...M3.typescale.headlineMedium,
   },
   errorText: {
-    marginTop: 8,
-    color: "#8080A0",
-    fontSize: 14,
-    fontFamily: "DMSans_400Regular",
+    marginTop: M3.spacing.sm,
+    color: M3.colors.onSurfaceMuted,
+    ...M3.typescale.bodyLarge,
     textAlign: "center",
     paddingHorizontal: 40,
   },
-  settingsButton: {
-    marginTop: 24,
-    backgroundColor: "#00D4AA",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  settingsButtonText: {
-    color: "#0A0A0F",
-    fontSize: 14,
-    fontFamily: "DMSans_700Bold",
-  },
-  manualButton: {
-    marginTop: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  manualButtonText: {
-    color: "#00D4AA",
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
-  },
-  cancelButton: {
-    marginTop: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  cancelButtonText: {
-    color: "#8080A0",
-    fontSize: 14,
-    fontFamily: "DMSans_500Medium",
-  },
   manualEntryContainer: {
     width: "85%",
-    backgroundColor: "#12121A",
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: M3.colors.surface,
+    borderRadius: M3.shape.large,
+    padding: M3.spacing.xxl,
     borderWidth: 1,
-    borderColor: "#252535",
+    borderColor: M3.colors.outline,
   },
   manualTitle: {
-    color: "#F0F0F5",
-    fontSize: 20,
-    fontFamily: "DMSans_700Bold",
-    marginBottom: 8,
+    color: M3.colors.onSurface,
+    ...M3.typescale.headlineLarge,
+    marginBottom: M3.spacing.sm,
   },
   manualSubtitle: {
-    color: "#8080A0",
-    fontSize: 13,
-    fontFamily: "DMSans_400Regular",
-    marginBottom: 20,
+    color: M3.colors.onSurfaceMuted,
+    ...M3.typescale.bodyMedium,
+    marginBottom: M3.spacing.xl,
   },
   manualInput: {
-    backgroundColor: "#1A1A26",
-    borderRadius: 8,
-    padding: 16,
-    color: "#F0F0F5",
+    backgroundColor: M3.colors.surfaceVariant,
+    borderRadius: M3.shape.small,
+    padding: M3.spacing.lg,
+    color: M3.colors.onSurface,
     fontSize: 18,
     fontFamily: "BebasNeue_400Regular",
     borderWidth: 1,
-    borderColor: "#252535",
-    marginBottom: 20,
+    borderColor: M3.colors.outline,
+    marginBottom: M3.spacing.xl,
   },
   manualButtons: {
     flexDirection: "row",
     gap: 12,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  cancelBtn: {
-    backgroundColor: "#1A1A26",
-    borderWidth: 1,
-    borderColor: "#252535",
-  },
-  cancelBtnText: {
-    color: "#8080A0",
-    fontSize: 14,
-    fontFamily: "DMSans_700Bold",
-  },
-  lookupBtn: {
-    backgroundColor: "#00D4AA",
-  },
-  lookupBtnText: {
-    color: "#0A0A0F",
-    fontSize: 14,
-    fontFamily: "DMSans_700Bold",
   },
 });

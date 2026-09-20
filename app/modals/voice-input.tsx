@@ -8,6 +8,9 @@ import { transcribeAudioMultilingual } from "../../lib/groq/transcribeAudio";
 import { parseFoodFromVoice } from "../../lib/groq/parseFood";
 import { isGroqConfigured } from "../../lib/groq/client";
 import { insertFoodLog } from "../../lib/db/queries/nutrition";
+import { ModalHeader } from "../../components/ui/ModalHeader";
+import { Button } from "../../components/ui/Button";
+import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 
 export default function VoiceInputModal() {
@@ -125,45 +128,39 @@ export default function VoiceInputModal() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20 }}>
-        <Text style={{ color: "#F0F0F5", fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-          VOICE LOG
-        </Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="x" size={22} color="#8080A0" />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+      <ModalHeader title="VOICE LOG" />
 
-      <ScrollView contentContainerStyle={{ flex: 1, padding: 20, gap: 16 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 16 }}>
         {/* Recording Button */}
         <View style={{ alignItems: "center", justifyContent: "center", gap: 24, paddingVertical: 40 }}>
           <TouchableOpacity
             onPress={isRecording ? stopRecording : startRecording}
             disabled={isProcessing}
+            activeOpacity={0.85}
             style={{
               width: 120,
               height: 120,
               borderRadius: 60,
-              backgroundColor: isRecording ? "#FF475722" : "#00D4AA22",
+              backgroundColor: isRecording ? M3.colors.errorContainer : M3.colors.primaryContainer,
               borderWidth: 3,
-              borderColor: isRecording ? "#FF4757" : "#00D4AA",
+              borderColor: isRecording ? M3.colors.error : M3.colors.primary,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             {isProcessing ? (
-              <ActivityIndicator size="large" color="#00D4AA" />
+              <ActivityIndicator size="large" color={M3.colors.primary} />
             ) : (
               <Feather
                 name={isRecording ? "square" : "mic"}
                 size={48}
-                color={isRecording ? "#FF4757" : "#00D4AA"}
+                color={isRecording ? M3.colors.error : M3.colors.primary}
               />
             )}
           </TouchableOpacity>
 
-          <Text style={{ color: "#F0F0F5", fontSize: 16, fontFamily: "DMSans_500Medium", textAlign: "center" }}>
+          <Text style={{ color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_500Medium", textAlign: "center" }}>
             {isRecording
               ? "Recording... tap to stop"
               : isProcessing
@@ -171,21 +168,21 @@ export default function VoiceInputModal() {
               : "Tap to start recording"}
           </Text>
 
-          <Text style={{ color: "#4A4A6A", fontSize: 12, fontFamily: "DMSans_400Regular", textAlign: "center", paddingHorizontal: 20 }}>
+          <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular", textAlign: "center", paddingHorizontal: 20 }}>
             Say what you ate, e.g. "4 eggs, a bowl of dal, and 2 rotis"
           </Text>
         </View>
 
         {/* Error Display */}
         {error && (
-          <View style={{ backgroundColor: "#FF475722", borderRadius: 12, padding: 16, borderWidth: 1, borderColor: "#FF4757" }}>
+          <View style={{ backgroundColor: M3.colors.errorContainer, borderRadius: M3.shape.large, padding: 16, borderWidth: 1, borderColor: M3.colors.error }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Feather name="alert-circle" size={16} color="#FF4757" />
-              <Text style={{ color: "#FF4757", fontSize: 13, fontFamily: "DMSans_500Medium" }}>
+              <Feather name="alert-circle" size={16} color={M3.colors.error} />
+              <Text style={{ color: M3.colors.error, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
                 Error
               </Text>
             </View>
-            <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: 6 }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: 6 }}>
               {error}
             </Text>
           </View>
@@ -193,14 +190,14 @@ export default function VoiceInputModal() {
 
         {/* Transcript Display */}
         {transcript && (
-          <View style={{ backgroundColor: "#12121A", borderRadius: 12, padding: 16, borderWidth: 1, borderColor: "#252535" }}>
+          <View style={{ backgroundColor: M3.colors.surface, borderRadius: M3.shape.large, padding: 16, borderWidth: 1, borderColor: M3.colors.outline }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Feather name="message-square" size={14} color="#00D4AA" />
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+              <Feather name="message-square" size={14} color={M3.colors.primary} />
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                 TRANSCRIPT
               </Text>
             </View>
-            <Text style={{ color: "#F0F0F5", fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
               {transcript}
             </Text>
           </View>
@@ -208,10 +205,10 @@ export default function VoiceInputModal() {
 
         {/* Parsed Food Display */}
         {parsedFood && parsedFood.items && parsedFood.items.length > 0 && (
-          <View style={{ backgroundColor: "#12121A", borderRadius: 12, padding: 16, borderWidth: 1, borderColor: "#252535", gap: 12 }}>
+          <View style={{ backgroundColor: M3.colors.surface, borderRadius: M3.shape.large, padding: 16, borderWidth: 1, borderColor: M3.colors.outline, gap: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Feather name="check-circle" size={14} color="#00C875" />
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+              <Feather name="check-circle" size={14} color={M3.colors.success} />
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                 DETECTED FOOD ({parsedFood.items.length})
               </Text>
             </View>
@@ -220,67 +217,54 @@ export default function VoiceInputModal() {
               <View
                 key={index}
                 style={{
-                  backgroundColor: "#1A1A26",
-                  borderRadius: 8,
+                  backgroundColor: M3.colors.surfaceVariant,
+                  borderRadius: M3.shape.medium,
                   padding: 12,
                   gap: 6,
                 }}
               >
-                <Text style={{ color: "#F0F0F5", fontSize: 14, fontFamily: "DMSans_700Bold" }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
                   {item.name}
                 </Text>
-                <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                   {item.quantity}
                 </Text>
                 <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
-                  <Text style={{ color: "#3B82F6", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                  <Text style={{ color: M3.colors.secondary, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
                     {item.calories} kcal
                   </Text>
-                  <Text style={{ color: "#22C55E", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                  <Text style={{ color: M3.colors.success, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
                     P: {item.protein_g}g
                   </Text>
-                  <Text style={{ color: "#F59E0B", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                  <Text style={{ color: M3.colors.warning, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
                     C: {item.carbs_g}g
                   </Text>
-                  <Text style={{ color: "#EF4444", fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                  <Text style={{ color: M3.colors.error, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
                     F: {item.fat_g}g
                   </Text>
                 </View>
                 {item.confidence === "low" && (
-                  <Text style={{ color: "#FFB800", fontSize: 10, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
-                    ⚠️ Low confidence estimate
+                  <Text style={{ color: M3.colors.warning, fontSize: 10, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
+                    Low confidence estimate
                   </Text>
                 )}
               </View>
             ))}
 
             {parsedFood.meal_suggestion && (
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
                 Suggested meal: {parsedFood.meal_suggestion}
               </Text>
             )}
 
             {parsedFood.parse_notes && (
-              <Text style={{ color: "#FFB800", fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
+              <Text style={{ color: M3.colors.warning, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
                 Note: {parsedFood.parse_notes}
               </Text>
             )}
 
             {/* Save Button */}
-            <TouchableOpacity
-              onPress={saveFoodLogs}
-              style={{
-                backgroundColor: "#00D4AA",
-                borderRadius: 8,
-                padding: 14,
-                alignItems: "center",
-                marginTop: 8,
-              }}
-            >
-              <Text style={{ color: "#0A0A0F", fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                Save to Food Log
-              </Text>
-            </TouchableOpacity>
+            <Button label="Save to Food Log" onPress={saveFoodLogs} style={{ marginTop: 8 }} />
           </View>
         )}
       </ScrollView>

@@ -23,6 +23,7 @@ import { MacroBar } from "../../components/ui/MacroBar";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
+import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
 
@@ -61,6 +62,7 @@ export default function NutritionScreen() {
 
   const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
 
   const loadData = useCallback(async () => {
@@ -77,6 +79,7 @@ export default function NutritionScreen() {
       console.error("Nutrition load error:", err);
     } finally {
       setRefreshing(false);
+      setIsLoading(false);
     }
   }, [selectedDate]);
 
@@ -112,6 +115,18 @@ export default function NutritionScreen() {
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
   const mealGroups = groupByMeal(foodLogs);
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+        <View style={{ padding: 20, gap: 16 }}>
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
@@ -163,7 +178,7 @@ export default function NutritionScreen() {
           </View>
           <MacroBar label="Protein" current={protein} target={USER_PROFILE.targets.protein_g} color={M3.colors.secondary} />
           <MacroBar label="Carbs" current={carbs} target={USER_PROFILE.targets.carbs_g} color={M3.colors.success} />
-          <MacroBar label="Fat" current={fat} target={USER_PROFILE.targets.fat_g} color="#F59E0B" />
+          <MacroBar label="Fat" current={fat} target={USER_PROFILE.targets.fat_g} color={M3.macroColors.fat} />
         </Card>
 
         {/* ── Log Mode Buttons ── */}

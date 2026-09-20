@@ -17,6 +17,7 @@ import { generateCoachResponse, isGroqConfigured, type CoachMessage } from "../.
 import { buildCoachContext } from "../../lib/ai/context-builder";
 import { getConversationHistory, insertConversationMessage, clearConversationHistory } from "../../lib/db/queries/reports";
 import { Card } from "../../components/ui/Card";
+import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { AiConversation } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
@@ -143,6 +144,18 @@ export default function CoachScreen() {
     await clearConversationHistory();
     setMessages([]);
   };
+
+  if (groqConfigured === null) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+        <View style={{ padding: 20, gap: 16 }}>
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>

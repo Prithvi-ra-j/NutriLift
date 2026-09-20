@@ -18,6 +18,8 @@ import { getAllReports } from "../../lib/db/queries/reports";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { Card } from "../../components/ui/Card";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
+import { Button } from "../../components/ui/Button";
+import { ListRow } from "../../components/ui/ListRow";
 import type { SupplementLog, MonthlyReport } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
@@ -321,53 +323,16 @@ account", label: "Account", icon: "cloud" },
                     fontFamily: "BebasNeue_400Regular",
                   }}
                 />
-                <TouchableOpacity
-                  onPress={logWeight}
-                  activeOpacity={0.75}
-                  style={{
-                    backgroundColor: M3.colors.primary,
-                    borderRadius: 8,
-                    paddingHorizontal: 16,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text style={{ color: M3.colors.onPrimary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                    Log
-                  </Text>
-                </TouchableOpacity>
+                <Button label="Log" onPress={logWeight} style={{ paddingHorizontal: 16, paddingVertical: 0, height: 48 }} />
               </View>
             </Card>
 
-            <TouchableOpacity
+            <ListRow
+              icon="clipboard"
+              title="Import InBody Report"
+              subtitle="Paste from Claude or ChatGPT"
               onPress={() => router.push("/modals/inbody-paste")}
-              activeOpacity={0.75}
-              style={{
-                backgroundColor: M3.colors.surface,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: M3.colors.outline,
-                padding: 16,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
-                  <Feather name="clipboard" size={18} color={M3.colors.primary} />
-                </View>
-                <View>
-                  <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
-                    Import InBody Report
-                  </Text>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                    Paste from Claude or ChatGPT
-                  </Text>
-                </View>
-              </View>
-              <Feather name="chevron-right" size={18} color={M3.colors.onSurfaceMuted} />
-            </TouchableOpacity>
+            />
           </>
         )}
 
@@ -478,20 +443,7 @@ account", label: "Account", icon: "cloud" },
               />
             </View>
 
-            <TouchableOpacity
-              onPress={saveRecovery}
-              activeOpacity={0.75}
-              style={{
-                backgroundColor: M3.colors.primary,
-                borderRadius: 8,
-                padding: 14,
-                alignItems: "center",
-              }}
-            >
-              <Text style={{ color: M3.colors.onPrimary, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                Save Recovery Log
-              </Text>
-            </TouchableOpacity>
+            <Button label="Save Recovery Log" onPress={saveRecovery} />
           </Card>
         )}
 
@@ -589,16 +541,7 @@ account", label: "Account", icon: "cloud" },
                 <View style={{ gap: 10 }}>
                   <Input value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" placeholder="Email" />
                   <Input value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" />
-                  <TouchableOpacity
-                    onPress={handleSignIn}
-                    disabled={!isSupabaseConfigured || isAuthenticating}
-                    activeOpacity={0.75}
-                    style={{ backgroundColor: isSupabaseConfigured ? M3.colors.primary : M3.colors.surfaceVariant, borderRadius: 8, paddingVertical: 10, alignItems: "center" }}
-                  >
-                    <Text style={{ color: isSupabaseConfigured ? M3.colors.onPrimary : M3.colors.onSurfaceMuted, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                      {isAuthenticating ? "Signing in…" : "Sign in"}
-                    </Text>
-                  </TouchableOpacity>
+                  <Button label={isAuthenticating ? "Signing in…" : "Sign in"} onPress={handleSignIn} disabled={!isSupabaseConfigured || isAuthenticating} loading={isAuthenticating} />
                   <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
                     You'll stay signed in across app restarts once verified.
                   </Text>
@@ -700,8 +643,11 @@ account", label: "Account", icon: "cloud" },
               ))}
             </Card>
 
-            <TouchableOpacity
-              onPress={async () => {
+            <ListRow
+              icon="download"
+              title="Export Progress PDF"
+              subtitle="All logs & progress data"
+              onPress={() => {
                 Alert.alert(
                   "Export Progress Report",
                   "Choose export period",
@@ -746,33 +692,7 @@ account", label: "Account", icon: "cloud" },
                   ]
                 );
               }}
-              activeOpacity={0.75}
-              style={{
-                backgroundColor: M3.colors.surface,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: M3.colors.outline,
-                padding: 16,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
-                  <Feather name="download" size={18} color={M3.colors.primary} />
-                </View>
-                <View>
-                  <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
-                    Export Progress PDF
-                  </Text>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                    All logs & progress data
-                  </Text>
-                </View>
-              </View>
-              <Feather name="chevron-right" size={18} color={M3.colors.onSurfaceMuted} />
-            </TouchableOpacity>
+            />
 
             <View style={{ alignItems: "center", paddingVertical: 16 }}>
               <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>

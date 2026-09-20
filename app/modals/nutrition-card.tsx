@@ -13,6 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 import { insertFoodLog } from "../../lib/db/queries/nutrition";
 import { logger } from "../../lib/logger";
+import { ModalHeader } from "../../components/ui/ModalHeader";
+import { Button } from "../../components/ui/Button";
+import { M3 } from "../../design-system/tokens";
 import type { FoodResult } from "../../lib/services/barcodeScanner";
 
 export default function NutritionCardModal() {
@@ -119,48 +122,38 @@ export default function NutritionCardModal() {
   const getQualityBadge = () => {
     switch (dataQuality) {
       case "verified":
-        return { icon: "checkmark-circle", color: "#00C875", label: "Verified" };
+        return { icon: "checkmark-circle", color: M3.colors.success, label: "Verified" };
       case "partial":
-        return { icon: "alert-circle", color: "#FFB800", label: "Partial Data" };
+        return { icon: "alert-circle", color: M3.colors.warning, label: "Partial Data" };
       case "suspect":
-        return { icon: "warning", color: "#FF6B6B", label: "Suspect Data" };
+        return { icon: "warning", color: M3.colors.error, label: "Suspect Data" };
       case "poor":
-        return { icon: "close-circle", color: "#FF6B6B", label: "Poor Data" };
+        return { icon: "close-circle", color: M3.colors.error, label: "Poor Data" };
       default:
-        return { icon: "information-circle", color: "#8080A0", label: "User Entered" };
+        return { icon: "information-circle", color: M3.colors.onSurfaceVariant, label: "User Entered" };
     }
   };
 
   const badge = getQualityBadge();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+      <ModalHeader title="Confirm Food" />
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 100 }}
+        contentContainerStyle={{ padding: 20, paddingTop: 4, paddingBottom: 100 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="close" size={28} color="#8080A0" />
-          </TouchableOpacity>
-          <Text style={{ color: "#F0F0F5", fontSize: 20, fontFamily: "DMSans_700Bold" }}>
-            Confirm Food
-          </Text>
-          <View style={{ width: 28 }} />
-        </View>
-
         {/* Data Quality Badge */}
         <View
           style={{
             flexDirection: "row",
             alignItems: "center",
             gap: 8,
-            backgroundColor: "#12121A",
+            backgroundColor: M3.colors.surface,
             padding: 12,
-            borderRadius: 8,
+            borderRadius: M3.shape.medium,
             borderWidth: 1,
-            borderColor: "#252535",
+            borderColor: M3.colors.outline,
             marginBottom: 16,
           }}
         >
@@ -170,8 +163,8 @@ export default function NutritionCardModal() {
           </Text>
           {source === "barcode" && (
             <View style={{ marginLeft: "auto", flexDirection: "row", alignItems: "center", gap: 4 }}>
-              <Ionicons name="barcode" size={16} color="#8080A0" />
-              <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+              <Ionicons name="barcode" size={16} color={M3.colors.onSurfaceVariant} />
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
                 Scanned
               </Text>
             </View>
@@ -182,18 +175,18 @@ export default function NutritionCardModal() {
         {warnings.length > 0 && (
           <View
             style={{
-              backgroundColor: "#FFB80022",
+              backgroundColor: M3.colors.warningContainer,
               borderWidth: 1,
-              borderColor: "#FFB80044",
-              borderRadius: 8,
+              borderColor: M3.colors.warning + "44",
+              borderRadius: M3.shape.medium,
               padding: 12,
               marginBottom: 16,
             }}
           >
             {warnings.map((warning, index) => (
               <View key={index} style={{ flexDirection: "row", gap: 8, marginBottom: index < warnings.length - 1 ? 8 : 0 }}>
-                <Ionicons name="warning" size={16} color="#FFB800" style={{ marginTop: 2 }} />
-                <Text style={{ flex: 1, color: "#FFB800", fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 18 }}>
+                <Ionicons name="warning" size={16} color={M3.colors.warning} style={{ marginTop: 2 }} />
+                <Text style={{ flex: 1, color: M3.colors.onWarningContainer, fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 18 }}>
                   {warning}
                 </Text>
               </View>
@@ -203,54 +196,54 @@ export default function NutritionCardModal() {
 
         {/* Food Name */}
         <View style={{ marginBottom: 16 }}>
-          <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 6 }}>
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 6 }}>
             FOOD NAME
           </Text>
           <TextInput
             style={{
-              backgroundColor: "#1A1A26",
-              borderRadius: 8,
+              backgroundColor: M3.colors.surface,
+              borderRadius: M3.shape.medium,
               padding: 14,
-              color: "#F0F0F5",
+              color: M3.colors.onSurface,
               fontSize: 16,
               fontFamily: "DMSans_500Medium",
               borderWidth: 1,
-              borderColor: "#252535",
+              borderColor: M3.colors.outline,
             }}
             value={name}
             onChangeText={setName}
             placeholder="Enter food name"
-            placeholderTextColor="#4A4A6A"
+            placeholderTextColor={M3.colors.onSurfaceMuted}
           />
         </View>
 
         {/* Brand (optional) */}
         {brand && (
           <View style={{ marginBottom: 16 }}>
-            <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 6 }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 6 }}>
               BRAND
             </Text>
             <TextInput
               style={{
-                backgroundColor: "#1A1A26",
-                borderRadius: 8,
+                backgroundColor: M3.colors.surface,
+                borderRadius: M3.shape.medium,
                 padding: 14,
-                color: "#F0F0F5",
+                color: M3.colors.onSurface,
                 fontSize: 14,
                 fontFamily: "DMSans_400Regular",
                 borderWidth: 1,
-                borderColor: "#252535",
+                borderColor: M3.colors.outline,
               }}
               value={brand}
               onChangeText={setBrand}
               placeholder="Brand name"
-              placeholderTextColor="#4A4A6A"
+              placeholderTextColor={M3.colors.onSurfaceMuted}
             />
           </View>
         )}
 
         {/* Nutrition (per 100g) */}
-        <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12 }}>
+        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12 }}>
           NUTRITION (PER 100G)
         </Text>
 
@@ -263,19 +256,19 @@ export default function NutritionCardModal() {
             { label: "Fiber", value: fiber, setter: setFiber, unit: "g" },
           ].map((field) => (
             <View key={field.label} style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <Text style={{ flex: 1, color: "#F0F0F5", fontSize: 14, fontFamily: "DMSans_500Medium" }}>
+              <Text style={{ flex: 1, color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_500Medium" }}>
                 {field.label}
               </Text>
               <TextInput
                 style={{
-                  backgroundColor: "#1A1A26",
-                  borderRadius: 8,
+                  backgroundColor: M3.colors.surface,
+                  borderRadius: M3.shape.medium,
                   padding: 12,
-                  color: "#F0F0F5",
+                  color: M3.colors.onSurface,
                   fontSize: 16,
                   fontFamily: "BebasNeue_400Regular",
                   borderWidth: 1,
-                  borderColor: "#252535",
+                  borderColor: M3.colors.outline,
                   width: 100,
                   textAlign: "right",
                 }}
@@ -283,9 +276,9 @@ export default function NutritionCardModal() {
                 onChangeText={field.setter}
                 keyboardType="decimal-pad"
                 placeholder="0"
-                placeholderTextColor="#4A4A6A"
+                placeholderTextColor={M3.colors.onSurfaceMuted}
               />
-              <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", width: 40 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", width: 40 }}>
                 {field.unit}
               </Text>
             </View>
@@ -294,29 +287,29 @@ export default function NutritionCardModal() {
 
         {/* Quantity */}
         <View style={{ marginBottom: 16 }}>
-          <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 6 }}>
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 6 }}>
             QUANTITY
           </Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
             <TextInput
               style={{
                 flex: 1,
-                backgroundColor: "#1A1A26",
-                borderRadius: 8,
+                backgroundColor: M3.colors.surface,
+                borderRadius: M3.shape.medium,
                 padding: 14,
-                color: "#F0F0F5",
+                color: M3.colors.onSurface,
                 fontSize: 18,
                 fontFamily: "BebasNeue_400Regular",
                 borderWidth: 1,
-                borderColor: "#252535",
+                borderColor: M3.colors.outline,
               }}
               value={quantity}
               onChangeText={setQuantity}
               keyboardType="decimal-pad"
               placeholder="100"
-              placeholderTextColor="#4A4A6A"
+              placeholderTextColor={M3.colors.onSurfaceMuted}
             />
-            <Text style={{ color: "#8080A0", fontSize: 14, fontFamily: "DMSans_400Regular" }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 14, fontFamily: "DMSans_400Regular" }}>
               grams
             </Text>
           </View>
@@ -324,7 +317,7 @@ export default function NutritionCardModal() {
 
         {/* Meal */}
         <View style={{ marginBottom: 24 }}>
-          <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 8 }}>
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 8 }}>
             MEAL
           </Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
@@ -332,19 +325,20 @@ export default function NutritionCardModal() {
               <TouchableOpacity
                 key={m}
                 onPress={() => setMeal(m)}
+                activeOpacity={0.75}
                 style={{
                   flex: 1,
                   paddingVertical: 12,
-                  borderRadius: 8,
-                  backgroundColor: meal === m ? "#00D4AA22" : "#1A1A26",
+                  borderRadius: M3.shape.medium,
+                  backgroundColor: meal === m ? M3.colors.primaryContainer : M3.colors.surface,
                   borderWidth: 1,
-                  borderColor: meal === m ? "#00D4AA" : "#252535",
+                  borderColor: meal === m ? M3.colors.primary : M3.colors.outline,
                   alignItems: "center",
                 }}
               >
                 <Text
                   style={{
-                    color: meal === m ? "#00D4AA" : "#8080A0",
+                    color: meal === m ? M3.colors.primary : M3.colors.onSurfaceVariant,
                     fontSize: 12,
                     fontFamily: "DMSans_700Bold",
                     textTransform: "capitalize",
@@ -358,19 +352,7 @@ export default function NutritionCardModal() {
         </View>
 
         {/* Log Button */}
-        <TouchableOpacity
-          onPress={handleLog}
-          style={{
-            backgroundColor: "#00D4AA",
-            borderRadius: 12,
-            paddingVertical: 16,
-            alignItems: "center",
-          }}
-        >
-          <Text style={{ color: "#0A0A0F", fontSize: 16, fontFamily: "DMSans_700Bold" }}>
-            Log Food
-          </Text>
-        </TouchableOpacity>
+        <Button label="Log Food" onPress={handleLog} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -255,7 +255,7 @@ export default function DashboardScreen() {
                 label="Fat"
                 current={fat}
                 target={USER_PROFILE.targets.fat_g}
-                color="#F59E0B"
+                color={M3.macroColors.fat}
               />
             </View>
           </View>

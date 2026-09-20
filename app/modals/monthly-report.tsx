@@ -18,6 +18,9 @@ import { getAllInBodyRecords, getWeightHistory } from "../../lib/db/queries/body
 import { getRecentRecoveryLogs, getSupplementAdherence30d } from "../../lib/db/queries/recovery";
 import { insertReport } from "../../lib/db/queries/reports";
 import { Card } from "../../components/ui/Card";
+import { ModalHeader } from "../../components/ui/ModalHeader";
+import { Button } from "../../components/ui/Button";
+import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import type { MonthlyReport } from "../../lib/groq";
 
@@ -89,58 +92,35 @@ export default function MonthlyReportModal() {
   const nextPlan = report?.next_month_plan;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#0A0A0F" }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 20, paddingBottom: 12 }}>
-        <Text style={{ color: "#F0F0F5", fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-          MONTHLY REPORT
-        </Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Feather name="x" size={22} color="#8080A0" />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+      <ModalHeader title="MONTHLY REPORT" />
 
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingTop: 0, gap: 16, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 20, paddingTop: 4, gap: 16, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
         {!report && !isGenerating && (
           <>
             <Card>
-              <Text style={{ color: "#F0F0F5", fontSize: 16, fontFamily: "DMSans_700Bold", marginBottom: 8 }}>
+              <Text style={{ color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_700Bold", marginBottom: 8 }}>
                 {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })} Report
               </Text>
-              <Text style={{ color: "#8080A0", fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
                 Generate a comprehensive AI analysis of your month — nutrition, strength, body composition, recovery, and a game plan for next month.
               </Text>
             </Card>
 
-            <TouchableOpacity
-              onPress={generateReport}
-              style={{
-                backgroundColor: "#00D4AA",
-                borderRadius: 12,
-                padding: 18,
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 10,
-              }}
-            >
-              <Feather name="cpu" size={20} color="#0A0A0F" />
-              <Text style={{ color: "#0A0A0F", fontSize: 16, fontFamily: "DMSans_700Bold" }}>
-                Generate Report
-              </Text>
-            </TouchableOpacity>
+            <Button label="Generate Report" icon="cpu" onPress={generateReport} />
           </>
         )}
 
         {isGenerating && (
           <View style={{ alignItems: "center", paddingVertical: 48, gap: 16 }}>
-            <ActivityIndicator size="large" color="#00D4AA" />
-            <Text style={{ color: "#F0F0F5", fontSize: 15, fontFamily: "DMSans_500Medium" }}>
+            <ActivityIndicator size="large" color={M3.colors.primary} />
+            <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_500Medium" }}>
               {progress}
             </Text>
-            <Text style={{ color: "#8080A0", fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
               This may take up to 30 seconds
             </Text>
           </View>
@@ -152,36 +132,36 @@ export default function MonthlyReportModal() {
             {execSummary && (
               <Card>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                     EXECUTIVE SUMMARY
                   </Text>
-                  <View style={{ backgroundColor: "#00D4AA22", borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}>
-                    <Text style={{ color: "#00D4AA", fontSize: 18, fontFamily: "BebasNeue_400Regular" }}>
+                  <View style={{ backgroundColor: M3.colors.primaryContainer, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ color: M3.colors.primary, fontSize: 18, fontFamily: "BebasNeue_400Regular" }}>
                       {execSummary.overall_score}/100
                     </Text>
                   </View>
                 </View>
-                <Text style={{ color: "#F0F0F5", fontSize: 15, fontFamily: "DMSans_700Bold", marginBottom: 12, lineHeight: 22 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold", marginBottom: 12, lineHeight: 22 }}>
                   {execSummary.headline}
                 </Text>
 
-                <Text style={{ color: "#00C875", fontSize: 11, fontFamily: "DMSans_700Bold", marginBottom: 6, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.success, fontSize: 11, fontFamily: "DMSans_700Bold", marginBottom: 6, letterSpacing: 0.5 }}>
                   TOP WINS
                 </Text>
                 {execSummary.top_3_wins?.map((win, i) => (
                   <View key={i} style={{ flexDirection: "row", gap: 8, marginBottom: 4 }}>
-                    <Feather name="check-circle" size={12} color="#00C875" style={{ marginTop: 2 }} />
-                    <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>{win}</Text>
+                    <Feather name="check-circle" size={12} color={M3.colors.success} style={{ marginTop: 2 }} />
+                    <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>{win}</Text>
                   </View>
                 ))}
 
-                <Text style={{ color: "#FFB800", fontSize: 11, fontFamily: "DMSans_700Bold", marginTop: 12, marginBottom: 6, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.warning, fontSize: 11, fontFamily: "DMSans_700Bold", marginTop: 12, marginBottom: 6, letterSpacing: 0.5 }}>
                   AREAS TO IMPROVE
                 </Text>
                 {execSummary.top_3_areas_to_improve?.map((area, i) => (
                   <View key={i} style={{ flexDirection: "row", gap: 8, marginBottom: 4 }}>
-                    <Feather name="arrow-up-circle" size={12} color="#FFB800" style={{ marginTop: 2 }} />
-                    <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>{area}</Text>
+                    <Feather name="arrow-up-circle" size={12} color={M3.colors.warning} style={{ marginTop: 2 }} />
+                    <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>{area}</Text>
                   </View>
                 ))}
               </Card>
@@ -190,10 +170,10 @@ export default function MonthlyReportModal() {
             {/* AI Narrative */}
             {report.ai_narrative && (
               <Card elevated>
-                <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   COACH ASSESSMENT
                 </Text>
-                <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 22 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 22 }}>
                   {report.ai_narrative}
                 </Text>
               </Card>
@@ -202,13 +182,13 @@ export default function MonthlyReportModal() {
             {/* Next Month Plan */}
             {nextPlan && (
               <Card>
-                <Text style={{ color: "#8080A0", fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   NEXT MONTH GAME PLAN
                 </Text>
                 {[
-                  { label: "Nutrition", items: nextPlan.nutrition_adjustments, color: "#3B82F6" },
-                  { label: "Training", items: nextPlan.training_adjustments, color: "#8B5CF6" },
-                  { label: "Recovery", items: nextPlan.recovery_focus, color: "#00C875" },
+                  { label: "Nutrition", items: nextPlan.nutrition_adjustments, color: M3.colors.secondary },
+                  { label: "Training", items: nextPlan.training_adjustments, color: M3.colors.tertiary },
+                  { label: "Recovery", items: nextPlan.recovery_focus, color: M3.colors.success },
                 ].map(({ label, items, color }) => (
                   <View key={label} style={{ marginBottom: 12 }}>
                     <Text style={{ color, fontSize: 11, fontFamily: "DMSans_700Bold", marginBottom: 6, letterSpacing: 0.5 }}>
@@ -217,7 +197,7 @@ export default function MonthlyReportModal() {
                     {items?.map((item, i) => (
                       <View key={i} style={{ flexDirection: "row", gap: 8, marginBottom: 4 }}>
                         <Text style={{ color, fontSize: 12 }}>→</Text>
-                        <Text style={{ color: "#F0F0F5", fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>{item}</Text>
+                        <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>{item}</Text>
                       </View>
                     ))}
                   </View>
