@@ -380,7 +380,7 @@ export default function ProgressScreen() {
                 title={isCurrentWeek ? "No body data yet" : "No data for this week"}
                 subtitle={isCurrentWeek ? "Log your daily weight or import an InBody report to start tracking." : "No weight or InBody data logged for this week."}
                 actionLabel={isCurrentWeek ? "Log Weight" : undefined}
-                onAction={isCurrentWeek ? () => router.push("/(tabs)/more") : undefined}
+                onAction={isCurrentWeek ? () => router.push("/(tabs)/more?section=body") : undefined}
               />
             )}
           </>

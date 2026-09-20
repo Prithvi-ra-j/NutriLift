@@ -157,18 +157,14 @@ export default function CoachScreen() {
             <Text style={{ color: M3.colors.onSurface, fontSize: 17, fontFamily: "DMSans_700Bold" }}>
               NutriLift Coach
             </Text>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-              <View style={{
-                width: 6,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: groqConfigured === true ? M3.colors.success : groqConfigured === false ? M3.colors.error : M3.colors.warning,
-              }} />
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-                {groqConfigured === true ? "Ready" : groqConfigured === false ? "API key missing" : "Checking..."}
-                {requestCount > 0 ? ` · ${requestCount} sent` : ""}
-              </Text>
-            </View>
+            {groqConfigured === true && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: M3.colors.success }} />
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                  Ready{requestCount > 0 ? ` · ${requestCount} sent` : ""}
+                </Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
             onPress={handleClear}

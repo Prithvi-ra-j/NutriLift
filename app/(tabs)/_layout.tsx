@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
-import { View, Text, Platform } from "react-native";
+import { View, Text, Platform, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { M3 } from "../../design-system/tokens";
 
@@ -24,6 +25,7 @@ function TabIcon({ name, focused, label }: TabIconProps) {
         alignItems: "center",
         justifyContent: "center",
         flex: 1,
+        height: "100%",
         gap: 3,
       }}
     >
@@ -53,9 +55,10 @@ function TabIcon({ name, focused, label }: TabIconProps) {
           color: focused ? M3.colors.primary : M3.colors.onSurfaceVariant,
           fontFamily: focused ? "DMSans_700Bold" : "DMSans_500Medium",
           textAlign: "center",
-          letterSpacing: 0.3,
+          letterSpacing: 0.2,
         }}
         numberOfLines={1}
+        minimumFontScale={0.8}
         adjustsFontSizeToFit
       >
         {label}
@@ -65,22 +68,33 @@ function TabIcon({ name, focused, label }: TabIconProps) {
 }
 
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  // Cap the bar width on tablets/web so it doesn't stretch edge-to-edge, and keep it centered.
+  const isWide = width >= 480;
+  const barWidth = isWide ? 420 : undefined;
+  const horizontalInset = isWide ? (width - (barWidth as number)) / 2 : 16;
+  // Respect the device's own safe area (notch / gesture bar / home indicator) instead of
+  // hardcoded platform guesses, so the floating bar sits correctly on every device.
+  const bottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 12 : 8) + 8;
+
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
-          left: 16,
-          right: 16,
-          bottom: Platform.OS === "ios" ? 28 : 16,
+          left: horizontalInset,
+          right: horizontalInset,
+          bottom: bottomInset,
           backgroundColor: M3.colors.surfaceContainer,
           borderTopWidth: 0,
           borderRadius: M3.shape.extraLarge,
           borderWidth: 1,
           borderColor: M3.colors.outline,
           // Floating pill nav bar
-          height: 64,
+          height: 68,
           paddingBottom: 0,
           paddingTop: 0,
           shadowColor: "#000",
@@ -90,7 +104,8 @@ export default function TabsLayout() {
           elevation: 12,
         },
         tabBarItemStyle: {
-          height: 64,
+          height: 68,
+          paddingVertical: 6,
         },
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
