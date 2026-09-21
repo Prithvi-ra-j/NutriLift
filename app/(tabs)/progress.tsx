@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -32,7 +33,7 @@ export default function ProgressScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   // Week navigation state
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getTodayKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
