@@ -19,7 +19,8 @@ function Item({ name, label, focused }: { name: IconName; label: string; focused
         <Feather name={name} size={22} color={focused ? M3.colors.primary : M3.colors.onSurfaceVariant} />
       </View>
       <Text style={{
-        marginTop: 2, fontSize: 12, lineHeight: 15, textAlign: "center",
+        marginTop: 2, ...M3.typescale.labelMedium,
+        lineHeight: 15, textAlign: "center",
         fontFamily: focused ? "DMSans_700Bold" : "DMSans_500Medium",
         color: focused ? M3.colors.primary : M3.colors.onSurfaceVariant,
       }}>{label}</Text>
@@ -58,7 +59,7 @@ export default function TabsLayout() {
           backgroundColor: M3.colors.surfaceContainer,
           borderTopWidth: 0, borderWidth: 1, borderColor: M3.colors.outline,
           borderRadius: M3.shape.extraLarge,
-          shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 14,
+          shadowColor: M3.colors.shadow, shadowOpacity: 0.25, shadowRadius: 14,
           shadowOffset: { width: 0, height: 6 }, elevation: 10,
         },
         tabBarItemStyle: { height: 62, paddingVertical: 2 },
