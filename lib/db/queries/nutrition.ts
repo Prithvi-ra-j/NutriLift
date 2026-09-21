@@ -3,6 +3,7 @@ import { getDateDaysAgo, getTodayKey } from "../../dates";
 import { db } from "../client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
+import { getUserProfile } from "./profile";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
 
@@ -54,9 +55,7 @@ export async function getDailyNutritionRange(
 }
 
 export async function getLast7DaysNutrition(): Promise<DailyNutrition[]> {
-  const today = new Date();
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(today.getDate() - 6);
+  
   return getDailyNutritionRange(
     getDateDaysAgo(6),
     getTodayKey()
@@ -64,9 +63,7 @@ export async function getLast7DaysNutrition(): Promise<DailyNutrition[]> {
 }
 
 export async function getLast30DaysNutrition(): Promise<DailyNutrition[]> {
-  const today = new Date();
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(today.getDate() - 29);
+  
   return getDailyNutritionRange(
     getDateDaysAgo(29),
     getTodayKey()
@@ -93,18 +90,20 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
     { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   );
 
-  const proteinTargetMet = totals.protein_g >= USER_PROFILE.targets.protein_g ? 1 : 0;
+  const profile = await getUserProfile();
+  const targets = { calories: profile?.calories_target ?? USER_PROFILE.targets.calories, protein_g: profile?.protein_target_g ?? USER_PROFILE.targets.protein_g };
+  const proteinTargetMet = totals.protein_g >= targets.protein_g ? 1 : 0;
   const calorieTargetMet =
-    totals.calories >= USER_PROFILE.targets.calories * 0.9 &&
-    totals.calories <= USER_PROFILE.targets.calories * 1.1
+    totals.calories >= targets.calories * 0.9 &&
+    totals.calories <= targets.calories * 1.1
       ? 1
       : 0;
 
   // Adherence score: weighted average of protein (60%) + calories (40%)
-  const proteinScore = Math.min(100, (totals.protein_g / USER_PROFILE.targets.protein_g) * 100);
+  const proteinScore = Math.min(100, (totals.protein_g / targets.protein_g) * 100);
   const calorieScore = Math.min(
     100,
-    100 - Math.abs(totals.calories - USER_PROFILE.targets.calories) / USER_PROFILE.targets.calories * 100
+    100 - Math.abs(totals.calories - targets.calories) / targets.calories * 100
   );
   const adherenceScore = proteinScore * 0.6 + calorieScore * 0.4;
 
