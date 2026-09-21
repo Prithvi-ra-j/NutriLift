@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { getTodayKey, getLocalDateKey, parseDateKey } from "../../../lib/dates";
+import { getTodayKey, getLocalDateKey, parseDateKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { useTodayStore } from "../../../lib/stores/today.store";
+import { useTodayStore } from "../../lib/stores/today.store";
 import {
   getSessionsForDate,
   getExercisesForSession,
@@ -31,26 +31,26 @@ import {
   calculateEpley1RM,
   getCustomExercises,
   insertCustomExercise,
-} from "../../../lib/db/queries/workout";
+} from "../../lib/db/queries/workout";
 import {
   DAY_TYPES,
   EXERCISE_LIBRARY,
   type DayType,
   type ExerciseType,
-} from "../../../lib/constants/exercises";
-import { WORKOUT_TEMPLATES, type ExerciseTemplate } from "../../../lib/constants/workout-templates";
-import { Card } from "../../../components/ui/Card";
-import { Button } from "../../../components/ui/Button";
-import { PressableScale } from "../../../components/ui/PressableScale";
-import { PRBadge } from "../../../components/ui/PRBadge";
-import { EmptyState } from "../../../components/ui/EmptyState";
-import { DateNavigator } from "../../../components/ui/DateNavigator";
-import { ScreenHeader } from "../../../components/ui/ScreenHeader";
-import { CardSkeleton } from "../../../components/ui/SkeletonLoader";
-import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../../lib/db/schema";
+} from "../../lib/constants/exercises";
+import { WORKOUT_TEMPLATES, type ExerciseTemplate } from "../../lib/constants/workout-templates";
+import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { PRBadge } from "../../components/ui/PRBadge";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { DateNavigator } from "../../components/ui/DateNavigator";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
+import { CardSkeleton } from "../../components/ui/SkeletonLoader";
+import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
-import { M3 } from "../../../design-system/tokens";
-import { success as hapticSuccess } from "../../../lib/haptics";
+import { M3 } from "../../design-system/tokens";
+import { success as hapticSuccess } from "../../lib/haptics";
 import { useWorkoutTimer } from "./hooks/useWorkoutTimer";
 import { RestTimer } from "./components/RestTimer";
 import { WorkoutSummary } from "./components/WorkoutSummary";
