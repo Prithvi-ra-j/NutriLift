@@ -52,6 +52,23 @@ export async function runMigrations(): Promise<void> {
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
 
+
+    CREATE TABLE IF NOT EXISTS user_profile (
+      id TEXT PRIMARY KEY,
+      display_name TEXT NOT NULL,
+      age INTEGER,
+      sex TEXT,
+      height_cm REAL,
+      calories_target REAL,
+      protein_target_g REAL,
+      carbs_target_g REAL,
+      fat_target_g REAL,
+      units TEXT NOT NULL DEFAULT 'metric',
+      target_source TEXT NOT NULL DEFAULT 'user',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE TABLE IF NOT EXISTS food_logs (
       id TEXT PRIMARY KEY,
       date TEXT NOT NULL,
