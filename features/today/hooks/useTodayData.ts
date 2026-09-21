@@ -42,11 +42,12 @@ export function useTodayData() {
         const row = last7.find((item) => item.date === date);
         return { date, hit: row?.protein_target_met === 1 };
       }));
-      setRecoveryScore(
-        recovery
-          ? Math.round((((recovery.sleep_quality ?? 3) + (recovery.energy_level ?? 3) + (6 - (recovery.muscle_soreness ?? 3))) / 3 / 5) * 100)
-          : null
-      );
+      const recoveryValues = recovery ? [
+        recovery.sleep_quality,
+        recovery.energy_level,
+        recovery.muscle_soreness == null ? null : 6 - recovery.muscle_soreness,
+      ].filter((value): value is number => typeof value === "number" && Number.isFinite(value)) : [];
+      setRecoveryScore(recoveryValues.length ? Math.round((recoveryValues.reduce((sum, value) => sum + value, 0) / recoveryValues.length / 5) * 100) : null);
     } catch (e) {
       console.error("Today load failed", e);
       setError("We couldn’t load today’s data. Your saved data is unchanged.");
