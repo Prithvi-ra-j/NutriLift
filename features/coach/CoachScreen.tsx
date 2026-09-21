@@ -201,9 +201,9 @@ export default function CoachScreen() {
 
         {/* ── Groq API warning ── */}
         {groqConfigured === false && (
-          <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: 8, padding: 12, flexDirection: "row", gap: 8 }}>
+          <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: M3.shape.medium, padding: 12, flexDirection: "row", gap: 8, borderWidth: 1, borderColor: M3.colors.error }}>
             <Feather name="alert-circle" size={14} color={M3.colors.error} />
-            <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
+            <Text style={{ color: M3.colors.onErrorContainer, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
               Groq API key is not configured. Please add GROQ_API_KEY to your .env file or Settings.
             </Text>
           </View>
@@ -298,7 +298,7 @@ export default function CoachScreen() {
                       : { paddingLeft: 28 }
                   }
                 >
-                  <Text style={{ color: M3.colors.onSurface, fontSize: 14.5, fontFamily: "DMSans_400Regular", lineHeight: 22 }}>
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_400Regular", lineHeight: 22 }}>
                     {msg.content === "..." && isGenerating ? (
                       <ActivityIndicator size="small" color={M3.colors.primary} />
                     ) : (
@@ -334,7 +334,7 @@ export default function CoachScreen() {
               paddingRight: 6,
               paddingVertical: 6,
               gap: 8,
-              shadowColor: "#000",
+              shadowColor: M3.colors.shadow,
               shadowOffset: { width: 0, height: 4 },
               shadowOpacity: 0.3,
               shadowRadius: 10,
