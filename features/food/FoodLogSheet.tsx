@@ -14,7 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { parseFoodInput, type ParsedFoodItem } from "../../../lib/ai/parsers";
-import { insertFoodLog, getDistinctRecentFoods } from "../../../lib/db/queries/nutrition";
+import { insertFoodLog, getDistinctRecentFoods, getMostRecentMealLogsBeforeDate } from "../../../lib/db/queries/nutrition";
 import { useUIStore } from "../../../lib/stores/ui.store";
 import { Card } from "../../../components/ui/Card";
 import { ModalHeader } from "../../../components/ui/ModalHeader";
@@ -51,6 +51,9 @@ export default function LogFoodModal() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedMeal, setSavedMeal] = useState<MealType | null>(null);
+  const [savedCalories, setSavedCalories] = useState(0);
+  const [savedProtein, setSavedProtein] = useState(0);
   const [recentFoods, setRecentFoods] = useState<import("../../lib/db/schema").FoodLog[]>([]);
 
   const today = getTodayKey();
@@ -63,8 +66,11 @@ export default function LogFoodModal() {
     try {
       await insertFoodLog({ ...food, id: uuid.v4() as string, date: today, meal: selectedMeal, created_at: Math.floor(Date.now() / 1000) });
       success();
+      setSavedMeal(selectedMeal);
+      setSavedCalories(food.calories);
+      setSavedProtein(food.protein_g);
       setSaved(true);
-      setTimeout(() => router.back(), 350);
+      setTimeout(() => router.back(), 700);
     } catch {
       setParseError("Couldn't save that food. Please try again.");
     } finally { setIsSaving(false); }
@@ -101,8 +107,11 @@ export default function LogFoodModal() {
         created_at: Math.floor(Date.now() / 1000),
       });
       success();
+      setSavedMeal(selectedMeal);
+      setSavedCalories(totalMacros?.calories ?? 0);
+      setSavedProtein(totalMacros?.protein ?? 0);
       setSaved(true);
-      setTimeout(() => router.back(), 350);
+      setTimeout(() => router.back(), 700);
     } catch {
       setParseError("Couldn't save that food. Please try again.");
     } finally {
@@ -229,7 +238,7 @@ export default function LogFoodModal() {
             <View>
               <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
                 <Text style={{ flex: 1, color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_700Bold" }}>Recent</Text>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>Tap to add again</Text>
+                <PressableScale onPress={handleRepeatMeal} accessibilityRole="button" accessibilityLabel={`Repeat previous ${selectedMeal}`} style={{ minHeight: 36, paddingHorizontal: 10, borderRadius: M3.shape.full, backgroundColor: M3.colors.primaryContainer, justifyContent: "center" }}><Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_500Medium" }}>Repeat {selectedMeal}</Text></PressableScale>
               </View>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {recentFoods.map(food => (
@@ -319,13 +328,13 @@ export default function LogFoodModal() {
 
 
           )}
-          <Button
+          {mode !== "manual" && <Button
             label={isParsing ? "Parsing..." : "Parse with AI"}
             icon="cpu"
             loading={isParsing}
             disabled={!input.trim()}
             onPress={handleParse}
-          />
+          />}
 
           {parseError && (
             <View style={{ backgroundColor: M3.colors.errorContainer, borderRadius: 10, padding: 12, flexDirection: "row", gap: 8 }}>
@@ -337,7 +346,7 @@ export default function LogFoodModal() {
           {saved && (
             <View style={{ backgroundColor: M3.colors.successContainer, borderRadius: 10, padding: 12, flexDirection: "row", gap: 8 }}>
               <Feather name="check-circle" size={16} color={M3.colors.success} />
-              <Text style={{ color: M3.colors.onSuccessContainer, fontSize: 13, fontFamily: "DMSans_500Medium" }}>Food saved</Text>
+              <View style={{ flex: 1 }}><Text style={{ color: M3.colors.onSuccessContainer, fontSize: 14, fontFamily: "DMSans_700Bold" }}>Added {savedMeal ?? selectedMeal}</Text><Text style={{ color: M3.colors.onSuccessContainer, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2 }}>+ {savedProtein.toFixed(0)}g protein · + {savedCalories.toFixed(0)} kcal</Text></View>
             </View>
           )}
 
