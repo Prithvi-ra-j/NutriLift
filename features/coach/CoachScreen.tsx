@@ -8,22 +8,22 @@ import {
   Platform,
   ActivityIndicator,
 } from "react-native";
-import { Input } from "../../components/ui/Input";
+import { Input } from "../../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useAIStore } from "../../lib/stores/ai.store";
-import { generateCoachResponse, isGroqConfigured, type CoachMessage } from "../../lib/groq";
-import { getDailyNutrition } from "../../lib/db/queries/nutrition";
-import { getSessionsForDate } from "../../lib/db/queries/workout";
-import { getTodayKey } from "../../lib/dates";
-import { buildCoachContext } from "../../lib/ai/context-builder";
-import { getConversationHistory, insertConversationMessage, clearConversationHistory } from "../../lib/db/queries/reports";
-import { Card } from "../../components/ui/Card";
-import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { AiConversation, DailyNutrition, WorkoutSession } from "../../lib/db/schema";
+import { useAIStore } from "../../../lib/stores/ai.store";
+import { generateCoachResponse, isGroqConfigured, type CoachMessage } from "../../../lib/groq";
+import { getDailyNutrition } from "../../../lib/db/queries/nutrition";
+import { getSessionsForDate } from "../../../lib/db/queries/workout";
+import { getTodayKey } from "../../../lib/dates";
+import { buildCoachContext } from "../../../lib/ai/context-builder";
+import { getConversationHistory, insertConversationMessage, clearConversationHistory } from "../../../lib/db/queries/reports";
+import { Card } from "../../../components/ui/Card";
+import { CardSkeleton } from "../../../components/ui/SkeletonLoader";
+import type { AiConversation, DailyNutrition, WorkoutSession } from "../../../lib/db/schema";
 import uuid from "react-native-uuid";
-import { M3 } from "../../design-system/tokens";
-import { PressableScale } from "../../components/ui/PressableScale";
+import { M3 } from "../../../design-system/tokens";
+import { PressableScale } from "../../../components/ui/PressableScale";
 
 // Suggested prompts for coach
 const COACH_SUGGESTED_PROMPTS = [
