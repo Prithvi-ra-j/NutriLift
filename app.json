@@ -17,18 +17,6 @@
       "eas": {
         "projectId": "4d082b22-8f1b-4d8d-abd2-dfe2c41a172b"
       }
-    },
-    "install": {
-      "exclude": [
-        "@react-native-async-storage/async-storage",
-        "@types/jest",
-        "expo",
-        "expo-constants",
-        "expo-file-system",
-        "expo-font",
-        "expo-router",
-        "expo-updates"
-      ]
     }
   }
 }
