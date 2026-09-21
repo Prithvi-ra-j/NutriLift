@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -78,7 +79,7 @@ export default function NutritionCardModal() {
 
       await insertFoodLog({
         id: uuid.v4() as string,
-        date: new Date().toISOString().split("T")[0],
+        date: getTodayKey(),
         meal,
         name: name.trim(),
         quantity_g: qty,
