@@ -143,7 +143,7 @@ export default function NutritionScreen() {
         {/* ── Header ── */}
         <ScreenHeader
           title="NUTRITION"
-          subtitle={new Date(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+          subtitle={parseDateKey(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
           actionIcon="plus"
           actionLabel="Log Food"
           onAction={() => router.push("/modals/log-food")}
@@ -153,7 +153,7 @@ export default function NutritionScreen() {
         <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />
 
         {/* ── Marathon Day Notice ── */}
-        {new Date(selectedDate).getDay() === 0 && (
+        {parseDateKey(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
               <Feather name="activity" size={20} color={M3.colors.error} />
@@ -347,7 +347,7 @@ export default function NutritionScreen() {
                       }}
                     />
                     <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                      {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
+                      {parseDateKey(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                     </Text>
                   </View>
                 );
