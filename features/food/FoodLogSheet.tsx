@@ -242,8 +242,11 @@ export default function LogFoodModal() {
         });
       }
       success();
+      setSavedMeal(selectedMeal);
+      setSavedCalories(totalMacros?.calories ?? 0);
+      setSavedProtein(totalMacros?.protein ?? 0);
       setSaved(true);
-      setTimeout(() => router.back(), 350);
+      setTimeout(() => router.back(), 700);
     } catch (err) {
       Alert.alert("Save Failed", "Could not save food log. Please try again.");
     } finally {
