@@ -194,7 +194,7 @@ export default function VoiceInputModal() {
           <View style={{ backgroundColor: M3.colors.surface, borderRadius: M3.shape.large, padding: 16, borderWidth: 1, borderColor: M3.colors.outline }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <Feather name="message-square" size={14} color={M3.colors.primary} />
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                 TRANSCRIPT
               </Text>
             </View>
@@ -209,7 +209,7 @@ export default function VoiceInputModal() {
           <View style={{ backgroundColor: M3.colors.surface, borderRadius: M3.shape.large, padding: 16, borderWidth: 1, borderColor: M3.colors.outline, gap: 12 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Feather name="check-circle" size={14} color={M3.colors.success} />
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                 DETECTED FOOD ({parsedFood.items.length})
               </Text>
             </View>
@@ -231,21 +231,21 @@ export default function VoiceInputModal() {
                   {item.quantity}
                 </Text>
                 <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
-                  <Text style={{ color: M3.colors.secondary, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                  <Text style={{ color: M3.colors.secondary, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                     {item.calories} kcal
                   </Text>
-                  <Text style={{ color: M3.colors.success, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                  <Text style={{ color: M3.colors.success, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                     P: {item.protein_g}g
                   </Text>
-                  <Text style={{ color: M3.colors.warning, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                  <Text style={{ color: M3.colors.warning, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                     C: {item.carbs_g}g
                   </Text>
-                  <Text style={{ color: M3.colors.error, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                  <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                     F: {item.fat_g}g
                   </Text>
                 </View>
                 {item.confidence === "low" && (
-                  <Text style={{ color: M3.colors.warning, fontSize: 10, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
+                  <Text style={{ color: M3.colors.warning, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
                     Low confidence estimate
                   </Text>
                 )}
@@ -253,13 +253,13 @@ export default function VoiceInputModal() {
             ))}
 
             {parsedFood.meal_suggestion && (
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
                 Suggested meal: {parsedFood.meal_suggestion}
               </Text>
             )}
 
             {parsedFood.parse_notes && (
-              <Text style={{ color: M3.colors.warning, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
+              <Text style={{ color: M3.colors.warning, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
                 Note: {parsedFood.parse_notes}
               </Text>
             )}
