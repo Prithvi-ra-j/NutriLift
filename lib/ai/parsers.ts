@@ -42,6 +42,8 @@ export async function parseFoodInput(input: string) {
       }],
       meal_suggestion: null,
       parse_notes: "Matched a local food database entry; review the serving if needed.",
+      source: "local" as const,
+      original_input: input,
     };
   }
   try {
