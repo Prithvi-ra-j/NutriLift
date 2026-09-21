@@ -41,6 +41,8 @@ import {
 } from "../../../lib/constants/exercises";
 import { WORKOUT_TEMPLATES, type ExerciseTemplate } from "../../../lib/constants/workout-templates";
 import { Card } from "../../../components/ui/Card";
+import { Button } from "../../../components/ui/Button";
+import { PressableScale } from "../../../components/ui/PressableScale";
 import { PRBadge } from "../../../components/ui/PRBadge";
 import { EmptyState } from "../../../components/ui/EmptyState";
 import { DateNavigator } from "../../../components/ui/DateNavigator";
@@ -169,9 +171,6 @@ export default function WorkoutScreen() {
   const [previousPerformance, setPreviousPerformance] = useState<Record<string, string>>({});
   const [restTimerDuration, setRestTimerDuration] = useState(90);
   const restTimer = useRestTimer(restTimerDuration);
-  const [previousPerformance, setPreviousPerformance] = useState<Record<string, string>>({});
-  const [restTimerDuration, setRestTimerDuration] = useState(90);
-  const restTimer = useRestTimer(restTimerDuration);
 
   // ── Set form state ──
   const [addSetForm, setAddSetForm] = useState<SetForm | null>(null);
@@ -195,7 +194,6 @@ export default function WorkoutScreen() {
   const [editExerciseName, setEditExerciseName] = useState("");
   const [editExerciseMuscle, setEditExerciseMuscle] = useState("");
   const [editExerciseEquip, setEditExerciseEquip] = useState("");
-  const [isFinishing, setIsFinishing] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
 
   // ─── Load ──────────────────────────────────────────────────────────────────
