@@ -34,7 +34,7 @@ const COLORS = {
   success: M3.colors.success,
   warning: M3.colors.warning,
   danger: M3.colors.error,
-  gold: M3.colors.pr,
+  gold: M3.colors.warning,
 } as const;
 
 export function NutriLiftText({
