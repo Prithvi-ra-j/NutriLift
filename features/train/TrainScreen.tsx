@@ -54,6 +54,8 @@ import { success as hapticSuccess } from "../../../lib/haptics";
 import { useWorkoutTimer } from "./hooks/useWorkoutTimer";
 import { RestTimer } from "./components/RestTimer";
 import { WorkoutSummary } from "./components/WorkoutSummary";
+import { WorkoutHeader } from "./components/WorkoutHeader";
+import { ExerciseCard } from "./components/ExerciseCard";
 import { SetRow } from "./components/SetRow";
 
 
@@ -820,12 +822,10 @@ export default function WorkoutScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Header ── */}
-        <ScreenHeader
-          title="WORKOUT"
-          subtitle={selectedDayType}
-          actionIcon="plus"
-          actionLabel={!session?.ended_at ? "Add Exercise" : undefined}
-          onAction={!session?.ended_at ? () => setShowAddExercise(true) : undefined}
+        <WorkoutHeader
+          dayType={selectedDayType}
+          canAdd={!session?.ended_at}
+          onAdd={() => setShowAddExercise(true)}
         />
 
         {/* ── Date Navigator ── */}
@@ -1032,7 +1032,25 @@ export default function WorkoutScreen() {
           const estimated1RM = topSet ? calculateEpley1RM(topSet.weight_kg, topSet.reps) : null;
 
           return (
-            <Card key={exercise.id}>
+            <ExerciseCard
+              exercise={exercise}
+              exerciseType={exType}
+              totalVolume={totalVolume}
+              estimated1RM={estimated1RM}
+              progressionMessage={progressionAlerts[exercise.id]}
+              previousPerformance={previousPerformance[exercise.id]}
+              onEdit={() => {
+                setEditingExerciseId(exercise.id);
+                setEditExerciseName(exercise.exercise_name);
+                setEditExerciseMuscle(exercise.muscle_group || "");
+                setEditExerciseEquip(exercise.equipment || "");
+              }}
+              onSwap={() => {
+                setSwapExerciseId(exercise.id);
+                setSwapSearch("");
+              }}
+              onDelete={() => confirmDeleteExercise(exercise.id, exercise.exercise_name)}
+            >
               {/* Exercise header */}
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                 <View style={{ flex: 1 }}>
@@ -1198,7 +1216,7 @@ export default function WorkoutScreen() {
                   </PressableScale>
                 )
               )}
-            </Card>
+            </ExerciseCard>
           );
         })}
 
