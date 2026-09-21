@@ -69,6 +69,8 @@ export default function TodayScreen() {
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
   const nextMeal = ["breakfast", "lunch", "snack", "dinner"].find((meal) => groups[meal].length === 0) ?? null;
+  const loggedProteinDays = week.filter((item) => item.hit).length;
+  const measuredDays = week.filter((item) => item.date <= today && item.hit || item.date <= today && false).length;
 
   if (loadError && !loading) return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
@@ -194,7 +196,7 @@ export default function TodayScreen() {
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
             <Text style={{ flex: 1, color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 19 }}>This week</Text>
-            <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_500Medium", fontSize: 13 }}>{week.filter(x => x.hit).length}/7 protein days</Text>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_500Medium", fontSize: 13 }}>{loggedProteinDays} of {week.filter((item) => item.date <= today).length} logged days on target</Text>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             {week.map(x => (
