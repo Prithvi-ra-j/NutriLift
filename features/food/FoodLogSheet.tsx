@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getTodayKey } from "../../../lib/dates";
 import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
@@ -23,6 +22,7 @@ import uuid from "react-native-uuid";
 import { M3 } from "../../../design-system/tokens";
 import { PressableScale } from "../../../components/ui/PressableScale";
 import { success } from "../../../lib/haptics";
+import { INDIAN_FOOD_DB } from "../../../lib/data/indianFoodDB";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -55,10 +55,70 @@ export default function LogFoodModal() {
   const [savedCalories, setSavedCalories] = useState(0);
   const [savedProtein, setSavedProtein] = useState(0);
   const [recentFoods, setRecentFoods] = useState<import("../../../lib/db/schema").FoodLog[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [manualName, setManualName] = useState("");
+  const [manualCalories, setManualCalories] = useState("");
+  const [manualProtein, setManualProtein] = useState("");
+  const [manualCarbs, setManualCarbs] = useState("");
+  const [manualFat, setManualFat] = useState("");
 
   const today = getTodayKey();
 
   useEffect(() => { getDistinctRecentFoods(8).then(setRecentFoods).catch(() => setRecentFoods([])); }, []);
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return INDIAN_FOOD_DB.filter((food) => [food.name, ...food.aliases].some((name) => name.toLowerCase().includes(q))).slice(0, 8);
+  }, [searchQuery]);
+
+  const handleLocalFoodAdd = async (food: (typeof INDIAN_FOOD_DB)[number]) => {
+    const serving = food.commonServings[1] ?? food.commonServings[0];
+    const grams = serving?.grams ?? 100;
+    const factor = grams / 100;
+    await handleQuickAdd({
+      id: uuid.v4() as string,
+      date: today,
+      meal: selectedMeal,
+      name: food.name,
+      quantity_g: grams,
+      calories: food.per100g.calories * factor,
+      protein_g: food.per100g.protein * factor,
+      carbs_g: food.per100g.carbs * factor,
+      fat_g: food.per100g.fat * factor,
+      fiber_g: food.per100g.fiber * factor,
+      sugar_g: null,
+      sodium_mg: null,
+      source: "manual",
+      raw_input: searchQuery,
+      created_at: Math.floor(Date.now() / 1000),
+    } as import("../../../lib/db/schema").FoodLog);
+  };
+
+  const handleRepeatMeal = async () => {
+    setIsSaving(true);
+    setParseError(null);
+    try {
+      const previous = await getMostRecentMealLogsBeforeDate(selectedMeal, today);
+      if (previous.length === 0) {
+        setParseError("No previous meal is available to repeat yet.");
+        return;
+      }
+      for (const food of previous) {
+        await insertFoodLog({ ...food, id: uuid.v4() as string, date: today, meal: selectedMeal, created_at: Math.floor(Date.now() / 1000) });
+      }
+      setSavedMeal(selectedMeal);
+      setSavedCalories(previous.reduce((sum, food) => sum + food.calories, 0));
+      setSavedProtein(previous.reduce((sum, food) => sum + food.protein_g, 0));
+      success();
+      setSaved(true);
+      setTimeout(() => router.back(), 700);
+    } catch {
+      setParseError("Unable to repeat that meal. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
 
 
   const handleQuickAdd = async (food: import("../../../lib/db/schema").FoodLog) => {
@@ -214,7 +274,7 @@ export default function LogFoodModal() {
           {/* ── Meal Selector ── */}
           <View style={{ flexDirection: "row", gap: 8 }}>
             {MEALS.map((meal) => (
-              <TouchableOpacity
+              <PressableScale
                 key={meal}
                 onPress={() => setSelectedMeal(meal)}
                 style={{
@@ -230,7 +290,7 @@ export default function LogFoodModal() {
                 <Text style={{ color: selectedMeal === meal ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
                   {meal}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             ))}
           </View>
 
@@ -249,6 +309,24 @@ export default function LogFoodModal() {
               </ScrollView>
             </View>
           )}
+
+
+          <Card>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Feather name="search" size={18} color={M3.colors.primary} />
+              <TextInput value={searchQuery} onChangeText={setSearchQuery} placeholder="Search foods" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ flex: 1, height: 44, color: M3.colors.onSurface, fontSize: 15 }} />
+            </View>
+            {searchResults.length > 0 && (
+              <View style={{ marginTop: 10, gap: 6 }}>
+                {searchResults.map((food) => (
+                  <PressableScale key={food.name} onPress={() => void handleLocalFoodAdd(food)} haptic accessibilityRole="button" accessibilityLabel={"Add " + food.name} style={{ minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 10, borderRadius: M3.shape.small, backgroundColor: M3.colors.surfaceVariant }}>
+                    <Text style={{ color: M3.colors.onSurface, ...M3.typescale.bodyMedium }}>{food.name}</Text>
+                    <Feather name="plus-circle" size={18} color={M3.colors.primary} />
+                  </PressableScale>
+                ))}
+              </View>
+            )}
+          </Card>
 
           {/* ── Entry methods ── */}
           <View style={{ gap: 10 }}>
@@ -384,9 +462,9 @@ export default function LogFoodModal() {
                           <Text style={{ color: M3.colors.warning, fontSize: 12, fontFamily: "DMSans_700Bold" }}>LOW CONF</Text>
                         </View>
                       )}
-                      <TouchableOpacity onPress={() => removeItem(index)}>
+                      <PressableScale onPress={() => removeItem(index)}>
                         <Feather name="trash-2" size={14} color={M3.colors.error} />
-                      </TouchableOpacity>
+                      </PressableScale>
                     </View>
                   </View>
 
