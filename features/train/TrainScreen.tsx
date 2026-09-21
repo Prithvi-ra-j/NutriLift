@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { getTodayKey, getLocalDateKey } from "../../lib/dates";
+import { getTodayKey, getLocalDateKey } from "../../../lib/dates";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useTodayStore } from "../../lib/stores/today.store";
+import { useTodayStore } from "../../../lib/stores/today.store";
 import {
   getSessionsForDate,
   getExercisesForSession,
@@ -28,23 +28,23 @@ import {
   calculateEpley1RM,
   getCustomExercises,
   insertCustomExercise,
-} from "../../lib/db/queries/workout";
+} from "../../../lib/db/queries/workout";
 import {
   DAY_TYPES,
   EXERCISE_LIBRARY,
   type DayType,
   type ExerciseType,
-} from "../../lib/constants/exercises";
-import { WORKOUT_TEMPLATES, type ExerciseTemplate } from "../../lib/constants/workout-templates";
-import { Card } from "../../components/ui/Card";
-import { PRBadge } from "../../components/ui/PRBadge";
-import { EmptyState } from "../../components/ui/EmptyState";
-import { DateNavigator } from "../../components/ui/DateNavigator";
-import { ScreenHeader } from "../../components/ui/ScreenHeader";
-import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
+} from "../../../lib/constants/exercises";
+import { WORKOUT_TEMPLATES, type ExerciseTemplate } from "../../../lib/constants/workout-templates";
+import { Card } from "../../../components/ui/Card";
+import { PRBadge } from "../../../components/ui/PRBadge";
+import { EmptyState } from "../../../components/ui/EmptyState";
+import { DateNavigator } from "../../../components/ui/DateNavigator";
+import { ScreenHeader } from "../../../components/ui/ScreenHeader";
+import { CardSkeleton } from "../../../components/ui/SkeletonLoader";
+import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../../lib/db/schema";
 import uuid from "react-native-uuid";
-import { M3 } from "../../design-system/tokens";
+import { M3 } from "../../../design-system/tokens";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
