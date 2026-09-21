@@ -7,7 +7,7 @@ export const colors = {
   warning:"#FFB800", warningContainer:"#3D2800", onWarningContainer:"#FFDE9C",
   success:"#00C875", successContainer:"#003920", onSuccessContainer:"#7EFFC4",
   onBackground:"#E8E8F0", onSurface:"#E8E8F0", onSurfaceVariant:"#909090", onSurfaceMuted:"#8080A0",
-  outline:"#2E2E3F", outlineVariant:"#3A3A50", shadow:"#000000",
+  outline:"#2E2E3F", outlineVariant:"#3A3A50", shadow:"#000000", scrim:"#000000", pr:"#FFD700",
 } as const;
 export type ColorToken = keyof typeof colors;
 export const dayTypeColors: Record<string,string> = {"Push A":"#FF6B6B","Push B":"#FF8C6B","Pull A":"#4ECDC4","Pull B":"#45B7D1","Legs A":"#B69DF8","Legs B":"#9B7EF0","Cardio":"#FF5449","Marathon":"#FF5449","Rest":"#909090"};
