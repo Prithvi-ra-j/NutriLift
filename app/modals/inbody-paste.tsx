@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -23,7 +24,7 @@ export default function InBodyPasteModal() {
   const [isParsing, setIsParsing] = useState(false);
   const [parsed, setParsed] = useState<InBodyParseResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [dateOverride, setDateOverride] = useState(new Date().toISOString().split("T")[0]);
+  const [dateOverride, setDateOverride] = useState(getTodayKey());
 
   const handleParse = async () => {
     if (!pasteText.trim()) return;
