@@ -13,7 +13,7 @@ import { M3 } from "../design-system/tokens";
 import { PressableScale } from "../components/ui/PressableScale";
 
 export default function ProfileScreen() {
-  const [name, setName] = useState(USER_PROFILE.name);
+  const [name, setName] = useState<string>(USER_PROFILE.name);
   const [calories, setCalories] = useState(String(USER_PROFILE.targets.calories));
   const [protein, setProtein] = useState(String(USER_PROFILE.targets.protein_g));
   const [carbs, setCarbs] = useState(String(USER_PROFILE.targets.carbs_g));
