@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -128,7 +129,7 @@ function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, e
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function WorkoutScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getTodayKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const getDefaultDayType = (dateStr: string): DayType => {
