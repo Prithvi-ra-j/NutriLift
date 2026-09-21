@@ -2,7 +2,9 @@ name: Build Android APK (EAS)
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - "redesign/**"
   pull_request:
     branches: [main]
   workflow_dispatch:
