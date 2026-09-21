@@ -16,7 +16,7 @@ export function useTodayData() {
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
   const [recovery, setRecovery] = useState<RecoveryLog | null>(null);
   const [profile, setProfile] = useState<UserProfileRow | null>(null);
-  const [week, setWeek] = useState<{ date: string; hit: boolean }[]>([]);
+  const [week, setWeek] = useState<{ date: string; hit: boolean; logged: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export function useTodayData() {
       setWeek(Array.from({ length: 7 }, (_, i) => {
         const date = getDateDaysAgo(6 - i);
         const row = last7.find((item) => item.date === date);
-        return { date, hit: row?.protein_target_met === 1 };
+        return { date, hit: row?.protein_target_met === 1, logged: !!row };
       }));
       const recoveryValues = recovery ? [
         recovery.sleep_quality,
