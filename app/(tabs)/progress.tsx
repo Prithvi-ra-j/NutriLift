@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { getTodayKey, addDaysToDateKey } from "../../lib/dates";
+import { getTodayKey, getLocalDateKey } from "../../lib/dates";
 import {
   View,
   Text,
