@@ -1,4 +1,4 @@
-import { Pressable, View, type PressableProps, type ViewStyle } from "react-native";
+import { Pressable, View, type PressableProps, type ViewStyle, type StyleProp } from "react-native";
 import { useEffect } from "react";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { impactLight } from "../../lib/haptics";
