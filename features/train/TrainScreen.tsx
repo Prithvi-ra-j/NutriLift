@@ -294,6 +294,13 @@ export default function WorkoutScreen() {
     }
 
     const lastWeight = exerciseType === "weight_reps" ? await getLastWeightForExercise(exerciseName) : null;
+    const previous = await getPreviousSessionForDayType(selectedDayType, selectedDate);
+    const previousExercise = previous?.exercises.find((entry) => entry.exercise.exercise_name === exerciseName);
+    if (previousExercise) {
+      const working = previousExercise.sets.filter((set) => !set.is_warmup);
+      const preview = working.slice(0, 3).map((set) => `${set.weight_kg}kg × ${set.reps}`).join(" · ");
+      if (preview) setPreviousPerformance((prev) => ({ ...prev, [exerciseId]: preview }));
+    }
     setAddSetForm(blankForm(exerciseId, exerciseName, exerciseType, lastWeight));
   };
 
