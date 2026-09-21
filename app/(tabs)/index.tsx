@@ -16,6 +16,7 @@ import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { MacroRing } from "../../components/ui/MacroRing";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
+import { ErrorState } from "../../components/ui/ErrorState";
 import { PressableScale } from "../../components/ui/PressableScale";
 import type { FoodLog } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
@@ -68,12 +69,14 @@ export default function TodayScreen() {
   const { coachInsight } = useUIStore();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
   const [profile, setProfile] = useState<{ display_name: string; calories_target: number | null; protein_target_g: number | null; carbs_target_g: number | null; fat_target_g: number | null } | null>(null);
   const [week, setWeek] = useState<{date:string; hit:boolean}[]>([]);
 
   const load = useCallback(async () => {
     try {
+      setLoadError(null);
       const [n, foods, sessions, last7, recovery, profileData] = await Promise.all([
         getDailyNutrition(today), getFoodLogsForDate(today), getSessionsForDate(today),
         getLast7DaysNutrition(), getRecoveryLog(today), getUserProfile(),
@@ -87,10 +90,17 @@ export default function TodayScreen() {
       setRecoveryScore(recovery ? Math.round((((recovery.sleep_quality ?? 3)+(recovery.energy_level ?? 3)+(6-(recovery.muscle_soreness ?? 3)))/3/5)*100) : null);
     } catch (e) {
       console.error("Today load failed", e);
+      setLoadError("We couldn’t load today’s data. Your saved data is unchanged.");
     } finally { setLoading(false); setRefreshing(false); }
   }, [today, setNutrition, setFoodLogs, setSession]);
 
   useEffect(() => { load(); }, [load]);
+
+  if (loadError && !loading) return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+      <ErrorState onRetry={() => { setLoading(true); load(); }} />
+    </SafeAreaView>
+  );
 
   const groups = useMemo(() => Object.fromEntries(MEALS.map(m => [m, foodLogs.filter(x => x.meal === m)])) as Record<string, FoodLog[]>, [foodLogs]);
   const targets = { calories: profile?.calories_target ?? USER_PROFILE.targets.calories, protein_g: profile?.protein_target_g ?? USER_PROFILE.targets.protein_g, carbs_g: profile?.carbs_target_g ?? USER_PROFILE.targets.carbs_g, fat_g: profile?.fat_target_g ?? USER_PROFILE.targets.fat_g };
