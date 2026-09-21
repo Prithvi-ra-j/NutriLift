@@ -38,9 +38,10 @@ function suggestedMeal(): MealType {
 export default function LogFoodModal() {
   const params = useLocalSearchParams();
   const mealParam = params.meal as MealType | undefined;
+  const modeParam = params.mode as "type" | "paste" | undefined;
   
   const { logFoodMeal, logFoodMode } = useUIStore();
-  const [mode, setMode] = useState<"type" | "paste" | "manual">(logFoodMode === "paste" ? "paste" : "type");
+  const [mode, setMode] = useState<"type" | "paste" | "manual">(modeParam ?? (logFoodMode === "paste" ? "paste" : "type"));
   const [selectedMeal, setSelectedMeal] = useState<MealType>(
     mealParam ?? (logFoodMeal as MealType) ?? suggestedMeal()
   );
