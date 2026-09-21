@@ -2,6 +2,8 @@ import { parseFoodFromText } from "../groq/parseFood";
 import { parseExerciseFromText } from "../groq/parseExercise";
 import { parseInBodyText } from "../groq/parseInBody";
 import { INDIAN_FOOD_DB } from "../data/indianFoodDB";
+import { searchPersonalFoods } from "../db/queries/personal-foods";
+import { getBarcodeCache } from "../db/queries/barcode";
 
 // Re-export types for backward compatibility
 export type {
@@ -23,6 +25,26 @@ export type {
 
 export async function parseFoodInput(input: string) {
   const normalized = input.trim().toLowerCase();
+  const normalized = input.trim().toLowerCase();
+  if (/^\d{8,14}$/.test(normalized)) {
+    const cached = await getBarcodeCache(normalized);
+    if (cached && cached.name) {
+      const grams = cached.servingSize || 100;
+      const factor = grams / 100;
+      return {
+        items: [{ name: cached.name, quantity: String(grams) + (cached.servingUnit || "g"), quantity_g: grams, calories: (cached.per100g.calories || 0) * factor, protein_g: (cached.per100g.protein || 0) * factor, carbs_g: (cached.per100g.carbs || 0) * factor, fat_g: (cached.per100g.fat || 0) * factor, fiber_g: cached.per100g.fiber == null ? null : cached.per100g.fiber * factor, confidence: "high" as const }],
+        meal_suggestion: null, parse_notes: "Matched a cached barcode product; review the serving if needed.", source: "local" as const, original_input: input,
+      };
+    }
+  }
+  const personalMatches = await searchPersonalFoods(normalized, 5);
+  const personal = personalMatches.find(function(food) { return food.name.toLowerCase() === normalized; }) || (personalMatches.length === 1 ? personalMatches[0] : null);
+  if (personal && personal.per100g_calories != null) {
+    return {
+      items: [{ name: personal.name, quantity: "100g", quantity_g: 100, calories: personal.per100g_calories, protein_g: personal.per100g_protein || 0, carbs_g: personal.per100g_carbs || 0, fat_g: personal.per100g_fat || 0, fiber_g: personal.per100g_fiber == null ? null : personal.per100g_fiber, confidence: "high" as const }],
+      meal_suggestion: null, parse_notes: "Matched your personal food database; review the serving if needed.", source: "local" as const, original_input: input,
+    };
+  }
   const local = INDIAN_FOOD_DB.find((food) => [food.name, ...food.aliases].some((name) => normalized.includes(name.toLowerCase())));
   if (local) {
     const serving = local.commonServings[1] ?? local.commonServings[0];
