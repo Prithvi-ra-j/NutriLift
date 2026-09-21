@@ -113,16 +113,22 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
   const profile = await getUserProfile();
   const calorieTarget = profile?.calories_target;
   const proteinTarget = profile?.protein_target_g;
-  const hasTargets = Number.isFinite(calorieTarget) && calorieTarget! > 0 && Number.isFinite(proteinTarget) && proteinTarget! > 0;
-  const proteinTargetMet = hasTargets ? (totals.protein_g >= proteinTarget! ? 1 : 0) : null;
-  const calorieTargetMet = hasTargets
+  const hasCalorieTarget = Number.isFinite(calorieTarget) && calorieTarget! > 0;
+  const hasProteinTarget = Number.isFinite(proteinTarget) && proteinTarget! > 0;
+  const proteinTargetMet = hasProteinTarget ? (totals.protein_g >= proteinTarget! ? 1 : 0) : null;
+  const calorieTargetMet = hasCalorieTarget
     ? (totals.calories >= calorieTarget! * 0.9 && totals.calories <= calorieTarget! * 1.1 ? 1 : 0)
     : null;
 
-  // Adherence score is only meaningful when the user has configured targets.
-  const proteinScore = hasTargets ? Math.min(100, (totals.protein_g / proteinTarget!) * 100) : null;
-  const calorieScore = hasTargets ? Math.min(100, Math.max(0, 100 - Math.abs(totals.calories - calorieTarget!) / calorieTarget! * 100)) : null;
-  const adherenceScore = proteinScore != null && calorieScore != null ? proteinScore * 0.6 + calorieScore * 0.4 : null;
+  // Adherence uses only configured targets; missing targets remain neutral.
+  const proteinScore = hasProteinTarget ? Math.min(100, (totals.protein_g / proteinTarget!) * 100) : null;
+  const calorieScore = hasCalorieTarget ? Math.min(100, Math.max(0, 100 - Math.abs(totals.calories - calorieTarget!) / calorieTarget! * 100)) : null;
+  const weightedScores = [
+    proteinScore == null ? null : { score: proteinScore, weight: 0.6 },
+    calorieScore == null ? null : { score: calorieScore, weight: 0.4 },
+  ].filter((x): x is { score: number; weight: number } => x !== null);
+  const totalWeight = weightedScores.reduce((sum, x) => sum + x.weight, 0);
+  const adherenceScore = totalWeight > 0 ? weightedScores.reduce((sum, x) => sum + x.score * x.weight, 0) / totalWeight : null;
 
   const existing = await getDailyNutrition(date);
   const updatedAt = new Date().toISOString();
@@ -159,7 +165,7 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
 // ─── Analytics Helpers ────────────────────────────────────────────────────────
 
 export async function getProteinHitRate(days: number = 30): Promise<number> {
-  const nutrition = await getLast30DaysNutrition();
+  const nutrition = days >= 30 ? await getLast30DaysNutrition() : await getDailyNutritionRange(getDateDaysAgo(Math.max(0, days - 1)), getTodayKey());
   if (nutrition.length === 0) return 0;
   const hits = nutrition.filter((d) => d.protein_target_met === 1).length;
   return (hits / nutrition.length) * 100;
