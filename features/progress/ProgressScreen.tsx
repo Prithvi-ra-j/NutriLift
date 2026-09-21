@@ -43,6 +43,7 @@ export default function ProgressScreen() {
   const [nutritionHistory, setNutritionHistory] = useState<DailyNutrition[]>([]);
   const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>([]);
   const [proteinTarget, setProteinTarget] = useState<number | null>(null);
+  const [calorieTarget, setCalorieTarget] = useState<number | null>(null);
 
   // Get week range for selected date
   const getWeekRange = (dateStr: string) => {
@@ -82,6 +83,7 @@ export default function ProgressScreen() {
       setNutritionHistory(nutritionData);
       setRecoveryLogs(recoveryData);
       setProteinTarget(profileData?.protein_target_g ?? null);
+      setCalorieTarget(profileData?.calories_target ?? null);
     } catch (err) {
       console.error("Progress load error:", err);
     } finally {
@@ -245,58 +247,7 @@ export default function ProgressScreen() {
               </View>
             </Card>
 
-            {/* Goal projection */}
-            <Card elevated>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
-                <Feather name="target" size={16} color={M3.colors.primary} />
-                <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                  December 2026 Goal
-                </Text>
-              </View>
-              <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                    Target Body Fat
-                  </Text>
-                  <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                    {USER_PROFILE.targets.body_fat_pct_dec2026}%
-                  </Text>
-                </View>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                    Current Body Fat
-                  </Text>
-                  <Text style={{ color: latestInBody?.body_fat_pct ? M3.colors.error : M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                    {latestInBody?.body_fat_pct ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "No InBody data"}
-                  </Text>
-                </View>
-                {bodySummary.projectedBFDate && (
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                      Projected Date
-                    </Text>
-                    <Text style={{ color: bodySummary.onTrackForGoal ? M3.colors.success : M3.colors.warning, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                      {new Date(bodySummary.projectedBFDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                    </Text>
-                  </View>
-                )}
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                    Trend
-                  </Text>
-                  <Text style={{
-                    color: bodySummary.trend === "losing" ? M3.colors.success : bodySummary.trend === "gaining" ? M3.colors.error : M3.colors.warning,
-                    fontSize: 13,
-                    fontFamily: "DMSans_700Bold",
-                    textTransform: "capitalize",
-                  }}>
-                    {bodySummary.trend}
-                  </Text>
-                </View>
-              </View>
-            </Card>
-
-            {/* Weight history mini chart */}
+            <Card elevated>\n              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>\n                <Feather name="target" size={16} color={M3.colors.primary} />\n                <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>Body composition</Text>\n              </View>\n              <View style={{ gap: 8 }}>\n                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>\n                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>Current body fat</Text>\n                  <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{latestInBody?.body_fat_pct != null ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "No InBody data"}</Text>\n                </View>\n                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18 }}>Projections are shown only when a personal body-fat target is configured.</Text>\n              </View>\n            </Card>\n\n            {/* Weight history mini chart */}
             {weekWeightHistory.length > 0 && (
               <Card>
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
@@ -457,8 +408,8 @@ export default function ProgressScreen() {
                 {isCurrentWeek ? "THIS WEEK" : "WEEK"} NUTRITION SUMMARY
               </Text>
               {[
-                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: `${USER_PROFILE.targets.calories}` },
-                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: `${USER_PROFILE.targets.protein_g}g` },
+                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: calorieTarget != null ? `${calorieTarget}` : "Not set" },
+                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: proteinTarget != null ? `${proteinTarget}g` : "Not set" },
                 { label: "Protein Hit Rate", value: `${nutritionSummary.proteinHitRate.toFixed(0)}%`, target: "100%" },
                 { label: "Best Streak", value: `${nutritionSummary.bestStreak} days`, target: "" },
                 { label: "Current Streak", value: `${nutritionSummary.currentStreak} days`, target: "" },
