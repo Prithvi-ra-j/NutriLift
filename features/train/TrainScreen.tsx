@@ -841,7 +841,7 @@ export default function WorkoutScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 180, gap: 16 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -850,8 +850,8 @@ export default function WorkoutScreen() {
           title="WORKOUT"
           subtitle={selectedDayType}
           actionIcon="plus"
-          actionLabel="Add Exercise"
-          onAction={() => setShowAddExercise(true)}
+          actionLabel={!session?.ended_at ? "Add Exercise" : undefined}
+          onAction={!session?.ended_at ? () => setShowAddExercise(true) : undefined}
         />
 
         {/* ── Date Navigator ── */}
