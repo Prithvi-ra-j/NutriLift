@@ -30,7 +30,7 @@ export default function MonthlyReportModal() {
   const [progress, setProgress] = useState("");
   const [report, setReport] = useState<MonthlyReport | null>(null);
 
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentMonth = getTodayKey().slice(0, 7); // YYYY-MM
 
   const generateReport = async () => {
     setIsGenerating(true);
