@@ -1,10 +1,11 @@
-import { useMemo } from "react";
+
 import { View, Text, ScrollView, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useUIStore } from "../../lib/stores/ui.store";
-import { useTodayData } from "./hooks/useTodayData";import { parseDateKey, formatDateKey } from "../../lib/dates";
+import { useTodayData } from "./hooks/useTodayData";
+import { parseDateKey, formatDateKey } from "../../lib/dates";
 import { formatCalories, formatGrams } from "../../lib/format";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
@@ -74,15 +75,6 @@ export default function TodayScreen() {
       <ErrorState onRetry={retry} />
     </SafeAreaView>
   );
-
-  const groups = useMemo(() => Object.fromEntries(MEALS.map(m => [m, foodLogs.filter(x => x.meal === m)])) as Record<string, FoodLog[]>, [foodLogs]);
-  const targets = { calories: profile?.calories_target ?? USER_PROFILE.targets.calories, protein_g: profile?.protein_target_g ?? USER_PROFILE.targets.protein_g, carbs_g: profile?.carbs_target_g ?? USER_PROFILE.targets.carbs_g, fat_g: profile?.fat_target_g ?? USER_PROFILE.targets.fat_g };
-  const displayName = profile?.display_name ?? USER_PROFILE.name;
-  const calories = nutrition?.total_calories ?? 0;
-  const protein = nutrition?.total_protein_g ?? 0;
-  const carbs = nutrition?.total_carbs_g ?? 0;
-  const fat = nutrition?.total_fat_g ?? 0;
-  const nextMeal = MEALS.find(m => groups[m].length === 0) ?? null;
 
   if (loading) return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
