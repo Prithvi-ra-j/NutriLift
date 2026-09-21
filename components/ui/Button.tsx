@@ -12,7 +12,7 @@ interface ButtonProps {
   icon?: React.ComponentProps<typeof Feather>["name"];
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: ViewStyle | ViewStyle[];
 }
 
 /** Shared button primitive — replaces the hand-rolled TouchableOpacity styling repeated across screens. */
