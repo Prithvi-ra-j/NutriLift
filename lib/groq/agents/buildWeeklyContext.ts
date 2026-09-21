@@ -114,6 +114,7 @@ export async function buildCustomContext(
   startDate: string,
   endDate: string
 ): Promise<WeeklyContext> {
+  const profile = await getUserProfile();
   const [nutrition, sessions, weights] = await Promise.all([
     db
       .select()
