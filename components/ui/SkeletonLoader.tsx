@@ -9,7 +9,7 @@ interface SkeletonProps {
   style?: ViewStyle;
 }
 
-export function Skeleton({ width = "100%", height = 16, borderRadius = 8, style }: SkeletonProps) {
+export function Skeleton({ width = "100%", height = 16, borderRadius = M3.shape.small, style }: SkeletonProps) {
   const opacity = useRef(new Animated.Value(0.2)).current;
 
   useEffect(() => {
@@ -52,10 +52,10 @@ export function CardSkeleton() {
     <View
       style={{
         backgroundColor: M3.colors.surface,
-        borderRadius: 12,
+        borderRadius: M3.shape.medium,
         borderWidth: 1,
         borderColor: M3.colors.surfaceContainer,
-        padding: 16,
+        padding: M3.spacing.lg,
         gap: 12, // Updated to 4pt grid
       }}
     >
