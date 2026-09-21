@@ -70,7 +70,6 @@ export default function TodayScreen() {
   const fat = nutrition?.total_fat_g ?? 0;
   const nextMeal = ["breakfast", "lunch", "snack", "dinner"].find((meal) => groups[meal].length === 0) ?? null;
   const loggedProteinDays = week.filter((item) => item.hit).length;
-  const measuredDays = week.filter((item) => item.date <= today && item.hit || item.date <= today && false).length;
 
   if (loadError && !loading) return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
