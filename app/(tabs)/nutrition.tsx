@@ -242,7 +242,7 @@ export default function NutritionScreen() {
                   color={M3.colors.primary}
                 />
               </View>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
                 {mode}
               </Text>
             </PressableScale>
@@ -312,7 +312,7 @@ export default function NutritionScreen() {
                         <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
                           {item.name}
                         </Text>
-                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
+                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
                           {item.calories.toFixed(0)} kcal · P:{item.protein_g.toFixed(0)}g · C:{item.carbs_g.toFixed(0)}g · F:{item.fat_g.toFixed(0)}g
                         </Text>
                       </View>
@@ -330,7 +330,7 @@ export default function NutritionScreen() {
         {/* ── Weekly Trend ── */}
         {last7Days.length > 0 && (
           <Card>
-            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
               7-DAY PROTEIN TREND
             </Text>
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: 60 }}>
@@ -347,7 +347,7 @@ export default function NutritionScreen() {
                         borderRadius: 3,
                       }}
                     />
-                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
+                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                       {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                     </Text>
                   </View>
