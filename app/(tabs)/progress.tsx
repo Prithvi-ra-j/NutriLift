@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { getTodayKey } from "../../lib/dates";
+import { getTodayKey, addDaysToDateKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -54,8 +54,8 @@ export default function ProgressScreen() {
     sunday.setDate(monday.getDate() + 6);
     
     return {
-      start: monday.toISOString().split("T")[0],
-      end: sunday.toISOString().split("T")[0],
+      start: getLocalDateKey(monday),
+      end: getLocalDateKey(sunday),
       monday,
       sunday,
     };
@@ -114,13 +114,13 @@ export default function ProgressScreen() {
   const goToPreviousWeek = () => {
     const prev = new Date(selectedDate);
     prev.setDate(prev.getDate() - 7);
-    setSelectedDate(prev.toISOString().split("T")[0]);
+    setSelectedDate(getLocalDateKey(prev));
   };
 
   const goToNextWeek = () => {
     const next = new Date(selectedDate);
     next.setDate(next.getDate() + 7);
-    setSelectedDate(next.toISOString().split("T")[0]);
+    setSelectedDate(getLocalDateKey(next));
   };
 
   const goToToday = () => {
