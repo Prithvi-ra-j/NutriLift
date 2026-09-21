@@ -35,7 +35,7 @@ export function Card({
           backgroundColor: M3.colors.surfaceVariant,
           borderWidth: 1,
           borderColor: M3.colors.outline,
-          shadowColor: "#000",
+          shadowColor: M3.colors.shadow,
           shadowOffset: { width: 0, height: 6 },
           shadowOpacity: 0.28,
           shadowRadius: 12,
