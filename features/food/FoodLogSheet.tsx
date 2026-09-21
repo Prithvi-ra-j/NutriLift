@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { getTodayKey } from "../../../lib/dates";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -12,17 +12,17 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { parseFoodInput, type ParsedFoodItem } from "../../../lib/ai/parsers";
-import { insertFoodLog, getDistinctRecentFoods, getMostRecentMealLogsBeforeDate } from "../../../lib/db/queries/nutrition";
-import { useUIStore } from "../../../lib/stores/ui.store";
-import { Card } from "../../../components/ui/Card";
-import { ModalHeader } from "../../../components/ui/ModalHeader";
-import { Button } from "../../../components/ui/Button";
+import { parseFoodInput, type ParsedFoodItem } from "../../lib/ai/parsers";
+import { insertFoodLog, getDistinctRecentFoods, getMostRecentMealLogsBeforeDate } from "../../lib/db/queries/nutrition";
+import { useUIStore } from "../../lib/stores/ui.store";
+import { Card } from "../../components/ui/Card";
+import { ModalHeader } from "../../components/ui/ModalHeader";
+import { Button } from "../../components/ui/Button";
 import uuid from "react-native-uuid";
-import { M3 } from "../../../design-system/tokens";
-import { PressableScale } from "../../../components/ui/PressableScale";
-import { success } from "../../../lib/haptics";
-import { INDIAN_FOOD_DB } from "../../../lib/data/indianFoodDB";
+import { M3 } from "../../design-system/tokens";
+import { PressableScale } from "../../components/ui/PressableScale";
+import { success } from "../../lib/haptics";
+import { INDIAN_FOOD_DB } from "../../lib/data/indianFoodDB";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
