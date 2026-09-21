@@ -135,7 +135,7 @@ export default function InBodyPasteModal() {
                 }}>
                   <Text style={{
                     color: parsed.parse_confidence === "high" ? M3.colors.success : parsed.parse_confidence === "medium" ? M3.colors.warning : M3.colors.error,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontFamily: "DMSans_700Bold",
                     textTransform: "uppercase",
                   }}>
@@ -143,7 +143,7 @@ export default function InBodyPasteModal() {
                   </Text>
                 </View>
                 {parsed.missing_fields.length > 0 && (
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                     {parsed.missing_fields.length} fields missing
                   </Text>
                 )}
@@ -151,7 +151,7 @@ export default function InBodyPasteModal() {
 
               {/* Date */}
               <View>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
                   Date (YYYY-MM-DD)
                 </Text>
                 <TextInput
@@ -171,7 +171,7 @@ export default function InBodyPasteModal() {
               </View>
 
               <Card>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   EXTRACTED DATA
                 </Text>
                 {[
