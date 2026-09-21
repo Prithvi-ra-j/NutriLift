@@ -53,6 +53,7 @@ import { M3 } from "../../../design-system/tokens";
 import { useRestTimer } from "./hooks/useRestTimer";
 import { RestTimer } from "./components/RestTimer";
 import { WorkoutSummary } from "./components/WorkoutSummary";
+import { SetRow } from "./components/SetRow";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -74,33 +75,6 @@ interface SetForm {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/** Format seconds → "1m 30s" or "45s" */
-function formatDuration(sec: number): string {
-  if (sec >= 60) {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return s > 0 ? `${m}m ${s}s` : `${m}m`;
-  }
-  return `${sec}s`;
-}
-
-/** Human-readable set pill label based on exercise type */
-function setLabel(set: SetLog, type: ExerciseType): string {
-  switch (type) {
-    case "reps_only":
-      return `× ${set.reps} reps`;
-    case "duration":
-      return formatDuration(set.duration_sec ?? set.reps ?? 0);
-    case "distance_duration": {
-      const dist = set.distance_km ?? 0;
-      const dur = set.duration_sec != null ? Math.round(set.duration_sec / 60) : set.reps;
-      return `${dist.toFixed(1)}km · ${dur}min`;
-    }
-    default:
-      return `${set.weight_kg}kg × ${set.reps}`;
-  }
-}
 
 /** Build a blank SetForm for a new set */
 function blankForm(exerciseLogId: string, exerciseName: string, exerciseType: ExerciseType, lastWeight?: number | null): SetForm {
@@ -1153,29 +1127,7 @@ export default function WorkoutScreen() {
                   const isEditing = editingSetId === set.id;
                   return (
                     <View key={set.id}>
-                      {/* Set pill — tap to edit */}
-                      {!isEditing && (
-                        <PressableScale
-                          onPress={() => openEditSet(set, exercise)}
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            gap: 4,
-                            backgroundColor: set.is_warmup ? M3.colors.surfaceVariant : M3.colors.surfaceContainer,
-                            borderRadius: 6,
-                            paddingHorizontal: 8,
-                            paddingVertical: 4,
-                            borderWidth: 1,
-                            borderColor: "transparent",
-                          }}
-                        >
-                          <Text style={{ color: set.is_warmup ? M3.colors.onSurfaceMuted : M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
-                            {setLabel(set, exType)}
-                          </Text>
-                          {set.is_pr === 1 && <PRBadge />}
-                          <Feather name="edit-2" size={9} color={M3.colors.onSurfaceMuted} style={{ marginLeft: 1 }} />
-                        </PressableScale>
-                      )}
+                      {!isEditing && <SetRow set={set} exerciseType={exType} onEdit={() => openEditSet(set, exercise)} />}
 
                       {/* Inline edit form for this set */}
                       {isEditing && editSetForm && (
