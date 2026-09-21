@@ -76,5 +76,19 @@
       "<rootDir>/jest.setup.js",
       "@testing-library/jest-native/extend-expect"
     ]
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "@react-native-async-storage/async-storage",
+        "@types/jest",
+        "expo",
+        "expo-constants",
+        "expo-file-system",
+        "expo-font",
+        "expo-router",
+        "expo-updates"
+      ]
+    }
   }
 }
