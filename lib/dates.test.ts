@@ -12,10 +12,11 @@ describe("local date utilities", () => {
     expect(addDaysToDateKey("2026-08-31", 1)).toBe("2026-09-01");
   });
 
-  it("keeps the same local day at midnight and early morning", () => {
-    expect(getLocalDateKey(new Date(2026, 8, 21, 0, 0))).toBe("2026-09-21");
-    expect(getLocalDateKey(new Date(2026, 8, 21, 5, 29))).toBe("2026-09-21");
-    expect(getLocalDateKey(new Date(2026, 8, 21, 5, 31))).toBe("2026-09-21");
+  it("keeps the local calendar day through the specified boundary times", () => {
+    expect(getLocalDateKey(new Date(2026, 8, 21, 23, 0))).toBe("2026-09-21");
+    expect(getLocalDateKey(new Date(2026, 8, 22, 0, 0))).toBe("2026-09-22");
+    expect(getLocalDateKey(new Date(2026, 8, 22, 5, 29))).toBe("2026-09-22");
+    expect(getLocalDateKey(new Date(2026, 8, 22, 5, 31))).toBe("2026-09-22");
   });
 
   it("derives today/yesterday and local weekday from the local calendar", () => {
