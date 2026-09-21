@@ -104,7 +104,22 @@ export default function TodayScreen() {
   const mealsRemaining = Math.max(1, MEALS.length - loggedMeals);
   const proteinPerRemainingMeal = remaining / mealsRemaining;
 
-  if (loading) return <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}><View style={{ padding: 20, gap: 16 }}><CardSkeleton /><CardSkeleton /><CardSkeleton /></View></SafeAreaView>;
+  if (loading) return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+      <View style={{ padding: M3.spacing.xl, gap: M3.spacing.lg }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={{ flex: 1, gap: 8 }}><CardSkeleton /></View>
+          <CardSkeleton />
+        </View>
+        <View style={{ height: 150, borderRadius: M3.shape.large, backgroundColor: M3.colors.surface, borderWidth: 1, borderColor: M3.colors.outline }} />
+        <View style={{ gap: 8 }}>
+          <View style={{ height: 20, width: 110, borderRadius: M3.shape.small, backgroundColor: M3.colors.surfaceContainer }} />
+          <CardSkeleton />
+        </View>
+        <CardSkeleton />
+      </View>
+    </SafeAreaView>
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
