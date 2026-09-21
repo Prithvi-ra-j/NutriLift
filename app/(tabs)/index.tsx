@@ -8,6 +8,7 @@ import { useUIStore } from "../../lib/stores/ui.store";
 import { getDailyNutrition, getFoodLogsForDate, getLast7DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { getRecoveryLog } from "../../lib/db/queries/recovery";
+import { getUserProfile } from "../../lib/db/queries/profile";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { getTodayKey, getDateDaysAgo, parseDateKey, formatDateKey } from "../../lib/dates";
 import { formatCalories, formatGrams } from "../../lib/format";
@@ -68,15 +69,16 @@ export default function TodayScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
+  const [profile, setProfile] = useState<{ display_name: string; calories_target: number | null; protein_target_g: number | null; carbs_target_g: number | null; fat_target_g: number | null } | null>(null);
   const [week, setWeek] = useState<{date:string; hit:boolean}[]>([]);
 
   const load = useCallback(async () => {
     try {
-      const [n, foods, sessions, last7, recovery] = await Promise.all([
+      const [n, foods, sessions, last7, recovery, profileData] = await Promise.all([
         getDailyNutrition(today), getFoodLogsForDate(today), getSessionsForDate(today),
-        getLast7DaysNutrition(), getRecoveryLog(today),
+        getLast7DaysNutrition(), getRecoveryLog(today), getUserProfile(),
       ]);
-      setNutrition(n); setFoodLogs(foods); setSession(sessions[0] ?? null);
+      setNutrition(n); setFoodLogs(foods); setSession(sessions[0] ?? null); setProfile(profileData);
       setWeek(Array.from({length:7}, (_,i) => {
         const date = getDateDaysAgo(6-i);
         const row = last7.find(x => x.date === date);
@@ -91,11 +93,13 @@ export default function TodayScreen() {
   useEffect(() => { load(); }, [load]);
 
   const groups = useMemo(() => Object.fromEntries(MEALS.map(m => [m, foodLogs.filter(x => x.meal === m)])) as Record<string, FoodLog[]>, [foodLogs]);
+  const targets = { calories: profile?.calories_target ?? targets.calories, protein_g: profile?.protein_target_g ?? targets.protein_g, carbs_g: profile?.carbs_target_g ?? targets.carbs_g, fat_g: profile?.fat_target_g ?? targets.fat_g };
+  const displayName = profile?.display_name ?? USER_PROFILE.name;
   const calories = nutrition?.total_calories ?? 0;
   const protein = nutrition?.total_protein_g ?? 0;
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
-  const remaining = Math.max(0, USER_PROFILE.targets.protein_g - protein);
+  const remaining = Math.max(0, targets.protein_g - protein);
   const loggedMeals = MEALS.filter(m => groups[m].length > 0).length;
   const mealsRemaining = Math.max(1, MEALS.length - loggedMeals);
   const proteinPerRemainingMeal = remaining / mealsRemaining;
@@ -109,23 +113,23 @@ export default function TodayScreen() {
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13 }}>{formatDateKey(today)}</Text>
-            <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 25, marginTop: 3 }}>{greeting()}, {USER_PROFILE.name}</Text>
+            <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 25, marginTop: 3 }}>{greeting()}, {displayName}</Text>
           </View>
           <PressableScale onPress={() => router.push("/(tabs)/more?section=account")} accessibilityRole="button" accessibilityLabel="Open profile" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
-            <Text style={{ color: M3.colors.primary, fontFamily: "DMSans_700Bold", fontSize: 17 }}>{USER_PROFILE.name.charAt(0)}</Text>
+            <Text style={{ color: M3.colors.primary, fontFamily: "DMSans_700Bold", fontSize: 17 }}>{displayName.charAt(0)}</Text>
           </PressableScale>
         </View>
 
         <Card>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-            <MacroRing protein={protein} carbs={carbs} fat={fat} proteinTarget={USER_PROFILE.targets.protein_g} carbsTarget={USER_PROFILE.targets.carbs_g} fatTarget={USER_PROFILE.targets.fat_g} calories={calories} caloriesTarget={USER_PROFILE.targets.calories} />
+            <MacroRing protein={protein} carbs={carbs} fat={fat} proteinTarget={targets.protein_g} carbsTarget={targets.carbs_g} fatTarget={targets.fat_g} calories={calories} caloriesTarget={targets.calories} />
             <View style={{ flex: 1 }}>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_500Medium" }}>Today's nutrition</Text>
               <Text style={{ color: M3.colors.onSurface, fontSize: 23, fontFamily: "BebasNeue_400Regular", marginTop: 2 }}>{formatGrams(protein)} protein</Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginBottom: 10 }}>of {USER_PROFILE.targets.protein_g}g target</Text>
-              <MacroBar label="Protein" current={protein} target={USER_PROFILE.targets.protein_g} color={M3.macroColors.protein} />
-              <MacroBar label="Carbs" current={carbs} target={USER_PROFILE.targets.carbs_g} color={M3.macroColors.carbs} />
-              <MacroBar label="Fat" current={fat} target={USER_PROFILE.targets.fat_g} color={M3.macroColors.fat} />
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginBottom: 10 }}>of {targets.protein_g}g target</Text>
+              <MacroBar label="Protein" current={protein} target={targets.protein_g} color={M3.macroColors.protein} />
+              <MacroBar label="Carbs" current={carbs} target={targets.carbs_g} color={M3.macroColors.carbs} />
+              <MacroBar label="Fat" current={fat} target={targets.fat_g} color={M3.macroColors.fat} />
             </View>
           </View>
         </Card>
