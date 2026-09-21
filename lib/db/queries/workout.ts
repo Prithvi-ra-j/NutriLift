@@ -31,6 +31,26 @@ export async function getSessionsForDate(date: string): Promise<WorkoutSession[]
   return db.select().from(workoutSessions).where(eq(workoutSessions.date, date));
 }
 
+
+export interface SessionSummary {
+  session: WorkoutSession | null;
+  exerciseCount: number;
+  workingSetCount: number;
+}
+
+export async function getSessionSummaryForDate(date: string): Promise<SessionSummary> {
+  const session = (await getSessionsForDate(date))[0] ?? null;
+  if (!session) return { session: null, exerciseCount: 0, workingSetCount: 0 };
+
+  const exercises = await getExercisesForSession(session.id);
+  if (exercises.length === 0) return { session, exerciseCount: 0, workingSetCount: 0 };
+
+  const sets = await Promise.all(exercises.map((exercise) => getSetsForExercise(exercise.id)));
+  const workingSetCount = sets.reduce((sum, exerciseSets) => sum + exerciseSets.filter((set) => !set.is_warmup).length, 0);
+
+  return { session, exerciseCount: exercises.length, workingSetCount };
+}
+
 export async function getRecentSessions(limit: number = 5): Promise<WorkoutSession[]> {
   return db
     .select()
