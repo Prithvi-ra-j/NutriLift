@@ -1,1 +1,1 @@
-export { default } from "../../features/food/PasteFood";
+export { default } from "../../features/progress/InBodyPaste";
