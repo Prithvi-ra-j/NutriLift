@@ -4,7 +4,6 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   TextInput,
   Alert,
   Modal,
@@ -51,6 +50,7 @@ import { CardSkeleton } from "../../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../../design-system/tokens";
+import { PressableScale } from "../../../components/ui/PressableScale";
 import { useRestTimer } from "./hooks/useRestTimer";
 import { RestTimer } from "./components/RestTimer";
 import { WorkoutSummary } from "./components/WorkoutSummary";
@@ -770,7 +770,7 @@ export default function WorkoutScreen() {
         {/* Actions row */}
         <View style={{ flexDirection: "row", gap: 8 }}>
           {(exerciseType === "weight_reps" || exerciseType === "reps_only") && (
-            <TouchableOpacity
+            <PressableScale
               onPress={() => onChange({ isWarmup: !form.isWarmup })}
               style={{
                 flex: 1,
@@ -785,12 +785,12 @@ export default function WorkoutScreen() {
               <Text style={{ color: form.isWarmup ? M3.colors.warning : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                 Warmup
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
 
           {extraActions}
 
-          <TouchableOpacity
+          <PressableScale
             onPress={onSubmit}
             style={{
               flex: 2,
@@ -803,9 +803,9 @@ export default function WorkoutScreen() {
             <Text style={{ color: M3.colors.background, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
               {submitLabel}
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
 
-          <TouchableOpacity
+          <PressableScale
             onPress={onCancel}
             style={{
               backgroundColor: M3.colors.surfaceVariant,
@@ -816,7 +816,7 @@ export default function WorkoutScreen() {
             }}
           >
             <Feather name="x" size={16} color={M3.colors.onSurfaceVariant} />
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       </View>
     );
@@ -880,7 +880,7 @@ export default function WorkoutScreen() {
                 RECOVERY & CARDIO
               </Text>
             </View>
-            <TouchableOpacity
+            <PressableScale
               onPress={() => setSelectedDayType("Cardio")}
               style={{
                 paddingHorizontal: 14,
@@ -895,7 +895,7 @@ export default function WorkoutScreen() {
               <Text style={{ color: selectedDayType === "Cardio" ? M3.colors.error : M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
                 Cardio & Recovery
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
           </Card>
         )}
 
@@ -912,7 +912,7 @@ export default function WorkoutScreen() {
             </View>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {DAY_TYPES.filter((dt) => !completedDayTypes.has(dt)).map((dt) => (
-                <TouchableOpacity
+                <PressableScale
                   key={dt}
                   onPress={() => setSelectedDayType(dt)}
                   style={{
@@ -927,12 +927,12 @@ export default function WorkoutScreen() {
                   <Text style={{ color: selectedDayType === dt ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
                     {dt}
                   </Text>
-                </TouchableOpacity>
+                </PressableScale>
               ))}
             </View>
 
             {WORKOUT_TEMPLATES[selectedDayType]?.length > 0 && (
-              <TouchableOpacity
+              <PressableScale
                 onPress={() => {
                   setShowTemplateSelector(true);
                   const template = WORKOUT_TEMPLATES[selectedDayType] || [];
@@ -955,7 +955,7 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.secondary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
                   Use {selectedDayType} Template ({WORKOUT_TEMPLATES[selectedDayType].length} exercises)
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             )}
           </Card>
         )}
@@ -1099,7 +1099,7 @@ export default function WorkoutScreen() {
                   )}
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     {/* Edit exercise */}
-                    <TouchableOpacity
+                    <PressableScale
                       onPress={() => {
                         setEditingExerciseId(exercise.id);
                         setEditExerciseName(exercise.exercise_name);
@@ -1109,9 +1109,9 @@ export default function WorkoutScreen() {
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Feather name="edit-2" size={15} color={M3.colors.primary} />
-                    </TouchableOpacity>
+                    </PressableScale>
                     {/* Swap exercise */}
-                    <TouchableOpacity
+                    <PressableScale
                       onPress={() => {
                         setSwapExerciseId(exercise.id);
                         setSwapSearch("");
@@ -1119,14 +1119,14 @@ export default function WorkoutScreen() {
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Feather name="repeat" size={15} color={M3.colors.onSurfaceVariant} />
-                    </TouchableOpacity>
+                    </PressableScale>
                     {/* Delete exercise */}
-                    <TouchableOpacity
+                    <PressableScale
                       onPress={() => confirmDeleteExercise(exercise.id, exercise.exercise_name)}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <Feather name="trash-2" size={15} color={M3.colors.error} />
-                    </TouchableOpacity>
+                    </PressableScale>
                   </View>
                 </View>
               </View>
@@ -1141,6 +1141,13 @@ export default function WorkoutScreen() {
                 </View>
               )}
 
+              {previousPerformance[exercise.id] && (
+                <View style={{ backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 10, borderWidth: 1, borderColor: M3.colors.outline }}>
+                  <Text style={{ ...M3.typescale.labelSmall, color: M3.colors.onSurfaceVariant }}>Last time</Text>
+                  <Text style={{ ...M3.typescale.bodyMedium, color: M3.colors.onSurface, marginTop: 2 }}>{previousPerformance[exercise.id]}</Text>
+                </View>
+              )}
+
               {/* Set pills */}
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
                 {exerciseSets.map((set) => {
@@ -1149,7 +1156,7 @@ export default function WorkoutScreen() {
                     <View key={set.id}>
                       {/* Set pill — tap to edit */}
                       {!isEditing && (
-                        <TouchableOpacity
+                        <PressableScale
                           onPress={() => openEditSet(set, exercise)}
                           style={{
                             flexDirection: "row",
@@ -1168,7 +1175,7 @@ export default function WorkoutScreen() {
                           </Text>
                           {set.is_pr === 1 && <PRBadge />}
                           <Feather name="edit-2" size={9} color={M3.colors.onSurfaceMuted} style={{ marginLeft: 1 }} />
-                        </TouchableOpacity>
+                        </PressableScale>
                       )}
 
                       {/* Inline edit form for this set */}
@@ -1187,12 +1194,12 @@ export default function WorkoutScreen() {
                             <Text style={{ color: M3.colors.secondary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
                               EDIT SET {set.set_number}
                             </Text>
-                            <TouchableOpacity
+                            <PressableScale
                               onPress={() => confirmDeleteSet(set.id, exercise.id, set.set_number)}
                               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                             >
                               <Feather name="trash-2" size={13} color={M3.colors.error} />
-                            </TouchableOpacity>
+                            </PressableScale>
                           </View>
                           {renderSetFormFields(
                             editSetForm,
@@ -1219,7 +1226,7 @@ export default function WorkoutScreen() {
                 )
               ) : (
                 !editingSetId && (
-                  <TouchableOpacity
+                  <PressableScale
                     onPress={async () => {
                       const lastWeight = exType === "weight_reps"
                         ? await getLastWeightForExercise(exercise.exercise_name)
@@ -1234,7 +1241,7 @@ export default function WorkoutScreen() {
                     <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
                       Add Set
                     </Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 )
               )}
             </Card>
@@ -1295,9 +1302,9 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
                   ADD EXERCISE
                 </Text>
-                <TouchableOpacity onPress={() => setShowAddExercise(false)}>
+                <PressableScale onPress={() => setShowAddExercise(false)}>
                   <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
+                </PressableScale>
               </View>
 
               <TextInput
@@ -1320,7 +1327,7 @@ export default function WorkoutScreen() {
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={{ gap: 8 }}>
                   {filteredExercises.map((ex) => (
-                    <TouchableOpacity
+                    <PressableScale
                       key={ex.name}
                       onPress={() => addExercise(ex.name, ex.muscle_group, ex.equipment, ex.exercise_type)}
                       style={{
@@ -1365,7 +1372,7 @@ export default function WorkoutScreen() {
                         </View>
                       </View>
                       <Feather name="plus" size={16} color={M3.colors.primary} />
-                    </TouchableOpacity>
+                    </PressableScale>
                   ))}
 
                   {filteredExercises.length === 0 && (
@@ -1376,7 +1383,7 @@ export default function WorkoutScreen() {
                     </View>
                   )}
 
-                  <TouchableOpacity
+                  <PressableScale
                     onPress={() => setShowCreateCustom(true)}
                     style={{
                       backgroundColor: M3.colors.secondaryContainer,
@@ -1393,7 +1400,7 @@ export default function WorkoutScreen() {
                     <Text style={{ color: M3.colors.secondary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
                       Create Custom Exercise
                     </Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
               </ScrollView>
             </View>
@@ -1410,9 +1417,9 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
                   CREATE CUSTOM EXERCISE
                 </Text>
-                <TouchableOpacity onPress={() => setShowCreateCustom(false)}>
+                <PressableScale onPress={() => setShowCreateCustom(false)}>
                   <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
+                </PressableScale>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -1445,7 +1452,7 @@ export default function WorkoutScreen() {
                     </Text>
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
                       {(["weight_reps", "reps_only", "duration", "distance_duration"] as ExerciseType[]).map((type) => (
-                        <TouchableOpacity
+                        <PressableScale
                           key={type}
                           onPress={() => setCustomExType(type)}
                           style={{
@@ -1460,7 +1467,7 @@ export default function WorkoutScreen() {
                           <Text style={{ color: customExType === type ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                             {type === "weight_reps" ? "Weight + Reps" : type === "reps_only" ? "Reps Only" : type === "duration" ? "Time Based" : "Cardio"}
                           </Text>
-                        </TouchableOpacity>
+                        </PressableScale>
                       ))}
                     </View>
                   </View>
@@ -1487,7 +1494,7 @@ export default function WorkoutScreen() {
                     />
                   </View>
 
-                  <TouchableOpacity
+                  <PressableScale
                     onPress={createCustomExercise}
                     style={{
                       backgroundColor: M3.colors.primary,
@@ -1500,7 +1507,7 @@ export default function WorkoutScreen() {
                     <Text style={{ color: M3.colors.background, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
                       Save & Add to Workout
                     </Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
               </ScrollView>
             </View>
@@ -1517,9 +1524,9 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
                   {selectedDayType} TEMPLATE
                 </Text>
-                <TouchableOpacity onPress={() => setShowTemplateSelector(false)}>
+                <PressableScale onPress={() => setShowTemplateSelector(false)}>
                   <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
+                </PressableScale>
               </View>
 
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
@@ -1532,7 +1539,7 @@ export default function WorkoutScreen() {
                     const isSelected = selectedTemplateExercises.has(ex.name);
                     const libEntry = EXERCISE_LIBRARY.find((e) => e.name === ex.name);
                     return (
-                      <TouchableOpacity
+                      <PressableScale
                         key={ex.name}
                         onPress={() => {
                           setSelectedTemplateExercises((prev) => {
@@ -1573,13 +1580,13 @@ export default function WorkoutScreen() {
                         }}>
                           {isSelected && <Feather name="check" size={14} color={M3.colors.background} />}
                         </View>
-                      </TouchableOpacity>
+                      </PressableScale>
                     );
                   })}
                 </View>
               </ScrollView>
 
-              <TouchableOpacity
+              <PressableScale
                 onPress={addExercisesFromTemplate}
                 disabled={selectedTemplateExercises.size === 0}
                 style={{
@@ -1596,7 +1603,7 @@ export default function WorkoutScreen() {
                 <Text style={{ color: selectedTemplateExercises.size > 0 ? M3.colors.background : M3.colors.onSurfaceMuted, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
                   Add {selectedTemplateExercises.size} Exercise{selectedTemplateExercises.size !== 1 && 's'}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             </View>
           </SafeAreaView>
         </View>
@@ -1611,9 +1618,9 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
                   SWAP EXERCISE
                 </Text>
-                <TouchableOpacity onPress={() => { setSwapExerciseId(null); setSwapSearch(""); }}>
+                <PressableScale onPress={() => { setSwapExerciseId(null); setSwapSearch(""); }}>
                   <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
+                </PressableScale>
               </View>
 
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
@@ -1640,7 +1647,7 @@ export default function WorkoutScreen() {
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={{ gap: 8 }}>
                   {swapFilteredExercises.map((ex) => (
-                    <TouchableOpacity
+                    <PressableScale
                       key={ex.name}
                       onPress={() => swapExercise(ex.name)}
                       style={{
@@ -1685,7 +1692,7 @@ export default function WorkoutScreen() {
                         </View>
                       </View>
                       <Feather name="repeat" size={16} color={M3.colors.secondary} />
-                    </TouchableOpacity>
+                    </PressableScale>
                   ))}
                 </View>
               </ScrollView>
@@ -1703,9 +1710,9 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
                   EDIT LOGGED EXERCISE
                 </Text>
-                <TouchableOpacity onPress={() => setEditingExerciseId(null)}>
+                <PressableScale onPress={() => setEditingExerciseId(null)}>
                   <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
+                </PressableScale>
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false}>
@@ -1774,7 +1781,7 @@ export default function WorkoutScreen() {
                     />
                   </View>
 
-                  <TouchableOpacity
+                  <PressableScale
                     onPress={saveEditExercise}
                     style={{
                       backgroundColor: M3.colors.primary,
@@ -1787,7 +1794,7 @@ export default function WorkoutScreen() {
                     <Text style={{ color: M3.colors.background, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
                       Save Changes
                     </Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 </View>
               </ScrollView>
             </View>
