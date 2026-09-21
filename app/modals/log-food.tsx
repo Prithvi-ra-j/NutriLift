@@ -26,6 +26,14 @@ import { success } from "../../lib/haptics";
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
 
+function suggestedMeal(): MealType {
+  const hour = new Date().getHours();
+  if (hour < 11) return "breakfast";
+  if (hour < 16) return "lunch";
+  if (hour < 19) return "snack";
+  return "dinner";
+}
+
 export default function LogFoodModal() {
   const params = useLocalSearchParams();
   const mealParam = params.meal as MealType | undefined;
@@ -33,7 +41,7 @@ export default function LogFoodModal() {
   const { logFoodMeal, logFoodMode } = useUIStore();
   const [mode, setMode] = useState<"type" | "voice" | "paste">(logFoodMode);
   const [selectedMeal, setSelectedMeal] = useState<MealType>(
-    mealParam ?? (logFoodMeal as MealType) ?? "breakfast"
+    mealParam ?? (logFoodMeal as MealType) ?? suggestedMeal()
   );
   const [input, setInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
