@@ -54,14 +54,14 @@ export default function LogFoodModal() {
   const [savedMeal, setSavedMeal] = useState<MealType | null>(null);
   const [savedCalories, setSavedCalories] = useState(0);
   const [savedProtein, setSavedProtein] = useState(0);
-  const [recentFoods, setRecentFoods] = useState<import("../../lib/db/schema").FoodLog[]>([]);
+  const [recentFoods, setRecentFoods] = useState<import("../../../lib/db/schema").FoodLog[]>([]);
 
   const today = getTodayKey();
 
   useEffect(() => { getDistinctRecentFoods(8).then(setRecentFoods).catch(() => setRecentFoods([])); }, []);
 
 
-  const handleQuickAdd = async (food: import("../../lib/db/schema").FoodLog) => {
+  const handleQuickAdd = async (food: import("../../../lib/db/schema").FoodLog) => {
     setIsSaving(true);
     try {
       await insertFoodLog({ ...food, id: uuid.v4() as string, date: today, meal: selectedMeal, created_at: Math.floor(Date.now() / 1000) });
@@ -108,8 +108,8 @@ export default function LogFoodModal() {
       });
       success();
       setSavedMeal(selectedMeal);
-      setSavedCalories(totalMacros?.calories ?? 0);
-      setSavedProtein(totalMacros?.protein ?? 0);
+      setSavedCalories(values[0]);
+      setSavedProtein(values[1]);
       setSaved(true);
       setTimeout(() => router.back(), 700);
     } catch {
