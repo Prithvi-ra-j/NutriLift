@@ -1077,7 +1077,7 @@ export default function WorkoutScreen() {
                       </Text>
                     </View>
                     {/* Exercise type badge */}
-                    <View style={{ backgroundColor: "#0D2D24", borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                    <View style={{ backgroundColor: M3.colors.primaryContainer, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
                       <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                         {exType === "weight_reps" ? "Weight" : exType === "reps_only" ? "Reps" : exType === "duration" ? "Duration" : "Cardio"}
                       </Text>
