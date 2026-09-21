@@ -104,9 +104,9 @@ export const typescale = {
   bodySmall:      { fontFamily: "DMSans_400Regular", fontSize: 12, letterSpacing: 0.4 },
 
   // Labels
-  labelLarge:     { fontFamily: "DMSans_500Medium", fontSize: 12, letterSpacing: 0.5 },
-  labelMedium:    { fontFamily: "DMSans_500Medium", fontSize: 11, letterSpacing: 0.5 },
-  labelSmall:     { fontFamily: "DMSans_500Medium", fontSize: 10, letterSpacing: 0.8 },
+  labelLarge:     { fontFamily: "DMSans_500Medium", fontSize: 13, letterSpacing: 0.2 },
+  labelMedium:    { fontFamily: "DMSans_500Medium", fontSize: 12, letterSpacing: 0.1 },
+  labelSmall:     { fontFamily: "DMSans_500Medium", fontSize: 12, letterSpacing: 0.1 },
 } as const;
 
 // ─── Spacing Tokens ───────────────────────────────────────────────────────────
