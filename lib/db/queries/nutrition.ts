@@ -33,6 +33,22 @@ export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, da
   await recomputeDailyNutrition(date);
 }
 
+
+export async function getRecentFoodLogs(limit: number = 12): Promise<FoodLog[]> {
+  return db.select().from(foodLogs).orderBy(desc(foodLogs.created_at)).limit(limit);
+}
+
+export async function getDistinctRecentFoods(limit: number = 12): Promise<FoodLog[]> {
+  const logs = await getRecentFoodLogs(Math.max(limit * 4, 24));
+  const seen = new Set<string>();
+  return logs.filter(log => {
+    const key = log.name.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, limit);
+}
+
 // ─── Daily Nutrition Queries ──────────────────────────────────────────────────
 
 export async function getDailyNutrition(date: string): Promise<DailyNutrition | null> {
