@@ -1,5 +1,5 @@
 import { View, Text } from "react-native";
-import { Canvas, Circle, Path, Skia } from "@shopify/react-native-skia";
+import { Canvas, Circle, Path } from "@shopify/react-native-skia";
 import { M3 } from "../../design-system/tokens";
 
 interface MacroRingProps {
@@ -14,13 +14,20 @@ interface MacroRingProps {
   size?: number;
 }
 
-function arcPath(size: number, start: number, sweep: number, radius: number) {
+function arcPath(size: number, start: number, sweep: number, radius: number): string {
+  if (sweep <= 0) return "";
+
   const center = size / 2;
-  const path = Skia.Path.Make();
-  const rect = Skia.XYWHRect(center - radius, center - radius, radius * 2, radius * 2);
-  const startDeg = start - 90;
-  path.addArc(rect, startDeg, sweep);
-  return path;
+  const startRad = ((start - 90) * Math.PI) / 180;
+  const endRad = ((start + sweep - 90) * Math.PI) / 180;
+
+  const startX = center + radius * Math.cos(startRad);
+  const startY = center + radius * Math.sin(startRad);
+  const endX = center + radius * Math.cos(endRad);
+  const endY = center + radius * Math.sin(endRad);
+  const largeArcFlag = sweep > 180 ? 1 : 0;
+
+  return `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
 }
 
 export function MacroRing({
@@ -47,6 +54,7 @@ export function MacroRing({
           const progress = Math.min(1, segment.target > 0 ? Math.max(0, segment.value) / segment.target : 0);
           const path = arcPath(size, start + gap / 2, sweep * progress, radius);
           start += allocation;
+          if (!path) return null;
           return <Path key={index} path={path} color={segment.color} style="stroke" strokeWidth={stroke} strokeCap="round" />;
         })}
       </Canvas>
