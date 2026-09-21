@@ -67,7 +67,7 @@ export default function NutritionScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
-  const [targets, setTargets] = useState(USER_PROFILE.targets);
+  const [targets, setTargets] = useState<{ calories: number; protein_g: number; carbs_g: number; fat_g: number }>({ ...USER_PROFILE.targets });
 
   const loadData = useCallback(async () => {
     try {
