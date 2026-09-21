@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getTodayKey } from "../../lib/dates";
+import { getTodayKey } from "../../../lib/dates";
 import {
   View,
   Text,
@@ -11,12 +11,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { parseInBodyText, type InBodyParseResult } from "../../lib/ai/parsers";
-import { insertBodyStat } from "../../lib/db/queries/body";
-import { Card } from "../../components/ui/Card";
-import { ModalHeader } from "../../components/ui/ModalHeader";
-import { Button } from "../../components/ui/Button";
-import { M3 } from "../../design-system/tokens";
+import { parseInBodyText, type InBodyParseResult } from "../../../lib/ai/parsers";
+import { insertBodyStat } from "../../../lib/db/queries/body";
+import { Card } from "../../../components/ui/Card";
+import { ModalHeader } from "../../../components/ui/ModalHeader";
+import { Button } from "../../../components/ui/Button";
+import { M3 } from "../../../design-system/tokens";
 import uuid from "react-native-uuid";
 
 export default function InBodyPasteModal() {
