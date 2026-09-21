@@ -1005,6 +1005,40 @@ export default function WorkoutScreen() {
           </Card>
         )}
 
+        {session?.ended_at && (
+          <WorkoutSummary
+            exerciseCount={exercises.length}
+            setCount={Object.values(sets).reduce((a, b) => a + b.filter((set) => !set.is_warmup).length, 0)}
+            volumeKg={session.total_volume_kg ?? 0}
+            prCount={Object.values(sets).flat().filter((set) => set.is_pr === 1).length}
+            durationMin={session.duration_min}
+            onDone={() => router.back()}
+          />
+        )}
+
+        {!session?.ended_at && session && exercises.length > 0 && (
+          <View style={{ gap: 8 }}>
+            <RestTimer
+              seconds={restTimer.seconds}
+              running={restTimer.running}
+              onStart={() => restTimer.start(restTimerDuration)}
+              onPause={restTimer.pause}
+              onReset={restTimer.reset}
+            />
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: 6 }}>
+              {[60, 90, 120].map((seconds) => (
+                <PressableScale key={seconds} onPress={() => setRestTimerDuration(seconds)} accessibilityRole="button" style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: M3.shape.full, backgroundColor: restTimerDuration === seconds ? M3.colors.primaryContainer : M3.colors.surfaceVariant }}>
+                  <Text style={{ color: restTimerDuration === seconds ? M3.colors.primary : M3.colors.onSurfaceVariant, ...M3.typescale.labelSmall }}>{seconds}s</Text>
+                </PressableScale>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {!session?.ended_at && session && exercises.length > 0 && (
+          <Button label={isFinishing ? "Finishing..." : "Finish workout"} icon="check-circle" loading={isFinishing} onPress={finishWorkout} />
+        )}
+
         {/* ── Exercise List ── */}
         {exercises.map((exercise) => {
           const exerciseSets = sets[exercise.id] ?? [];
