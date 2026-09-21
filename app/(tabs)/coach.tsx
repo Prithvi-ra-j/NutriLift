@@ -21,6 +21,7 @@ import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { AiConversation } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { PressableScale } from "../../components/ui/PressableScale";
 
 // Suggested prompts for coach
 const COACH_SUGGESTED_PROMPTS = [
@@ -179,9 +180,9 @@ export default function CoachScreen() {
               </View>
             )}
           </View>
-          <TouchableOpacity
+          <PressableScale
             onPress={handleClear}
-            activeOpacity={0.7}
+           
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={{
               width: 36,
@@ -195,7 +196,7 @@ export default function CoachScreen() {
             }}
           >
             <Feather name="edit" size={15} color={M3.colors.onSurfaceVariant} />
-          </TouchableOpacity>
+          </PressableScale>
         </View>
 
         {/* ── Groq API warning ── */}
@@ -238,10 +239,10 @@ export default function CoachScreen() {
 
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, justifyContent: "space-between" }}>
                 {COACH_SUGGESTED_PROMPTS.map((prompt) => (
-                  <TouchableOpacity
+                  <PressableScale
                     key={prompt}
                     onPress={() => sendMessage(prompt)}
-                    activeOpacity={0.7}
+                   
                     style={{
                       width: "48%",
                       backgroundColor: M3.colors.surface,
@@ -258,7 +259,7 @@ export default function CoachScreen() {
                     <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12.5, fontFamily: "DMSans_500Medium", lineHeight: 17 }}>
                       {prompt}
                     </Text>
-                  </TouchableOpacity>
+                  </PressableScale>
                 ))}
               </View>
             </View>
@@ -356,10 +357,10 @@ export default function CoachScreen() {
                 fontSize: 14.5,
               }}
             />
-            <TouchableOpacity
+            <PressableScale
               onPress={() => sendMessage(input)}
               disabled={!input.trim() || isGenerating}
-              activeOpacity={0.75}
+             
               style={{
                 width: 38,
                 height: 38,
@@ -375,7 +376,7 @@ export default function CoachScreen() {
               ) : (
                 <Feather name="arrow-up" size={18} color={input.trim() ? M3.colors.onPrimary : M3.colors.onSurfaceMuted} />
               )}
-            </TouchableOpacity>
+            </PressableScale>
           </View>
         </View>
       </KeyboardAvoidingView>
