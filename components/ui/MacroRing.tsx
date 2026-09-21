@@ -42,6 +42,7 @@ export function MacroRing({
   ];
   const total = segments.reduce((sum, x) => sum + Math.max(0, x.target), 0) || 1;
   const gap = 5;
+  const hasCaloriesTarget = Number(caloriesTarget) > 0;
   let start = 0;
 
   return (
@@ -55,7 +56,8 @@ export function MacroRing({
           const path = arcPath(size, start + gap / 2, sweep * progress, radius);
           start += allocation;
           if (!path) return null;
-          return <Path key={index} path={path} color={segment.color} style="stroke" strokeWidth={stroke} strokeCap="round" />;
+          const overTarget = segment.target > 0 && segment.value > segment.target;
+          return <Path key={index} path={path} color={overTarget ? M3.colors.warning : segment.color} style="stroke" strokeWidth={stroke} strokeCap="round" />;
         })}
       </Canvas>
       <View style={{ position: "absolute", alignItems: "center" }}>
@@ -63,7 +65,7 @@ export function MacroRing({
           {Math.round(calories)}
         </Text>
         <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
-          / {Math.round(caloriesTarget)} kcal
+          {hasCaloriesTarget ? `/ ${Math.round(caloriesTarget)} kcal` : "Targets not set"}
         </Text>
       </View>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
@@ -71,7 +73,7 @@ export function MacroRing({
           <View key={s.color} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: s.color }} />
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-              {Math.round(s.target ? (s.value / s.target) * 100 : 0)}%
+              {s.target > 0 ? `${Math.round((s.value / s.target) * 100)}%` : "—"}
             </Text>
           </View>
         ))}
