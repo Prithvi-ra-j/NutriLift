@@ -70,6 +70,7 @@ export default function TodayScreen() {
   const fat = nutrition?.total_fat_g ?? 0;
   const nextMeal = ["breakfast", "lunch", "snack", "dinner"].find((meal) => groups[meal].length === 0) ?? null;
   const loggedProteinDays = week.filter((item) => item.hit).length;
+  const loggedNutritionDays = week.filter((item) => item.logged).length;
 
   if (loadError && !loading) return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
@@ -195,12 +196,12 @@ export default function TodayScreen() {
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
             <Text style={{ flex: 1, color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 19 }}>This week</Text>
-            <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_500Medium", fontSize: 13 }}>{loggedProteinDays} of {week.filter((item) => item.date <= today).length} logged days on target</Text>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_500Medium", fontSize: 13 }}>{loggedNutritionDays === 0 ? "No nutrition days logged yet" : `${loggedProteinDays} of ${loggedNutritionDays} logged days on target`}</Text>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             {week.map(x => (
               <View key={x.date} style={{ alignItems: "center", gap: 5 }}>
-                <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: x.hit ? M3.colors.successContainer : M3.colors.surfaceVariant, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: x.hit ? M3.colors.success : M3.colors.outline }}>
+                <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: x.hit ? M3.colors.successContainer : x.logged ? M3.colors.warningContainer : M3.colors.surfaceVariant, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: x.hit ? M3.colors.success : x.logged ? M3.colors.warning : M3.colors.outline }}>
                   {x.hit && <Feather name="check" size={14} color={M3.colors.success} />}
                 </View>
                 <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>{parseDateKey(x.date).toLocaleDateString(undefined, { weekday: "short" }).slice(0, 1)}</Text>
