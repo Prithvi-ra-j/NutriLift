@@ -1,5 +1,4 @@
 import type { DailyNutrition, FoodLog } from "../db/schema";
-import { USER_PROFILE } from "../constants/user-profile";
 
 export interface NutritionSummary {
   avgDailyCalories: number;
@@ -15,7 +14,7 @@ export interface NutritionSummary {
   proteinGapAnalysis: string;
 }
 
-export function computeNutritionSummary(days: DailyNutrition[]): NutritionSummary {
+export function computeNutritionSummary(days: DailyNutrition[], proteinTarget?: number | null): NutritionSummary {
   if (days.length === 0) {
     return {
       avgDailyCalories: 0,
@@ -75,10 +74,14 @@ export function computeNutritionSummary(days: DailyNutrition[]): NutritionSummar
       : null;
 
   // Protein gap analysis
-  const proteinGap = USER_PROFILE.targets.protein_g - avgProtein;
+  const target = Number(proteinTarget) > 0 ? Number(proteinTarget) : null;
+  if (target == null) {
+    return { avgDailyCalories: avgCalories, avgDailyProtein: avgProtein, avgDailyCarbs: avgCarbs, avgDailyFat: avgFat, proteinHitRate: (proteinHits / days.length) * 100, calorieHitRate: (calorieHits / days.length) * 100, bestStreak, currentStreak, worstDay, bestDay, proteinGapAnalysis: "Set a protein target to see gap analysis." };
+  }
+  const proteinGap = target - avgProtein;
   let proteinGapAnalysis: string;
   if (proteinGap <= 0) {
-    proteinGapAnalysis = `Averaging ${avgProtein.toFixed(0)}g — ${Math.abs(proteinGap).toFixed(0)}g above your ${USER_PROFILE.targets.protein_g}g target. Solid.`;
+    proteinGapAnalysis = `Averaging ${avgProtein.toFixed(0)}g — ${Math.abs(proteinGap).toFixed(0)}g above your ${target}g target. Solid.`;
   } else {
     proteinGapAnalysis = `Averaged ${avgProtein.toFixed(0)}g — ${proteinGap.toFixed(0)}g short of your ${USER_PROFILE.targets.protein_g}g target.`;
   }
@@ -101,9 +104,10 @@ export function computeNutritionSummary(days: DailyNutrition[]): NutritionSummar
 export function computeProteinPace(
   currentProtein: number,
   mealsLogged: number,
-  totalMeals: number = 4
+  totalMeals: number = 4,
+  proteinTarget?: number | null
 ): { needed: number; perMeal: number; message: string } {
-  const target = USER_PROFILE.targets.protein_g;
+  const target = Number(proteinTarget) > 0 ? Number(proteinTarget) : 0;
   const remaining = Math.max(0, target - currentProtein);
   const mealsLeft = Math.max(1, totalMeals - mealsLogged);
   const perMeal = remaining / mealsLeft;
