@@ -5,6 +5,7 @@
  */
 
 import * as Print from "expo-print";
+import { getTodayKey, getDateDaysAgo, getLocalDateKey } from "../dates";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { Platform } from "react-native";
@@ -46,7 +47,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
     includePRs = true,
   } = options;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayKey();
   const start = startDate || getDateDaysAgo(30); // Default 30 days
   const end = endDate || today;
 
