@@ -48,7 +48,7 @@ export function MacroRing({
   return (
     <View style={{ width: size, alignItems: "center", justifyContent: "center" }}>
       <Canvas style={{ width: size, height: size }}>
-        <Circle cx={size / 2} cy={size / 2} r={radius} color={M3.colors.surfaceVariant} style="stroke" strokeWidth={stroke} />
+        <Circle cx={size / 2} cy={size / 2} r={radius} color={M3.colors.outlineVariant} style="stroke" strokeWidth={stroke} />
         {segments.map((segment, index) => {
           const allocation = (Math.max(0, segment.target) / total) * 360;
           const sweep = Math.max(0, allocation - gap);
