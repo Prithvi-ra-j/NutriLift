@@ -1,4 +1,3 @@
-import { USER_PROFILE } from "../constants/user-profile";
 import { getUserProfile } from "../db/queries/profile";
 import { getLast7DaysNutrition, getProteinHitRate } from "../db/queries/nutrition";
 import { getRecentSessions, getAllPRs } from "../db/queries/workout";
