@@ -18,6 +18,11 @@ export async function getFoodLogsByMeal(date: string, meal: string): Promise<Foo
     .where(and(eq(foodLogs.date, date), eq(foodLogs.meal, meal)));
 }
 
+export async function getMealsLoggedForDate(date: string): Promise<number> {
+  const logs = await getFoodLogsForDate(date);
+  return new Set(logs.map((log) => log.meal)).size;
+}
+
 export async function insertFoodLog(log: NewFoodLog): Promise<void> {
   await db.insert(foodLogs).values(log);
   await recomputeDailyNutrition(log.date);
@@ -119,7 +124,7 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
   const proteinScore = Math.min(100, (totals.protein_g / targets.protein_g) * 100);
   const calorieScore = Math.min(
     100,
-    100 - Math.abs(totals.calories - targets.calories) / targets.calories * 100
+    Math.max(0, 100 - Math.abs(totals.calories - targets.calories) / targets.calories * 100)
   );
   const adherenceScore = proteinScore * 0.6 + calorieScore * 0.4;
 
