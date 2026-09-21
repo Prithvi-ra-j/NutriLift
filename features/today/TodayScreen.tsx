@@ -61,7 +61,7 @@ function MealRow({ meal, logs, onAdd }: { meal: string; logs: FoodLog[]; onAdd: 
 export default function TodayScreen() {
   const { coachInsight } = useUIStore();
   const {
-    today, nutrition, session, recoveryScore, profile, week, groups, targets,
+    today, nutrition, session, recoveryScore, week, groups, targets,
     displayName, loading, refreshing, error: loadError, refresh, retry,
   } = useTodayData();
   const calories = nutrition?.total_calories ?? 0;
