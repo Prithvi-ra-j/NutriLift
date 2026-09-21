@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { getTodayKey } from "../../lib/dates";
+import { getTodayKey } from "../../../lib/dates";
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAudioRecorder, RecordingPresets } from "expo-audio";
-import { transcribeAudioMultilingual } from "../../lib/groq/transcribeAudio";
-import { parseFoodFromVoice } from "../../lib/groq/parseFood";
-import { isGroqConfigured } from "../../lib/groq/client";
-import { insertFoodLog } from "../../lib/db/queries/nutrition";
-import { ModalHeader } from "../../components/ui/ModalHeader";
-import { Button } from "../../components/ui/Button";
-import { M3 } from "../../design-system/tokens";
+import { transcribeAudioMultilingual } from "../../../lib/groq/transcribeAudio";
+import { parseFoodFromVoice } from "../../../lib/groq/parseFood";
+import { isGroqConfigured } from "../../../lib/groq/client";
+import { insertFoodLog } from "../../../lib/db/queries/nutrition";
+import { ModalHeader } from "../../../components/ui/ModalHeader";
+import { Button } from "../../../components/ui/Button";
+import { M3 } from "../../../design-system/tokens";
 import uuid from "react-native-uuid";
 
 export default function VoiceInputModal() {
