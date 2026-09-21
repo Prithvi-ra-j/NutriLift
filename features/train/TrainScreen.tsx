@@ -205,7 +205,7 @@ export default function WorkoutScreen() {
   }, [selectedDate]);
 
   const loadCompletedDayTypes = async () => {
-    const curr = new Date(selectedDate);
+    const curr = parseDateKey(selectedDate);
     const first = curr.getDate() - curr.getDay() + 1;
     const monday = new Date(curr.setDate(first));
     const mondayStr = getLocalDateKey(monday);
