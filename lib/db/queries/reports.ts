@@ -75,7 +75,7 @@ export async function getPreviousWeeklySummaries(limit: number = 3): Promise<Wee
     const weekStart = new Date(currentWeekStart);
     weekStart.setDate(currentWeekStart.getDate() - weekOffset * 7);
     
-    const summary = await getWeeklySummary(weekStart.toISOString().split("T")[0]);
+    const summary = await getWeeklySummary(getLocalDateKey(weekStart));
     if (summary) {
       summaries.push(summary);
     }
@@ -90,8 +90,8 @@ export async function getWeeklySummariesForMonth(month: string): Promise<WeeklyS
   const startDate = new Date(year, monthNum - 1, 1);
   const endDate = new Date(year, monthNum, 0); // Last day of month
   
-  const startStr = startDate.toISOString().split('T')[0];
-  const endStr = endDate.toISOString().split('T')[0];
+  const startStr = getLocalDateKey(startDate);
+  const endStr = getLocalDateKey(endDate);
   
   return db
     .select()
