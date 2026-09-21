@@ -74,11 +74,16 @@ export default function RootLayout() {
     );
   }
 
+  const onOnboarding = segments[0] === "onboarding";
+  if (Platform.OS !== "web" && !hasProfile && !onOnboarding) return <Redirect href="/onboarding" />;
+
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <StatusBar style="light" backgroundColor={M3.colors.background} />
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="profile" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="modals/log-food"
