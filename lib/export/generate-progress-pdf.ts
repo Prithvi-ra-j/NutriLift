@@ -5,7 +5,7 @@
  */
 
 import * as Print from "expo-print";
-import { getTodayKey, getDateDaysAgo } from "../dates";
+import { getTodayKey, getDateDaysAgo, getLocalDateKey } from "../dates";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { Platform } from "react-native";
@@ -617,6 +617,6 @@ export async function exportCurrentMonth() {
 export async function exportAllData() {
   return generateProgressPDF({
     startDate: '2020-01-01', // Far back enough to get all data
-    endDate: new Date().toISOString().split("T")[0],
+    endDate: getTodayKey(),
   });
 }
