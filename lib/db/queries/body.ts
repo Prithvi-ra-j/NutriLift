@@ -1,4 +1,5 @@
 import { eq, and, desc, lte, gte } from "drizzle-orm";
+import { getDateDaysAgo } from "../../dates";
 import { db } from "../client";
 import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
 import { recordTombstone } from "../../integrations/life-os/syncRepository";
@@ -38,7 +39,7 @@ export async function getAllInBodyRecords(): Promise<BodyStat[]> {
 export async function getWeightHistory(days: number = 30): Promise<BodyStat[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = getDateDaysAgo(days);
 
   return db
     .select()
