@@ -39,7 +39,7 @@ export async function getAllInBodyRecords(): Promise<BodyStat[]> {
 export async function getWeightHistory(days: number = 30): Promise<BodyStat[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = getDateDaysAgo(days);
+  const cutoffStr = getDateDaysAgo(Math.max(0, days - 1));
 
   return db
     .select()
