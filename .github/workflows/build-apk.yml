@@ -44,7 +44,7 @@ jobs:
       - name: Setup Expo
         uses: expo/expo-github-action@v8
         with:
-          expo-version: 54.0.34
+          expo-version: 54.0.27
           eas-version: 24.3.0
           packager: npm
           token: ${{ secrets.EXPO_TOKEN }}
