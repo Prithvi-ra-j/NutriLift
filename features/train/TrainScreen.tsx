@@ -50,7 +50,6 @@ import { CardSkeleton } from "../../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../../design-system/tokens";
-import { PressableScale } from "../../../components/ui/PressableScale";
 import { useRestTimer } from "./hooks/useRestTimer";
 import { RestTimer } from "./components/RestTimer";
 import { WorkoutSummary } from "./components/WorkoutSummary";
