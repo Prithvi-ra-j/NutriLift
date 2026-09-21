@@ -182,7 +182,7 @@ export default function ProgressScreen() {
               }}
             >
               <Feather name="chevrons-left" size={14} color={M3.colors.onSurfaceVariant} />
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                 Prev Week
               </Text>
             </PressableScale>
@@ -205,7 +205,7 @@ export default function ProgressScreen() {
                 borderColor: M3.colors.surfaceContainer,
               }}
             >
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                 Next Week
               </Text>
               <Feather name="chevrons-right" size={14} color={M3.colors.onSurfaceVariant} />
@@ -220,7 +220,7 @@ export default function ProgressScreen() {
           <>
             {/* Current stats */}
             <Card>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 BODY COMPOSITION
               </Text>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -234,7 +234,7 @@ export default function ProgressScreen() {
                     <Text style={{ color: stat.color, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
                       {stat.value}
                     </Text>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                       {stat.label}
                     </Text>
                   </View>
@@ -296,7 +296,7 @@ export default function ProgressScreen() {
             {/* Weight history mini chart */}
             {weekWeightHistory.length > 0 && (
               <Card>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   {isCurrentWeek ? "THIS WEEK" : "WEEK"} WEIGHT TREND
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 60 }}>
@@ -322,19 +322,19 @@ export default function ProgressScreen() {
                   })}
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 6 }}>
-                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                     Mon
                   </Text>
-                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                     Sun
                   </Text>
                 </View>
                 {weekWeightHistory.length > 0 && (
                   <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                       Start: {weekWeightHistory[0]?.weight_kg?.toFixed(1)}kg
                     </Text>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                       End: {weekWeightHistory[weekWeightHistory.length - 1]?.weight_kg?.toFixed(1)}kg
                     </Text>
                   </View>
@@ -345,7 +345,7 @@ export default function ProgressScreen() {
             {/* InBody history */}
             {inBodyRecords.length > 1 && (
               <Card>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   INBODY HISTORY
                 </Text>
                 {inBodyRecords.slice(-5).reverse().map((record) => (
@@ -393,7 +393,7 @@ export default function ProgressScreen() {
           <>
             {weekPRs.length > 0 ? (
               <Card>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   {isCurrentWeek ? "THIS WEEK'S" : "WEEK"} PERSONAL RECORDS
                 </Text>
                 {weekPRs.map((pr) => (
@@ -412,7 +412,7 @@ export default function ProgressScreen() {
                       <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
                         {pr.exercise_name}
                       </Text>
-                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 1 }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 1 }}>
                         {pr.achieved_date}
                       </Text>
                     </View>
@@ -421,12 +421,12 @@ export default function ProgressScreen() {
                         {pr.best_weight_kg}kg × {pr.best_reps_at_best_weight}
                       </Text>
                       {!!pr.best_1rm_estimated && (
-                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                           ~{pr.best_1rm_estimated.toFixed(0)}kg 1RM
                         </Text>
                       )}
                       {pr.improvement_pct != null && pr.improvement_pct > 0 && (
-                        <Text style={{ color: M3.colors.success, fontSize: 10, fontFamily: "DMSans_500Medium" }}>
+                        <Text style={{ color: M3.colors.success, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                           +{pr.improvement_pct.toFixed(1)}%
                         </Text>
                       )}
@@ -450,7 +450,7 @@ export default function ProgressScreen() {
         {activeSection === "nutrition" && (
           <>
             <Card>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 {isCurrentWeek ? "THIS WEEK" : "WEEK"} NUTRITION SUMMARY
               </Text>
               {[
@@ -469,7 +469,7 @@ export default function ProgressScreen() {
                       {item.value}
                     </Text>
                     {!!item.target && (
-                      <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                      <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                         / {item.target}
                       </Text>
                     )}
@@ -479,7 +479,7 @@ export default function ProgressScreen() {
             </Card>
 
             <Card elevated>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
                 PROTEIN ANALYSIS
               </Text>
               <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
@@ -505,7 +505,7 @@ export default function ProgressScreen() {
             {weekRecoveryLogs.length > 0 ? (
               <>
                 <Card>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                     {isCurrentWeek ? "THIS WEEK" : "WEEK"} SLEEP TREND
                   </Text>
                   <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 4, height: 60 }}>
@@ -525,7 +525,7 @@ export default function ProgressScreen() {
                 </Card>
 
                 <Card>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                     RECOVERY AVERAGES
                   </Text>
                   {[
