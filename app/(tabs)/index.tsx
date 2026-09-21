@@ -109,10 +109,7 @@ export default function TodayScreen() {
   const protein = nutrition?.total_protein_g ?? 0;
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
-  const remaining = Math.max(0, targets.protein_g - protein);
-  const loggedMeals = MEALS.filter(m => groups[m].length > 0).length;
-  const mealsRemaining = Math.max(1, MEALS.length - loggedMeals);
-  const proteinPerRemainingMeal = remaining / mealsRemaining;
+  const nextMeal = MEALS.find(m => groups[m].length === 0) ?? null;
 
   if (loading) return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
@@ -172,16 +169,19 @@ export default function TodayScreen() {
           </View>
         </Card>
 
-        {remaining > 0 && (
+        {nextMeal && (
           <Card variant="elevated">
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: M3.colors.secondaryContainer, alignItems: "center", justifyContent: "center" }}>
-                <Feather name="target" size={18} color={M3.colors.secondary} />
+              <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
+                <Feather name="arrow-right-circle" size={18} color={M3.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_500Medium", fontSize: 14 }}>{formatGrams(remaining)} protein left</Text>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 2 }}>{Math.round(proteinPerRemainingMeal)}g across {mealsRemaining} remaining meal{mealsRemaining === 1 ? "" : "s"}</Text>
+                <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_500Medium", fontSize: 14 }}>Next up</Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 2, textTransform: "capitalize" }}>{nextMeal} isn’t logged yet</Text>
               </View>
+              <PressableScale onPress={() => router.push({ pathname: "/modals/log-food", params: { meal: nextMeal } })} haptic style={{ minHeight: 40, paddingHorizontal: 12, borderRadius: 20, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: M3.colors.primary, fontFamily: "DMSans_700Bold", fontSize: 13 }}>Log</Text>
+              </PressableScale>
             </View>
           </Card>
         )}
