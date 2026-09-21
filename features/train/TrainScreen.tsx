@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { getTodayKey, getLocalDateKey } from "../../../lib/dates";
+import { getTodayKey, getLocalDateKey, parseDateKey } from "../../../lib/dates";
 import {
   View,
   Text,
@@ -25,6 +25,8 @@ import {
   updateExerciseLog,
   checkDoubleProgression,
   getLastWeightForExercise,
+  getPreviousSessionForDayType,
+  getSessionsInRange,
   calculateEpley1RM,
   getCustomExercises,
   insertCustomExercise,
@@ -45,6 +47,9 @@ import { CardSkeleton } from "../../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../../design-system/tokens";
+import { useRestTimer } from "./hooks/useRestTimer";
+import { RestTimer } from "./components/RestTimer";
+import { WorkoutSummary } from "./components/WorkoutSummary";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -133,7 +138,7 @@ export default function WorkoutScreen() {
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const getDefaultDayType = (dateStr: string): DayType => {
-    const date = new Date(dateStr);
+    const date = parseDateKey(dateStr);
     const dayOfWeek = date.getDay();
     if (dayOfWeek === 0) return "Cardio";
     const dayTypeMap: Record<number, DayType> = {
@@ -159,6 +164,9 @@ export default function WorkoutScreen() {
   const [exerciseSearch, setExerciseSearch] = useState("");
   const [progressionAlerts, setProgressionAlerts] = useState<Record<string, string>>({});
   const [completedDayTypes, setCompletedDayTypes] = useState<Set<string>>(new Set());
+  const [previousPerformance, setPreviousPerformance] = useState<Record<string, string>>({});
+  const [restTimerDuration, setRestTimerDuration] = useState(90);
+  const restTimer = useRestTimer(restTimerDuration);
 
   // ── Set form state ──
   const [addSetForm, setAddSetForm] = useState<SetForm | null>(null);
@@ -182,6 +190,7 @@ export default function WorkoutScreen() {
   const [editExerciseName, setEditExerciseName] = useState("");
   const [editExerciseMuscle, setEditExerciseMuscle] = useState("");
   const [editExerciseEquip, setEditExerciseEquip] = useState("");
+  const [isFinishing, setIsFinishing] = useState(false);
 
   // ─── Load ──────────────────────────────────────────────────────────────────
 
@@ -222,7 +231,6 @@ export default function WorkoutScreen() {
     const first = curr.getDate() - curr.getDay() + 1;
     const monday = new Date(curr.setDate(first));
     const mondayStr = getLocalDateKey(monday);
-    const { getSessionsInRange } = await import("../../lib/db/queries/workout");
     const sessions = await getSessionsInRange(mondayStr, selectedDate);
     setCompletedDayTypes(new Set(sessions.map((s) => s.day_type)));
   };
