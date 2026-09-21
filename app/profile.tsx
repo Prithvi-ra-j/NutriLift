@@ -6,18 +6,20 @@ import { Feather } from "@expo/vector-icons";
 import { getUserProfile, upsertUserProfile } from "../lib/db/queries/profile";
 import { recomputeDailyNutrition } from "../lib/db/queries/nutrition";
 import { getTodayKey } from "../lib/dates";
-import { USER_PROFILE } from "../lib/constants/user-profile";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { M3 } from "../design-system/tokens";
 import { PressableScale } from "../components/ui/PressableScale";
 
 export default function ProfileScreen() {
-  const [name, setName] = useState<string>(USER_PROFILE.name);
-  const [calories, setCalories] = useState(String(USER_PROFILE.targets.calories));
-  const [protein, setProtein] = useState(String(USER_PROFILE.targets.protein_g));
-  const [carbs, setCarbs] = useState(String(USER_PROFILE.targets.carbs_g));
-  const [fat, setFat] = useState(String(USER_PROFILE.targets.fat_g));
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [height, setHeight] = useState("");
+  const [sex, setSex] = useState("");
+  const [calories, setCalories] = useState("");
+  const [protein, setProtein] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fat, setFat] = useState("");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -25,6 +27,9 @@ export default function ProfileScreen() {
     getUserProfile().then(profile => {
       if (profile) {
         setName(profile.display_name);
+        if (profile.age != null) setAge(String(profile.age));
+        if (profile.height_cm != null) setHeight(String(profile.height_cm));
+        if (profile.sex) setSex(profile.sex);
         if (profile.calories_target != null) setCalories(String(profile.calories_target));
         if (profile.protein_target_g != null) setProtein(String(profile.protein_target_g));
         if (profile.carbs_target_g != null) setCarbs(String(profile.carbs_target_g));
@@ -38,14 +43,14 @@ export default function ProfileScreen() {
     setSaving(true);
     try {
       await upsertUserProfile({
-        display_name: name.trim() || USER_PROFILE.name,
-        age: USER_PROFILE.age,
-        sex: USER_PROFILE.sex,
-        height_cm: USER_PROFILE.height_cm,
-        calories_target: Number(calories) || USER_PROFILE.targets.calories,
-        protein_target_g: Number(protein) || USER_PROFILE.targets.protein_g,
-        carbs_target_g: Number(carbs) || USER_PROFILE.targets.carbs_g,
-        fat_target_g: Number(fat) || USER_PROFILE.targets.fat_g,
+        display_name: name.trim(),
+        age: Number(age) || null,
+        sex: sex || null,
+        height_cm: Number(height) || null,
+        calories_target: Number(calories) || null,
+        protein_target_g: Number(protein) || null,
+        carbs_target_g: Number(carbs) || null,
+        fat_target_g: Number(fat) || null,
         units: "metric",
         target_source: "user",
       });
@@ -83,6 +88,10 @@ export default function ProfileScreen() {
           <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_500Medium", fontSize: 13, marginBottom: 6 }}>Name</Text>
           <TextInput value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor={M3.colors.onSurfaceMuted}
             style={{ backgroundColor: M3.colors.surfaceVariant, borderRadius: 10, paddingHorizontal: 14, height: 48, color: M3.colors.onSurface, fontFamily: "DMSans_500Medium", fontSize: 15 }} />
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+            <TextInput value={age} onChangeText={setAge} placeholder="Age" keyboardType="number-pad" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ flex: 1, backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, paddingHorizontal: 12, height: 48, color: M3.colors.onSurface, fontSize: 15 }} />
+            <TextInput value={height} onChangeText={setHeight} placeholder="Height cm" keyboardType="decimal-pad" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ flex: 1, backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, paddingHorizontal: 12, height: 48, color: M3.colors.onSurface, fontSize: 15 }} />
+          </View>
         </Card>
 
         <Card>
