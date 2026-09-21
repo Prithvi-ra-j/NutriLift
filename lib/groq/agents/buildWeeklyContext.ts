@@ -1,4 +1,5 @@
 import { db } from "../../db/client";
+import { getDateDaysAgo } from "../../dates";
 import {
   dailyNutrition,
   workoutSessions,
@@ -17,7 +18,7 @@ export async function buildWeeklyContext(): Promise<WeeklyContext> {
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-  const weekAgoStr = weekAgo.toISOString().split("T")[0];
+  const weekAgoStr = getDateDaysAgo(7);
   const nowStr = now.toISOString().split("T")[0];
 
   // Fetch all data in parallel
