@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -39,7 +40,7 @@ export default function LogFoodModal() {
   const [parseNotes, setParseNotes] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayKey();
 
   const handleParse = async () => {
     if (!input.trim()) return;
