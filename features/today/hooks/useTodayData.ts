@@ -36,6 +36,7 @@ export function useTodayData() {
       setFoodLogs(foods);
       setSessionSummary(sessionSummaryData);
       setProfile(profileData);
+      setRecovery(recovery);
       setWeek(Array.from({ length: 7 }, (_, i) => {
         const date = getDateDaysAgo(6 - i);
         const row = last7.find((item) => item.date === date);
