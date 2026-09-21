@@ -1,4 +1,4 @@
-import { asc, desc, like, or } from "drizzle-orm";
+import { asc, desc, eq, like, or } from "drizzle-orm";
 import { db } from "../client";
 import { personalFoods, type NewPersonalFood, type PersonalFood } from "../schema";
 
@@ -23,7 +23,7 @@ export async function insertPersonalFood(food: NewPersonalFood): Promise<void> {
 export async function markPersonalFoodLogged(id: string): Promise<void> {
   const existing = await db.select({ times_logged: personalFoods.times_logged })
     .from(personalFoods)
-    .where(like(personalFoods.id, id));
+    .where(eq(personalFoods.id, id));
   if (!existing[0]) return;
   await db.update(personalFoods)
     .set({ times_logged: (existing[0].times_logged ?? 0) + 1, updated_at: new Date().toISOString() })
