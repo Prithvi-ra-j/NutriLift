@@ -18,7 +18,6 @@ import {
   deleteFoodLog,
   getLast7DaysNutrition,
 } from "../../lib/db/queries/nutrition";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { getUserProfile } from "../../lib/db/queries/profile";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
@@ -67,7 +66,7 @@ export default function NutritionScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
-  const [targets, setTargets] = useState<{ calories: number; protein_g: number; carbs_g: number; fat_g: number }>({ ...USER_PROFILE.targets });
+  const [targets, setTargets] = useState<{ calories: number; protein_g: number; carbs_g: number; fat_g: number }>({ calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 });
 
   const loadData = useCallback(async () => {
     try {
@@ -196,7 +195,7 @@ export default function NutritionScreen() {
                 } else if (mode === "voice") {
                   router.push("/modals/voice-input");
                 } else if (mode === "paste") {
-                  router.push("/modals/inbody-paste");
+                  router.push({ pathname: "/modals/log-food", params: { mode: "paste" } });
                 } else {
                   router.push("/modals/log-food");
                 }
@@ -243,7 +242,7 @@ export default function NutritionScreen() {
                 />
               </View>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
-                {mode}
+                {mode === "type" ? "Describe" : mode === "paste" ? "Paste" : mode}
               </Text>
             </PressableScale>
           ))}
