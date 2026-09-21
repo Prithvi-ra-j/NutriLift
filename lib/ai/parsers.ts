@@ -3,7 +3,6 @@ import { parseExerciseFromText } from "../groq/parseExercise";
 import { parseInBodyText } from "../groq/parseInBody";
 import { INDIAN_FOOD_DB } from "../data/indianFoodDB";
 import { searchPersonalFoods } from "../db/queries/personal-foods";
-import { searchPersonalFoods } from "../db/queries/personal-foods";
 import { getBarcodeCache } from "../db/queries/barcode";
 
 // Re-export types for backward compatibility
