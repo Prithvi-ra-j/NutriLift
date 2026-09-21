@@ -11,10 +11,10 @@ import {
 import { router } from "expo-router";
 import { CameraView, Camera } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
-import { lookupBarcode } from "../../lib/services/barcodeScanner";
-import { logger } from "../../lib/logger";
-import { Button } from "../../components/ui/Button";
-import { M3 } from "../../design-system/tokens";
+import { lookupBarcode } from "../../../lib/services/barcodeScanner";
+import { logger } from "../../../lib/logger";
+import { Button } from "../../../components/ui/Button";
+import { M3 } from "../../../design-system/tokens";
 
 type ScanState = "scanning" | "detecting" | "found" | "not_found" | "error" | "offline";
 
