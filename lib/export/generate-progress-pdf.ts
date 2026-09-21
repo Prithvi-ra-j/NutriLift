@@ -5,7 +5,7 @@
  */
 
 import * as Print from "expo-print";
-import { getTodayKey, getDateDaysAgo, getLocalDateKey } from "../dates";
+import { getTodayKey, getDateDaysAgo } from "../dates";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { Platform } from "react-native";
@@ -481,13 +481,6 @@ async function generateHTML(options: ExportOptions): Promise<string> {
 </html>`;
 
   return html;
-}
-
-// Helper functions
-function getDateDaysAgo(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().split("T")[0];
 }
 
 function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
