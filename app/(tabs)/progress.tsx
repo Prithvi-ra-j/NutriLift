@@ -24,6 +24,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { PressableScale } from "../../components/ui/PressableScale";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
 
@@ -166,7 +167,7 @@ export default function ProgressScreen() {
 
         {/* ── Week Navigation ── */}
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
-          <TouchableOpacity
+          <PressableScale
               onPress={goToPreviousWeek}
               style={{
                 flexDirection: "row",
@@ -184,13 +185,13 @@ export default function ProgressScreen() {
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
                 Prev Week
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
             
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
               {isCurrentWeek ? "This Week" : `Week of ${weekRange.monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
             </Text>
             
-            <TouchableOpacity
+            <PressableScale
               onPress={goToNextWeek}
               style={{
                 flexDirection: "row",
@@ -208,7 +209,7 @@ export default function ProgressScreen() {
                 Next Week
               </Text>
               <Feather name="chevrons-right" size={14} color={M3.colors.onSurfaceVariant} />
-            </TouchableOpacity>
+            </PressableScale>
           </View>
 
         {/* ── Section Tabs ── */}
