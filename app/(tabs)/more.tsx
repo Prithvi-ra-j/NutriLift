@@ -16,7 +16,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { insertBodyStat, getLatestWeight } from "../../lib/db/queries/body";
 import { getSupplementLogsForDate, upsertSupplementLog, getRecoveryLog, upsertRecoveryLog } from "../../lib/db/queries/recovery";
 import { getAllReports } from "../../lib/db/queries/reports";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getUserProfile } from "../../lib/db/queries/profile";
 import { Card } from "../../components/ui/Card";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Button } from "../../components/ui/Button";
@@ -39,6 +39,7 @@ export default function MoreScreen() {
   // Body stats
   const [weightInput, setWeightInput] = useState("");
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
+  const [profileData, setProfileData] = useState<Awaited<ReturnType<typeof getUserProfile>>>(null);
 
   // Supplements
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>([]);
@@ -69,16 +70,18 @@ export default function MoreScreen() {
   const [isVerifyingGroq, setIsVerifyingGroq] = useState(false);
 
   const loadData = useCallback(async () => {
-    const [weight, suppLogs, recoveryLog, reportsData] = await Promise.all([
+    const [weight, suppLogs, recoveryLog, reportsData, profile] = await Promise.all([
       getLatestWeight(),
       getSupplementLogsForDate(today),
       getRecoveryLog(today),
       getAllReports(),
+      getUserProfile(),
     ]);
 
     setLatestWeight(weight?.weight_kg ?? null);
     setSupplementLogs(suppLogs);
     setReports(reportsData);
+    setProfileData(profile);
 
     if (recoveryLog) {
       setSleepHr(recoveryLog.sleep_duration_hr?.toString() ?? "7");
@@ -353,7 +356,8 @@ export default function MoreScreen() {
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
               TODAY'S SUPPLEMENTS
             </Text>
-            {USER_PROFILE.supplements.map((supp) => {
+            {Array.from(new Set(supplementLogs.map((log) => log.supplement_name))).map((supplementName) => {
+              const supp = { name: supplementName };
               const log = supplementLogs.find((l) => l.supplement_name === supp.name);
               const taken = log?.taken === 1;
               return (
@@ -655,11 +659,11 @@ export default function MoreScreen() {
                 PROFILE
               </Text>
               {[
-                { label: "Name", value: USER_PROFILE.name },
-                { label: "Age", value: `${USER_PROFILE.age}` },
-                { label: "Height", value: `${USER_PROFILE.height_cm}cm` },
-                { label: "Training Since", value: USER_PROFILE.training_start_date },
-                { label: "Current Split", value: USER_PROFILE.training.current_split },
+                { label: "Name", value: profileData?.display_name || "Not set" },
+                { label: "Age", value: profileData?.age != null ? String(profileData.age) : "Not set" },
+                { label: "Height", value: profileData?.height_cm != null ? String(profileData.height_cm) + "cm" : "Not set" },
+                { label: "Units", value: profileData?.units || "metric" },
+                
               ].map((item) => (
                 <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: M3.colors.outline }}>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
@@ -673,11 +677,11 @@ export default function MoreScreen() {
                 TARGETS
               </Text>
               {[
-                { label: "Calories", value: `${USER_PROFILE.targets.calories} kcal` },
-                { label: "Protein", value: `${USER_PROFILE.targets.protein_g}g` },
-                { label: "Carbs", value: `${USER_PROFILE.targets.carbs_g}g` },
-                { label: "Fat", value: `${USER_PROFILE.targets.fat_g}g` },
-                { label: "BF% Goal (Dec 2026)", value: `${USER_PROFILE.targets.body_fat_pct_dec2026}%` },
+                { label: "Calories", value: profileData?.calories_target != null ? String(profileData.calories_target) + " kcal" : "Not set" },
+                { label: "Protein", value: profileData?.protein_target_g != null ? String(profileData.protein_target_g) + "g" : "Not set" },
+                { label: "Carbs", value: profileData?.carbs_target_g != null ? String(profileData.carbs_target_g) + "g" : "Not set" },
+                { label: "Fat", value: profileData?.fat_target_g != null ? String(profileData.fat_target_g) + "g" : "Not set" },
+                { label: "Body-fat goal", value: "Set from your profile" },
               ].map((item) => (
                 <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: M3.colors.outline }}>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
@@ -690,7 +694,7 @@ export default function MoreScreen() {
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 STRUCTURAL NOTES
               </Text>
-              {USER_PROFILE.structural_notes.map((note, i) => (
+              Array.from(new Set<string>()).map((note, i) => (
                 <View key={i} style={{ flexDirection: "row", gap: 8, paddingVertical: 6 }}>
                   <Feather name="alert-circle" size={12} color={M3.colors.warning} style={{ marginTop: 2 }} />
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1, lineHeight: 18 }}>
