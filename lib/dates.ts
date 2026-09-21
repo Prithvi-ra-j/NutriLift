@@ -8,6 +8,8 @@ export function getLocalDateKey(date = new Date()): string {
 
 export const getTodayKey = () => getLocalDateKey();
 
+export const getYesterdayKey = () => getDateDaysAgo(1);
+
 export function getDateDaysAgo(days: number, from = new Date()): string {
   const d = new Date(from);
   d.setDate(d.getDate() - days);
@@ -34,4 +36,8 @@ export function parseDateKey(key: string): Date {
 
 export function formatDateKey(key: string, options: Intl.DateTimeFormatOptions = { weekday: "long", month: "long", day: "numeric" }): string {
   return parseDateKey(key).toLocaleDateString(undefined, options);
+}
+
+export function getLocalDayOfWeek(date = new Date()): number {
+  return date.getDay();
 }
