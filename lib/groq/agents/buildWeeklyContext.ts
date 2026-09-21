@@ -9,13 +9,14 @@ import {
 } from "../../db/schema";
 import { gte, desc, eq } from "drizzle-orm";
 import { WeeklyContext } from "./weeklyCoach";
-import { USER_PROFILE } from "../../constants/user-profile";
+import { getUserProfile } from "../../db/queries/profile";
 
 /**
  * Build weekly context from SQLite database for AI coach analysis
  */
 export async function buildWeeklyContext(): Promise<WeeklyContext> {
   const now = new Date();
+  const profile = await getUserProfile();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   const weekAgoStr = getDateDaysAgo(7);
@@ -82,9 +83,9 @@ export async function buildWeeklyContext(): Promise<WeeklyContext> {
   // Build context object
   const context: WeeklyContext = {
     weekRange: `${weekAgoStr} to ${nowStr}`,
-    goal: (USER_PROFILE as any).goal || "body recomposition",
-    targetCalories: USER_PROFILE.targets.calories,
-    targetProtein: USER_PROFILE.targets.protein_g,
+    goal: "User-configured goal",
+    targetCalories: profile?.calories_target ?? 0,
+    targetProtein: profile?.protein_target_g ?? 0,
     days: nutrition.map((n: any) => ({
       date: n.date,
       calories: n.total_calories,
@@ -99,8 +100,8 @@ export async function buildWeeklyContext(): Promise<WeeklyContext> {
       weight: w.weight_kg || 0,
     })),
     currentWeight: weights[0]?.weight_kg || 0,
-    startWeight: (USER_PROFILE as any).current_weight_kg || 0,
-    targetWeight: (USER_PROFILE as any).target_weight_kg || 0,
+    startWeight: weights[weights.length - 1]?.weight_kg || 0,
+    targetWeight: 0,
   };
 
   return context;
@@ -168,9 +169,9 @@ export async function buildCustomContext(
 
   return {
     weekRange: `${startDate} to ${endDate}`,
-    goal: (USER_PROFILE as any).goal || "body recomposition",
-    targetCalories: USER_PROFILE.targets.calories,
-    targetProtein: USER_PROFILE.targets.protein_g,
+    goal: "User-configured goal",
+    targetCalories: profile?.calories_target ?? 0,
+    targetProtein: profile?.protein_target_g ?? 0,
     days: nutrition.map((n: any) => ({
       date: n.date,
       calories: n.total_calories,
@@ -185,7 +186,7 @@ export async function buildCustomContext(
       weight: w.weight_kg || 0,
     })),
     currentWeight: weights[0]?.weight_kg || 0,
-    startWeight: (USER_PROFILE as any).current_weight_kg || 0,
-    targetWeight: (USER_PROFILE as any).target_weight_kg || 0,
+    startWeight: weights[weights.length - 1]?.weight_kg || 0,
+    targetWeight: 0,
   };
 }
