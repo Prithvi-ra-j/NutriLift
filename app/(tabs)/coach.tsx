@@ -174,7 +174,7 @@ export default function CoachScreen() {
             {groqConfigured === true && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: M3.colors.success }} />
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                   Ready{requestCount > 0 ? ` · ${requestCount} sent` : ""}
                 </Text>
               </View>
@@ -280,7 +280,7 @@ export default function CoachScreen() {
                     <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
                       <Feather name="cpu" size={11} color={M3.colors.primary} />
                     </View>
-                    <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold", letterSpacing: 0.5 }}>
+                    <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_700Bold", letterSpacing: 0.5 }}>
                       COACH
                     </Text>
                   </View>
