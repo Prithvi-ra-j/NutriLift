@@ -64,7 +64,7 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
     const aiSummary = await generateQuarterlySummary({
       quarter,
       start_date: getLocalDateKey(startDate),
-      end_date: endDate.toISOString().split('T')[0],
+      end_date: getLocalDateKey(endDate),
       monthly_summaries: monthlySummaries
         .filter(m => m.ai_summary)
         .map(m => ({
