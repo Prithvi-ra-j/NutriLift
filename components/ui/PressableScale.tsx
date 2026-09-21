@@ -8,7 +8,7 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 interface Props extends PressableProps {
   children: React.ReactNode;
-  style?: ViewStyle | ViewStyle[];
+  style?: StyleProp<ViewStyle>;
   haptic?: boolean;
   scale?: number;
 }
