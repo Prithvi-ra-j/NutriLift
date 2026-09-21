@@ -93,7 +93,7 @@ export default function TodayScreen() {
   useEffect(() => { load(); }, [load]);
 
   const groups = useMemo(() => Object.fromEntries(MEALS.map(m => [m, foodLogs.filter(x => x.meal === m)])) as Record<string, FoodLog[]>, [foodLogs]);
-  const targets = { calories: profile?.calories_target ?? targets.calories, protein_g: profile?.protein_target_g ?? targets.protein_g, carbs_g: profile?.carbs_target_g ?? targets.carbs_g, fat_g: profile?.fat_target_g ?? targets.fat_g };
+  const targets = { calories: profile?.calories_target ?? USER_PROFILE.targets.calories, protein_g: profile?.protein_target_g ?? USER_PROFILE.targets.protein_g, carbs_g: profile?.carbs_target_g ?? USER_PROFILE.targets.carbs_g, fat_g: profile?.fat_target_g ?? USER_PROFILE.targets.fat_g };
   const displayName = profile?.display_name ?? USER_PROFILE.name;
   const calories = nutrition?.total_calories ?? 0;
   const protein = nutrition?.total_protein_g ?? 0;
