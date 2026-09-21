@@ -1,4 +1,5 @@
 import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { getDateDaysAgo, getTodayKey } from "../../dates";
 import { db } from "../client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
@@ -57,8 +58,8 @@ export async function getLast7DaysNutrition(): Promise<DailyNutrition[]> {
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 6);
   return getDailyNutritionRange(
-    sevenDaysAgo.toISOString().split("T")[0],
-    today.toISOString().split("T")[0]
+    getDateDaysAgo(6),
+    getTodayKey()
   );
 }
 
@@ -67,8 +68,8 @@ export async function getLast30DaysNutrition(): Promise<DailyNutrition[]> {
   const thirtyDaysAgo = new Date(today);
   thirtyDaysAgo.setDate(today.getDate() - 29);
   return getDailyNutritionRange(
-    thirtyDaysAgo.toISOString().split("T")[0],
-    today.toISOString().split("T")[0]
+    getDateDaysAgo(29),
+    getTodayKey()
   );
 }
 
