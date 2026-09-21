@@ -5,7 +5,7 @@ import * as schema from "./schema";
 let sqlite: any = null;
 let db: any = null;
 
-if (Platform.OS !== "web") {
+if (Platform.OS !== "web" && process.env.NODE_ENV !== "test") {
   // Only import and initialize SQLite on native platforms
   const SQLite = require("expo-sqlite");
   const { drizzle } = require("drizzle-orm/expo-sqlite");
