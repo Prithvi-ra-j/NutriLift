@@ -17,10 +17,10 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
   return (
     <View style={{ marginBottom: 10 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
           {label}
         </Text>
-        <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+        <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
           <Text style={{ color: over ? M3.colors.warning : color }}>
             {current.toFixed(0)}{unit}
           </Text>
@@ -50,9 +50,9 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
           <View
             style={{
               position: "absolute",
-              left: "100%",
+              left: `${Math.min(100, pct)}%`,
               height: "100%",
-              width: `${overPct}%`,
+              width: `${Math.min(100 - Math.min(100, pct), overPct)}%`,
               backgroundColor: M3.colors.error,
               borderRadius: 3,
             }}

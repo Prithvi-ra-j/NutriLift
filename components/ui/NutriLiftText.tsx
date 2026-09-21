@@ -1,4 +1,5 @@
 import { Text, type TextProps } from "react-native";
+import { M3 } from "../../design-system/tokens";
 
 interface NutriLiftTextProps extends TextProps {
   variant?: "display" | "body" | "body-medium" | "body-bold" | "mono";
@@ -6,16 +7,16 @@ interface NutriLiftTextProps extends TextProps {
   color?: "primary" | "secondary" | "muted" | "teal" | "success" | "warning" | "danger" | "gold";
 }
 
-const FONT_FAMILIES: Record<string, string> = {
-  display: "BebasNeue_400Regular",
-  body: "DMSans_400Regular",
-  "body-medium": "DMSans_500Medium",
-  "body-bold": "DMSans_700Bold",
-  mono: "DMSans_400Regular", // fallback until JetBrains Mono is added
-};
+const FONT_FAMILIES = {
+  display: M3.typescale.displaySmall.fontFamily,
+  body: M3.typescale.bodyLarge.fontFamily,
+  "body-medium": M3.typescale.titleMedium.fontFamily,
+  "body-bold": M3.typescale.headlineSmall.fontFamily,
+  mono: M3.typescale.bodyMedium.fontFamily,
+} as const;
 
-const FONT_SIZES: Record<string, number> = {
-  xs: 11,
+const FONT_SIZES: Record<NutriLiftTextProps["size"] & string, number> = {
+  xs: 12,
   sm: 13,
   base: 15,
   lg: 17,
@@ -25,16 +26,16 @@ const FONT_SIZES: Record<string, number> = {
   "4xl": 36,
 };
 
-const COLORS: Record<string, string> = {
-  primary: "#F0F0F5",
-  secondary: "#8080A0",
-  muted: "#4A4A6A",
-  teal: "#00D4AA",
-  success: "#00C875",
-  warning: "#FFB800",
-  danger: "#FF4757",
-  gold: "#FFD700",
-};
+const COLORS = {
+  primary: M3.colors.onSurface,
+  secondary: M3.colors.onSurfaceVariant,
+  muted: M3.colors.onSurfaceMuted,
+  teal: M3.colors.primary,
+  success: M3.colors.success,
+  warning: M3.colors.warning,
+  danger: M3.colors.error,
+  gold: M3.colors.warning,
+} as const;
 
 export function NutriLiftText({
   variant = "body",

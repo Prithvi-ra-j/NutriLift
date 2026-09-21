@@ -1,6 +1,7 @@
-import { TouchableOpacity, Text, ActivityIndicator, type ViewStyle } from "react-native";
+import { Text, ActivityIndicator, type ViewStyle, type StyleProp } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { M3 } from "../../design-system/tokens";
+import { PressableScale } from "./PressableScale";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -11,7 +12,7 @@ interface ButtonProps {
   icon?: React.ComponentProps<typeof Feather>["name"];
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 /** Shared button primitive — replaces the hand-rolled TouchableOpacity styling repeated across screens. */
@@ -33,10 +34,10 @@ export function Button({ label, onPress, variant = "primary", icon, loading = fa
   })();
 
   return (
-    <TouchableOpacity
+    <PressableScale
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.75}
+      haptic={variant === "primary"}
       style={[
         {
           backgroundColor: bg,
@@ -59,7 +60,7 @@ export function Button({ label, onPress, variant = "primary", icon, loading = fa
       ) : (
         icon && <Feather name={icon} size={16} color={fg} />
       )}
-      <Text style={{ color: fg, fontSize: 14, fontFamily: "DMSans_700Bold" }}>{label}</Text>
-    </TouchableOpacity>
+      <Text style={{ color: fg, fontSize: 15, fontFamily: "DMSans_700Bold" }}>{label}</Text>
+    </PressableScale>
   );
 }

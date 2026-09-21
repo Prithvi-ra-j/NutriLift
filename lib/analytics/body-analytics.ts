@@ -1,5 +1,5 @@
 import type { BodyStat } from "../db/schema";
-import { USER_PROFILE } from "../constants/user-profile";
+import { getTodayKey, getDateDaysAgo, getLocalDateKey, parseDateKey } from "../dates";
 
 export interface BodyCompositionSummary {
   currentWeight: number | null;
@@ -12,7 +12,8 @@ export interface BodyCompositionSummary {
 
 export function computeBodySummary(
   weightHistory: BodyStat[],
-  latestInBody: BodyStat | null
+  latestInBody: BodyStat | null,
+  targetBodyFat?: number | null
 ): BodyCompositionSummary {
   if (weightHistory.length === 0) {
     return {
@@ -32,7 +33,7 @@ export function computeBodySummary(
   // 7-day change
   const sevenDaysAgo = sorted.find((s) => {
     const diff =
-      (new Date(latest.date).getTime() - new Date(s.date).getTime()) /
+      (parseDateKey(latest.date).getTime() - parseDateKey(s.date).getTime()) /
       (1000 * 60 * 60 * 24);
     return diff >= 6;
   });
@@ -41,10 +42,12 @@ export function computeBodySummary(
       ? currentWeight - sevenDaysAgo.weight_kg
       : null;
 
-  // 30-day change
-  const thirtyDaysAgo = sorted[0];
+  // 30-day change: compare with the closest measurement at least 29 local days earlier.
+  const thirtyDayCutoff = new Date(parseDateKey(latest.date));
+  thirtyDayCutoff.setDate(thirtyDayCutoff.getDate() - 29);
+  const thirtyDaysAgo = sorted.find((stat) => parseDateKey(stat.date).getTime() <= thirtyDayCutoff.getTime());
   const weightChange30d =
-    thirtyDaysAgo && currentWeight && thirtyDaysAgo.weight_kg
+    thirtyDaysAgo && currentWeight != null && thirtyDaysAgo.weight_kg != null
       ? currentWeight - thirtyDaysAgo.weight_kg
       : null;
 
@@ -59,10 +62,10 @@ export function computeBodySummary(
   let projectedBFDate: string | null = null;
   let onTrackForGoal = false;
 
-  if (latestInBody?.body_fat_pct) {
+  if (latestInBody?.body_fat_pct && Number(targetBodyFat) > 0) {
     const currentBF = latestInBody.body_fat_pct;
-    const targetBF = USER_PROFILE.targets.body_fat_pct_dec2026;
-    const goalDate = new Date("2026-12-31");
+    const targetBF = Number(targetBodyFat);
+    const goalDate = parseDateKey("2026-12-31");
     const today = new Date();
     const daysToGoal = (goalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
 
@@ -79,7 +82,7 @@ export function computeBodySummary(
       const weeksNeeded = (currentBF - targetBF) / weeklyFatLossPct;
       const projectedDate = new Date(today);
       projectedDate.setDate(today.getDate() + weeksNeeded * 7);
-      projectedBFDate = projectedDate.toISOString().split("T")[0];
+      projectedBFDate = getLocalDateKey(projectedDate);
       onTrackForGoal = projectedDate <= goalDate;
     }
   }

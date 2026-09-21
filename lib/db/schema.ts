@@ -1,5 +1,23 @@
 import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core";
 
+
+// ─── User Profile ─────────────────────────────────────────────────────────────
+export const userProfile = sqliteTable("user_profile", {
+  id: text("id").primaryKey(),
+  display_name: text("display_name").notNull(),
+  age: integer("age"),
+  sex: text("sex"),
+  height_cm: real("height_cm"),
+  calories_target: real("calories_target"),
+  protein_target_g: real("protein_target_g"),
+  carbs_target_g: real("carbs_target_g"),
+  fat_target_g: real("fat_target_g"),
+  units: text("units").notNull().default("metric"),
+  target_source: text("target_source").notNull().default("user"),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+});
+
 // ─── Food Logs ────────────────────────────────────────────────────────────────
 export const foodLogs = sqliteTable("food_logs", {
   id: text("id").primaryKey(), // UUID
@@ -364,3 +382,6 @@ export type NewSyncQueueEntry = typeof syncQueue.$inferInsert;
 
 export type SyncState = typeof syncState.$inferSelect;
 export type NewSyncState = typeof syncState.$inferInsert;
+
+export type UserProfileRow = typeof userProfile.$inferSelect;
+export type NewUserProfileRow = typeof userProfile.$inferInsert;

@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity } from "react-native";
+import { View, Text } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { M3 } from "../../design-system/tokens";
+import { PressableScale } from "./PressableScale";
 
 interface EmptyStateProps {
   icon: React.ComponentProps<typeof Feather>["name"];
@@ -17,15 +18,15 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        padding: 32,
-        gap: 12,
+        padding: M3.spacing.xxxl,
+        gap: M3.spacing.md,
       }}
     >
       <View
         style={{
           width: 64,
           height: 64,
-          borderRadius: 32,
+          borderRadius: M3.shape.full,
           backgroundColor: M3.colors.surfaceVariant,
           alignItems: "center",
           justifyContent: "center",
@@ -56,7 +57,7 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
         {subtitle}
       </Text>
       {actionLabel && onAction && (
-        <TouchableOpacity
+        <PressableScale
           onPress={onAction}
           style={{
             marginTop: 8,
@@ -75,7 +76,7 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
           >
             {actionLabel}
           </Text>
-        </TouchableOpacity>
+        </PressableScale>
       )}
     </View>
   );

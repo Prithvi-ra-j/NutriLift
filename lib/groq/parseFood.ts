@@ -18,6 +18,8 @@ export interface FoodParseResult {
   items: ParsedFoodItem[];
   meal_suggestion: "breakfast" | "lunch" | "snack" | "dinner" | null;
   parse_notes: string | null;
+  source: "ai" | "local";
+  original_input: string;
 }
 
 /**
@@ -88,7 +90,7 @@ Rules:
     
     // Parse and validate
     const result = JSON.parse(raw) as FoodParseResult;
-    return validateFoodParseResult(result);
+    return { ...validateFoodParseResult(result), source: "ai", original_input: text };
   }) as Promise<FoodParseResult>;
 }
 
@@ -100,18 +102,35 @@ function validateFoodParseResult(result: FoodParseResult): FoodParseResult {
     throw new Error("Invalid food parse result: missing items array");
   }
 
-  // Ensure all required fields exist with defaults
-  result.items = result.items.map((item) => ({
-    name: item.name || "Unknown food",
-    quantity: item.quantity || "1 serving",
-    quantity_g: item.quantity_g ?? null,
-    calories: Math.max(0, item.calories || 0),
-    protein_g: Math.max(0, item.protein_g || 0),
-    carbs_g: Math.max(0, item.carbs_g || 0),
-    fat_g: Math.max(0, item.fat_g || 0),
-    fiber_g: item.fiber_g ?? null,
-    confidence: item.confidence || "medium",
-  }));
+  // Reject fabricated/empty nutrition rather than silently creating a 0-kcal record.
+  result.items = result.items.map((item) => {
+    const calories = Number(item.calories);
+    const protein_g = Number(item.protein_g);
+    const carbs_g = Number(item.carbs_g);
+    const fat_g = Number(item.fat_g);
+
+    if (!item.name?.trim()) {
+      throw new Error("Food parse result is missing a food name");
+    }
+    if (![calories, protein_g, carbs_g, fat_g].every(Number.isFinite)) {
+      throw new Error("Food parse result contains invalid nutrition values");
+    }
+    if (calories <= 0 && protein_g <= 0 && carbs_g <= 0 && fat_g <= 0) {
+      throw new Error("Food parse result contains an empty nutrition record");
+    }
+
+    return {
+      name: item.name.trim(),
+      quantity: item.quantity || "1 serving",
+      quantity_g: item.quantity_g ?? null,
+      calories: Math.max(0, calories),
+      protein_g: Math.max(0, protein_g),
+      carbs_g: Math.max(0, carbs_g),
+      fat_g: Math.max(0, fat_g),
+      fiber_g: item.fiber_g ?? null,
+      confidence: item.confidence === "low" || item.confidence === "high" ? item.confidence : "medium",
+    };
+  });
 
   return result;
 }

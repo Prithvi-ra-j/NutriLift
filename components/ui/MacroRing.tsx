@@ -1,4 +1,5 @@
 import { View, Text } from "react-native";
+import { Canvas, Circle, Path } from "@shopify/react-native-skia";
 import { M3 } from "../../design-system/tokens";
 
 interface MacroRingProps {
@@ -10,116 +11,72 @@ interface MacroRingProps {
   fatTarget: number;
   calories: number;
   caloriesTarget: number;
+  size?: number;
+}
+
+function arcPath(size: number, start: number, sweep: number, radius: number): string {
+  if (sweep <= 0) return "";
+
+  const center = size / 2;
+  const startRad = ((start - 90) * Math.PI) / 180;
+  const endRad = ((start + sweep - 90) * Math.PI) / 180;
+
+  const startX = center + radius * Math.cos(startRad);
+  const startY = center + radius * Math.sin(startRad);
+  const endX = center + radius * Math.cos(endRad);
+  const endY = center + radius * Math.sin(endRad);
+  const largeArcFlag = sweep > 180 ? 1 : 0;
+
+  return `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`;
 }
 
 export function MacroRing({
-  protein,
-  carbs,
-  fat,
-  proteinTarget,
-  carbsTarget,
-  fatTarget,
-  calories,
+  protein, carbs, fat, proteinTarget, carbsTarget, fatTarget, calories, caloriesTarget, size = 112,
 }: MacroRingProps) {
-  const size = 90;
-
-  // Calculate percentages
-  const proteinPct = Math.min(100, (protein / proteinTarget) * 100);
-  const carbsPct = Math.min(100, (carbs / carbsTarget) * 100);
-  const fatPct = Math.min(100, (fat / fatTarget) * 100);
+  const stroke = 10;
+  const radius = (size - stroke) / 2;
+  const segments = [
+    { value: protein, target: proteinTarget, color: M3.macroColors.protein },
+    { value: carbs, target: carbsTarget, color: M3.macroColors.carbs },
+    { value: fat, target: fatTarget, color: M3.macroColors.fat },
+  ];
+  const total = segments.reduce((sum, x) => sum + Math.max(0, x.target), 0) || 1;
+  const gap = 5;
+  const hasCaloriesTarget = Number(caloriesTarget) > 0;
+  let start = 0;
 
   return (
-    <View style={{ alignItems: "center", justifyContent: "center" }}>
-      {/* Main circle with stacked colored bars */}
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: M3.colors.surfaceVariant,
-          alignItems: "center",
-          justifyContent: "center",
-          borderWidth: 2,
-          borderColor: M3.colors.surfaceContainer,
-          overflow: "hidden",
-        }}
-      >
-        {/* Colored segments as horizontal bars */}
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "33.33%",
-            backgroundColor: M3.colors.secondary,
-            opacity: proteinPct / 100,
-          }}
-        />
-        <View
-          style={{
-            position: "absolute",
-            top: "33.33%",
-            left: 0,
-            right: 0,
-            height: "33.33%",
-            backgroundColor: M3.colors.success,
-            opacity: carbsPct / 100,
-          }}
-        />
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "33.34%",
-            backgroundColor: M3.macroColors.fat,
-            opacity: fatPct / 100,
-          }}
-        />
-
-        {/* Center content overlay */}
-        <View
-          style={{
-            width: size - 20,
-            height: size - 20,
-            borderRadius: (size - 20) / 2,
-            backgroundColor: M3.colors.surfaceVariant,
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10,
-          }}
-        >
-          <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
-            {calories.toFixed(0)}
-          </Text>
-          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
-            kcal
-          </Text>
-        </View>
+    <View style={{ width: size, alignItems: "center", justifyContent: "center" }}>
+      <Canvas style={{ width: size, height: size }}>
+        <Circle cx={size / 2} cy={size / 2} r={radius} color={M3.colors.outlineVariant} style="stroke" strokeWidth={stroke} />
+        {segments.map((segment, index) => {
+          const allocation = (Math.max(0, segment.target) / total) * 360;
+          const sweep = Math.max(0, allocation - gap);
+          const progress = Math.min(1, segment.target > 0 ? Math.max(0, segment.value) / segment.target : 0);
+          const path = arcPath(size, start + gap / 2, sweep * progress, radius);
+          start += allocation;
+          if (!path) return null;
+          const overTarget = segment.target > 0 && segment.value > segment.target;
+          return <Path key={index} path={path} color={overTarget ? M3.colors.warning : segment.color} style="stroke" strokeWidth={stroke} strokeCap="round" />;
+        })}
+      </Canvas>
+      <View style={{ position: "absolute", alignItems: "center" }}>
+        <Text style={{ color: M3.colors.onSurface, fontSize: 28, fontFamily: "BebasNeue_400Regular", lineHeight: 30 }}>
+          {Math.round(calories)}
+        </Text>
+        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+          {hasCaloriesTarget ? `/ ${Math.round(caloriesTarget)} kcal` : "Targets not set"}
+        </Text>
       </View>
-
-      {/* Macro indicators below */}
       <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: M3.colors.secondary }} />
-          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
-            P {proteinPct.toFixed(0)}%
-          </Text>
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: M3.colors.success }} />
-          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
-            C {carbsPct.toFixed(0)}%
-          </Text>
-        </View>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: M3.macroColors.fat }} />
-          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
-            F {fatPct.toFixed(0)}%
-          </Text>
-        </View>
+        {segments.map((s) => (
+          <View key={s.color} style={{ flexDirection: "row", alignItems: "center", gap: 3 }}>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: s.color }} />
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+              {s.target > 0 ? `${Math.round((s.value / s.target) * 100)}%` : "—"}
+            </Text>
+          </View>
+        ))}
       </View>
     </View>
   );

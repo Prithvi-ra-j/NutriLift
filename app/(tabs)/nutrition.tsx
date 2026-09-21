@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -17,7 +18,7 @@ import {
   deleteFoodLog,
   getLast7DaysNutrition,
 } from "../../lib/db/queries/nutrition";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getUserProfile } from "../../lib/db/queries/profile";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -26,6 +27,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { PressableScale } from "../../components/ui/PressableScale";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -56,7 +58,7 @@ function groupByMeal(logs: FoodLog[]): MealGroup[] {
 }
 
 export default function NutritionScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getTodayKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const { nutrition, foodLogs, setNutrition, setFoodLogs } = useTodayStore();
 
@@ -64,17 +66,18 @@ export default function NutritionScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
+  const [targets, setTargets] = useState<{ calories: number; protein_g: number; carbs_g: number; fat_g: number }>({ calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 });
 
   const loadData = useCallback(async () => {
     try {
-      const [nutritionData, logsData, weekData] = await Promise.all([
+      const [nutritionData, logsData, weekData, profile] = await Promise.all([
         getDailyNutrition(selectedDate),
         getFoodLogsForDate(selectedDate),
-        getLast7DaysNutrition(),
+        getLast7DaysNutrition(), getUserProfile(),
       ]);
       setNutrition(nutritionData);
       setFoodLogs(logsData);
-      setLast7Days(weekData);
+      setLast7Days(weekData); if (profile) setTargets({ calories: profile.calories_target ?? targets.calories, protein_g: profile.protein_target_g ?? targets.protein_g, carbs_g: profile.carbs_target_g ?? targets.carbs_g, fat_g: profile.fat_target_g ?? targets.fat_g });
     } catch (err) {
       console.error("Nutrition load error:", err);
     } finally {
@@ -173,18 +176,18 @@ export default function NutritionScreen() {
               {calories.toFixed(0)}
             </Text>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
-              of {USER_PROFILE.targets.calories} kcal
+              of {targets.calories} kcal
             </Text>
           </View>
-          <MacroBar label="Protein" current={protein} target={USER_PROFILE.targets.protein_g} color={M3.colors.secondary} />
-          <MacroBar label="Carbs" current={carbs} target={USER_PROFILE.targets.carbs_g} color={M3.colors.success} />
-          <MacroBar label="Fat" current={fat} target={USER_PROFILE.targets.fat_g} color={M3.macroColors.fat} />
+          <MacroBar label="Protein" current={protein} target={targets.protein_g} color={M3.colors.secondary} />
+          <MacroBar label="Carbs" current={carbs} target={targets.carbs_g} color={M3.colors.success} />
+          <MacroBar label="Fat" current={fat} target={targets.fat_g} color={M3.macroColors.fat} />
         </Card>
 
         {/* ── Log Mode Buttons ── */}
         <View style={{ flexDirection: "row", gap: 8 }}>
           {(["type", "voice", "paste", "scan"] as const).map((mode) => (
-            <TouchableOpacity
+            <PressableScale
               key={mode}
               onPress={() => {
                 if (mode === "scan") {
@@ -192,7 +195,7 @@ export default function NutritionScreen() {
                 } else if (mode === "voice") {
                   router.push("/modals/voice-input");
                 } else if (mode === "paste") {
-                  router.push("/modals/inbody-paste");
+                  router.push({ pathname: "/modals/log-food", params: { mode: "paste" } });
                 } else {
                   router.push("/modals/log-food");
                 }
@@ -212,7 +215,7 @@ export default function NutritionScreen() {
                 shadowRadius: 4,
                 elevation: 2,
               }}
-              activeOpacity={0.7}
+             
             >
               <View
                 style={{
@@ -238,17 +241,17 @@ export default function NutritionScreen() {
                   color={M3.colors.primary}
                 />
               </View>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
-                {mode}
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
+                {mode === "type" ? "Describe" : mode === "paste" ? "Paste" : mode}
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
           ))}
         </View>
 
         {/* ── Meal Accordion ── */}
         {mealGroups.map((group) => (
           <Card key={group.meal}>
-            <TouchableOpacity
+            <PressableScale
               onPress={() => toggleMeal(group.meal)}
               style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
             >
@@ -264,7 +267,7 @@ export default function NutritionScreen() {
                 </View>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <TouchableOpacity
+                <PressableScale
                   onPress={() => router.push(`/modals/log-food?meal=${group.meal}`)}
                   style={{
                     width: 28,
@@ -276,14 +279,14 @@ export default function NutritionScreen() {
                   }}
                 >
                   <Feather name="plus" size={14} color={M3.colors.primary} />
-                </TouchableOpacity>
+                </PressableScale>
                 <Feather
                   name={expandedMeals.has(group.meal) ? "chevron-up" : "chevron-down"}
                   size={16}
                   color={M3.colors.onSurfaceMuted}
                 />
               </View>
-            </TouchableOpacity>
+            </PressableScale>
 
             {expandedMeals.has(group.meal) && (
               <View style={{ marginTop: 12, gap: 8 }}>
@@ -308,13 +311,13 @@ export default function NutritionScreen() {
                         <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
                           {item.name}
                         </Text>
-                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
+                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
                           {item.calories.toFixed(0)} kcal · P:{item.protein_g.toFixed(0)}g · C:{item.carbs_g.toFixed(0)}g · F:{item.fat_g.toFixed(0)}g
                         </Text>
                       </View>
-                      <TouchableOpacity onPress={() => handleDeleteFood(item)}>
+                      <PressableScale onPress={() => handleDeleteFood(item)}>
                         <Feather name="trash-2" size={14} color={M3.colors.error} />
-                      </TouchableOpacity>
+                      </PressableScale>
                     </View>
                   ))
                 )}
@@ -326,12 +329,12 @@ export default function NutritionScreen() {
         {/* ── Weekly Trend ── */}
         {last7Days.length > 0 && (
           <Card>
-            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
               7-DAY PROTEIN TREND
             </Text>
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: 60 }}>
               {last7Days.map((day, i) => {
-                const pct = Math.min(1, day.total_protein_g / USER_PROFILE.targets.protein_g);
+                const pct = Math.min(1, day.total_protein_g / targets.protein_g);
                 const hit = day.protein_target_met === 1;
                 return (
                   <View key={i} style={{ flex: 1, alignItems: "center", gap: 4 }}>
@@ -343,7 +346,7 @@ export default function NutritionScreen() {
                         borderRadius: 3,
                       }}
                     />
-                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
+                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                       {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                     </Text>
                   </View>

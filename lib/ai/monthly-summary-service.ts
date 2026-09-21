@@ -1,4 +1,5 @@
 import uuid from "react-native-uuid";
+import { getLocalDateKey } from "../dates";
 import { getDailyNutritionRange } from "../db/queries/nutrition";
 import { getSessionsForDateRange } from "../db/queries/workout";
 import { getRecoveryLogsForDateRange } from "../db/queries/recovery";
@@ -44,8 +45,8 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
     // Calculate month date range
     const startDate = new Date(year, monthNum - 1, 1);
     const endDate = new Date(year, monthNum, 0); // Last day of month
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
+    const startStr = getLocalDateKey(startDate);
+    const endStr = getLocalDateKey(endDate);
 
     // Gather month data
     const [nutrition, workouts, recovery, bodyStats] = await Promise.all([

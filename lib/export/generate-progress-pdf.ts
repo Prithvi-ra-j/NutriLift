@@ -5,6 +5,7 @@
  */
 
 import * as Print from "expo-print";
+import { getTodayKey, getDateDaysAgo, getLocalDateKey } from "../dates";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { Platform } from "react-native";
@@ -46,7 +47,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
     includePRs = true,
   } = options;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayKey();
   const start = startDate || getDateDaysAgo(30); // Default 30 days
   const end = endDate || today;
 
@@ -482,13 +483,6 @@ async function generateHTML(options: ExportOptions): Promise<string> {
   return html;
 }
 
-// Helper functions
-function getDateDaysAgo(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().split("T")[0];
-}
-
 function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
   return array.reduce((result, item) => {
     const groupKey = String(item[key]);
@@ -600,7 +594,7 @@ export async function generateProgressPDF(options: ExportOptions = {}): Promise<
 export async function exportLast30Days() {
   return generateProgressPDF({
     startDate: getDateDaysAgo(30),
-    endDate: new Date().toISOString().split("T")[0],
+    endDate: getTodayKey(),
   });
 }
 
@@ -612,8 +606,8 @@ export async function exportCurrentMonth() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   
   return generateProgressPDF({
-    startDate: startOfMonth.toISOString().split("T")[0],
-    endDate: now.toISOString().split("T")[0],
+    startDate: getLocalDateKey(startOfMonth),
+    endDate: getTodayKey(),
   });
 }
 
@@ -623,6 +617,6 @@ export async function exportCurrentMonth() {
 export async function exportAllData() {
   return generateProgressPDF({
     startDate: '2020-01-01', // Far back enough to get all data
-    endDate: new Date().toISOString().split("T")[0],
+    endDate: getTodayKey(),
   });
 }

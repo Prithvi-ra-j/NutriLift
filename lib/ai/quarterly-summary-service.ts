@@ -1,4 +1,5 @@
 import uuid from "react-native-uuid";
+import { getLocalDateKey } from "../dates";
 import { 
   getQuarterlySummary, 
   insertQuarterlySummary, 
@@ -62,8 +63,8 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
     // Generate AI summary
     const aiSummary = await generateQuarterlySummary({
       quarter,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: getLocalDateKey(startDate),
+      end_date: getLocalDateKey(endDate),
       monthly_summaries: monthlySummaries
         .filter(m => m.ai_summary)
         .map(m => ({
@@ -77,8 +78,8 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
     const summary: QuarterlySummary = {
       id: uuid.v4() as string,
       quarter,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: getLocalDateKey(startDate),
+      end_date: getLocalDateKey(endDate),
       generated_at: Math.floor(Date.now() / 1000),
       ai_summary: aiSummary,
       stats_json: JSON.stringify(aggregatedStats),

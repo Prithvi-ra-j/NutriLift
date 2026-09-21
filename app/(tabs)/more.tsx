@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { getTodayKey, getDateDaysAgo, getLocalDateKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -32,7 +33,7 @@ type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "a
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
 
 export default function MoreScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayKey();
   const params = useLocalSearchParams<{ section?: string }>();
   const [activeSection, setActiveSection] = useState<MoreSection>("menu");
   // Body stats
@@ -349,7 +350,7 @@ export default function MoreScreen() {
         {/* ── Supplements ── */}
         {activeSection === "supplements" && (
           <Card>
-            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
               TODAY'S SUPPLEMENTS
             </Text>
             {USER_PROFILE.supplements.map((supp) => {
@@ -388,7 +389,7 @@ export default function MoreScreen() {
                     <Text style={{ color: taken ? M3.colors.onSurface : M3.colors.onSurfaceVariant, fontSize: 14, fontFamily: "DMSans_500Medium" }}>
                       {supp.name}
                     </Text>
-                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 1 }}>
+                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 1 }}>
                       {supp.dose} · {supp.timing}
                     </Text>
                   </View>
@@ -402,13 +403,13 @@ export default function MoreScreen() {
         {activeSection === "recovery" && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                 RECOVERY LOG
               </Text>
               {recoverySaved && (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
                   <Feather name="check-circle" size={12} color={M3.colors.success} />
-                  <Text style={{ color: M3.colors.success, fontSize: 11, fontFamily: "DMSans_400Regular" }}>Saved</Text>
+                  <Text style={{ color: M3.colors.success, fontSize: 12, fontFamily: "DMSans_400Regular" }}>Saved</Text>
                 </View>
               )}
             </View>
@@ -517,7 +518,7 @@ export default function MoreScreen() {
           <>
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                   SUPABASE ACCOUNT
                 </Text>
                 <View
@@ -532,7 +533,7 @@ export default function MoreScreen() {
                   }}
                 >
                   <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: signedInEmail ? M3.colors.success : M3.colors.onSurfaceMuted }} />
-                  <Text style={{ color: signedInEmail ? M3.colors.onSuccessContainer : M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_700Bold", letterSpacing: 0.3 }}>
+                  <Text style={{ color: signedInEmail ? M3.colors.onSuccessContainer : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_700Bold", letterSpacing: 0.3 }}>
                     {!authChecked ? "CHECKING…" : signedInEmail ? "CONNECTED" : "NOT CONNECTED"}
                   </Text>
                 </View>
@@ -552,7 +553,7 @@ export default function MoreScreen() {
                   <Input value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" placeholder="Email" />
                   <Input value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" />
                   <Button label={isAuthenticating ? "Signing in…" : "Sign in"} onPress={handleSignIn} disabled={!isSupabaseConfigured || isAuthenticating} loading={isAuthenticating} />
-                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                     You'll stay signed in across app restarts once verified.
                   </Text>
                 </View>
@@ -584,14 +585,14 @@ export default function MoreScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
-              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                 {isWeb ? "Web uses a no-op database; use Android for local-first sync." : signedInEmail ? "Sync uploads locally queued changes to your Supabase account." : "Sign in above before syncing."}
               </Text>
             </Card>
 
             <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                   GROQ API KEY
                 </Text>
                 <View
@@ -606,7 +607,7 @@ export default function MoreScreen() {
                   }}
                 >
                   <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: groqKeySaved ? M3.colors.success : M3.colors.onSurfaceMuted }} />
-                  <Text style={{ color: groqKeySaved ? M3.colors.onSuccessContainer : M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_700Bold", letterSpacing: 0.3 }}>
+                  <Text style={{ color: groqKeySaved ? M3.colors.onSuccessContainer : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_700Bold", letterSpacing: 0.3 }}>
                     {groqKeySaved ? "READY" : "NOT CONFIGURED"}
                   </Text>
                 </View>
@@ -637,7 +638,7 @@ export default function MoreScreen() {
                     disabled={isVerifyingGroq} 
                     loading={isVerifyingGroq} 
                   />
-                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                     Your key is stored persistently on-device.
                   </Text>
                 </View>
@@ -650,7 +651,7 @@ export default function MoreScreen() {
         {activeSection === "settings" && (
           <>
             <Card>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 PROFILE
               </Text>
               {[
@@ -668,7 +669,7 @@ export default function MoreScreen() {
             </Card>
 
             <Card>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 TARGETS
               </Text>
               {[
@@ -686,7 +687,7 @@ export default function MoreScreen() {
             </Card>
 
             <Card>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 STRUCTURAL NOTES
               </Text>
               {USER_PROFILE.structural_notes.map((note, i) => (
@@ -751,7 +752,7 @@ export default function MoreScreen() {
             />
 
             <View style={{ alignItems: "center", paddingVertical: 16 }}>
-              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                 NutriLift v1.0 · Built for Prithvi · May 2026
               </Text>
             </View>

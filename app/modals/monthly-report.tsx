@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -29,7 +30,7 @@ export default function MonthlyReportModal() {
   const [progress, setProgress] = useState("");
   const [report, setReport] = useState<MonthlyReport | null>(null);
 
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentMonth = getTodayKey().slice(0, 7); // YYYY-MM
 
   const generateReport = async () => {
     setIsGenerating(true);
@@ -37,7 +38,7 @@ export default function MonthlyReportModal() {
 
     try {
       const startDate = `${currentMonth}-01`;
-      const endDate = new Date().toISOString().split("T")[0];
+      const endDate = getTodayKey();
 
       const [nutrition, sessions, prs, inBodyRecords, weightHistory, recoveryLogs, supplementAdherence] =
         await Promise.all([
@@ -132,7 +133,7 @@ export default function MonthlyReportModal() {
             {execSummary && (
               <Card>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                     EXECUTIVE SUMMARY
                   </Text>
                   <View style={{ backgroundColor: M3.colors.primaryContainer, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 4 }}>
@@ -145,7 +146,7 @@ export default function MonthlyReportModal() {
                   {execSummary.headline}
                 </Text>
 
-                <Text style={{ color: M3.colors.success, fontSize: 11, fontFamily: "DMSans_700Bold", marginBottom: 6, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.success, fontSize: 12, fontFamily: "DMSans_700Bold", marginBottom: 6, letterSpacing: 0.5 }}>
                   TOP WINS
                 </Text>
                 {execSummary.top_3_wins?.map((win, i) => (
@@ -155,7 +156,7 @@ export default function MonthlyReportModal() {
                   </View>
                 ))}
 
-                <Text style={{ color: M3.colors.warning, fontSize: 11, fontFamily: "DMSans_700Bold", marginTop: 12, marginBottom: 6, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.warning, fontSize: 12, fontFamily: "DMSans_700Bold", marginTop: 12, marginBottom: 6, letterSpacing: 0.5 }}>
                   AREAS TO IMPROVE
                 </Text>
                 {execSummary.top_3_areas_to_improve?.map((area, i) => (
@@ -170,7 +171,7 @@ export default function MonthlyReportModal() {
             {/* AI Narrative */}
             {report.ai_narrative && (
               <Card elevated>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   COACH ASSESSMENT
                 </Text>
                 <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 22 }}>
@@ -182,7 +183,7 @@ export default function MonthlyReportModal() {
             {/* Next Month Plan */}
             {nextPlan && (
               <Card>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                   NEXT MONTH GAME PLAN
                 </Text>
                 {[
@@ -191,7 +192,7 @@ export default function MonthlyReportModal() {
                   { label: "Recovery", items: nextPlan.recovery_focus, color: M3.colors.success },
                 ].map(({ label, items, color }) => (
                   <View key={label} style={{ marginBottom: 12 }}>
-                    <Text style={{ color, fontSize: 11, fontFamily: "DMSans_700Bold", marginBottom: 6, letterSpacing: 0.5 }}>
+                    <Text style={{ color, fontSize: 12, fontFamily: "DMSans_700Bold", marginBottom: 6, letterSpacing: 0.5 }}>
                       {label.toUpperCase()}
                     </Text>
                     {items?.map((item, i) => (
