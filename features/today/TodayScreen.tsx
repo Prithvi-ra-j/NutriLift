@@ -189,7 +189,7 @@ export default function TodayScreen() {
               <Feather name="chevron-right" size={18} color={M3.colors.onSurfaceMuted} />
             </View>
           </Card>
-        </PressableScale>rd>
+        </PressableScale>
 
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
