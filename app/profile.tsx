@@ -4,6 +4,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { getUserProfile, upsertUserProfile } from "../lib/db/queries/profile";
+import { recomputeDailyNutrition } from "../lib/db/queries/nutrition";
+import { getTodayKey } from "../lib/dates";
 import { USER_PROFILE } from "../lib/constants/user-profile";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -47,6 +49,7 @@ export default function ProfileScreen() {
         units: "metric",
         target_source: "user",
       });
+      await recomputeDailyNutrition(getTodayKey());
       router.back();
     } finally {
       setSaving(false);
