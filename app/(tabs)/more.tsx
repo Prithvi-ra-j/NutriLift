@@ -694,14 +694,9 @@ export default function MoreScreen() {
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 STRUCTURAL NOTES
               </Text>
-              Array.from(new Set<string>()).map((note, i) => (
-                <View key={i} style={{ flexDirection: "row", gap: 8, paddingVertical: 6 }}>
-                  <Feather name="alert-circle" size={12} color={M3.colors.warning} style={{ marginTop: 2 }} />
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1, lineHeight: 18 }}>
-                    {note}
-                  </Text>
-                </View>
-              ))}
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
+                Personal notes are managed in the profile flow and are not embedded in the app source.
+              </Text>
             </Card>
 
             <ListRow
