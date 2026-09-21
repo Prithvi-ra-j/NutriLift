@@ -1,7 +1,7 @@
 import "../global.css";
 import { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, Platform } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, Redirect, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   useFonts,
@@ -18,10 +18,14 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
 import { M3 } from "../design-system/tokens";
 import { syncToSupabase } from "../lib/integrations/life-os/syncClient";
+import { getUserProfile } from "../lib/db/queries/profile";
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [profileChecked, setProfileChecked] = useState(false);
+  const [hasProfile, setHasProfile] = useState(false);
+  const segments = useSegments();
 
   const [fontsLoaded] = useFonts({
     BebasNeue_400Regular,
@@ -36,6 +40,7 @@ export default function RootLayout() {
       .then(() => {
         logger.info("Database migrations completed successfully");
         setDbReady(true);
+        getUserProfile().then((profile) => setHasProfile(!!profile)).catch(() => setHasProfile(false)).finally(() => setProfileChecked(true));
         if (Platform.OS === "web") return;
 
         syncToSupabase().then((result) => {
@@ -54,10 +59,11 @@ export default function RootLayout() {
         console.error("DB migration failed:", err);
         setDbError(err.message);
         setDbReady(true); // Still proceed, show error in UI
+        setProfileChecked(true);
       });
   }, []);
 
-  if (!fontsLoaded || !dbReady) {
+  if (!fontsLoaded || !dbReady || !profileChecked) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: M3.colors.background }}>
         <ActivityIndicator color={M3.colors.primary} size="large" />
