@@ -21,6 +21,7 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { success } from "../../lib/haptics";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -38,13 +39,16 @@ export default function LogFoodModal() {
   const [isParsing, setIsParsing] = useState(false);
   const [parsedItems, setParsedItems] = useState<ParsedFoodItem[] | null>(null);
   const [parseNotes, setParseNotes] = useState<string | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const today = getTodayKey();
 
   const handleParse = async () => {
     if (!input.trim()) return;
     setIsParsing(true);
+    setParseError(null);
     setParsedItems(null);
     try {
       const result = await parseFoodInput(input);
@@ -54,26 +58,8 @@ export default function LogFoodModal() {
         setSelectedMeal(result.meal_suggestion);
       }
     } catch (err) {
-      // Fallback: show raw input as editable
-      Alert.alert(
-        "Parse Failed",
-        "Could not parse food automatically. You can add items manually.",
-        [{ text: "OK" }]
-      );
-      // Create a basic item from the input
-      setParsedItems([
-        {
-          name: input,
-          quantity: "1 serving",
-          quantity_g: null,
-          calories: 0,
-          protein_g: 0,
-          carbs_g: 0,
-          fat_g: 0,
-          fiber_g: null,
-          confidence: "low",
-        },
-      ]);
+      setParseError("We couldn't parse that yet. Your text is still here — edit it or try again.");
+      setParsedItems(null);
     } finally {
       setIsParsing(false);
     }
@@ -121,7 +107,9 @@ export default function LogFoodModal() {
           created_at: now,
         });
       }
-      router.back();
+      success();
+      setSaved(true);
+      setTimeout(() => router.back(), 350);
     } catch (err) {
       Alert.alert("Save Failed", "Could not save food log. Please try again.");
     } finally {
@@ -235,7 +223,7 @@ export default function LogFoodModal() {
             onPress={handleParse}
           />
 
-          {/* ── Parse Notes ── */}
+          {parseError && (\n            <View style={{ backgroundColor: M3.colors.errorContainer, borderRadius: 10, padding: 12, flexDirection: "row", gap: 8 }}>\n              <Feather name="alert-circle" size={16} color={M3.colors.error} />\n              <Text style={{ color: M3.colors.onErrorContainer, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>{parseError}</Text>\n            </View>\n          )}\n\n          {saved && (\n            <View style={{ backgroundColor: M3.colors.successContainer, borderRadius: 10, padding: 12, flexDirection: "row", gap: 8 }}>\n              <Feather name="check-circle" size={16} color={M3.colors.success} />\n              <Text style={{ color: M3.colors.onSuccessContainer, fontSize: 13, fontFamily: "DMSans_500Medium" }}>Food saved</Text>\n            </View>\n          )}\n\n          {/* ── Parse Notes ── */}
           {parseNotes && (
             <View style={{ backgroundColor: M3.colors.warningContainer, borderRadius: 8, padding: 10, flexDirection: "row", gap: 8 }}>
               <Feather name="alert-circle" size={14} color={M3.colors.warning} />
