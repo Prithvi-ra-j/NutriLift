@@ -12,13 +12,15 @@ import { Input } from "../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useAIStore } from "../../lib/stores/ai.store";
-import { useTodayStore } from "../../lib/stores/today.store";
 import { generateCoachResponse, isGroqConfigured, type CoachMessage } from "../../lib/groq";
+import { getDailyNutrition } from "../../lib/db/queries/nutrition";
+import { getSessionsForDate } from "../../lib/db/queries/workout";
+import { getTodayKey } from "../../lib/dates";
 import { buildCoachContext } from "../../lib/ai/context-builder";
 import { getConversationHistory, insertConversationMessage, clearConversationHistory } from "../../lib/db/queries/reports";
 import { Card } from "../../components/ui/Card";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { AiConversation } from "../../lib/db/schema";
+import type { AiConversation, DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 import { PressableScale } from "../../components/ui/PressableScale";
@@ -35,7 +37,8 @@ const COACH_SUGGESTED_PROMPTS = [
 
 export default function CoachScreen() {
   const { messages, isGenerating, error, setMessages, addMessage, setGenerating, setError } = useAIStore();
-  const { nutrition, session } = useTodayStore();
+  const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
+  const [session, setSession] = useState<WorkoutSession | null>(null);
 
   const [input, setInput] = useState("");
   const [groqConfigured, setGroqConfigured] = useState<boolean | null>(null);
@@ -55,6 +58,9 @@ export default function CoachScreen() {
   useEffect(() => {
     checkConfiguration();
     loadHistory();
+    Promise.all([getDailyNutrition(getTodayKey()), getSessionsForDate(getTodayKey())])
+      .then(([todayNutrition, sessions]) => { setNutrition(todayNutrition); setSession(sessions[0] ?? null); })
+      .catch((err) => console.warn("Coach context preload failed", err));
   }, [checkConfiguration, loadHistory]);
 
   useEffect(() => {
