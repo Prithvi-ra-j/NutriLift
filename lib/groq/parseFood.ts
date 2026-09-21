@@ -18,6 +18,8 @@ export interface FoodParseResult {
   items: ParsedFoodItem[];
   meal_suggestion: "breakfast" | "lunch" | "snack" | "dinner" | null;
   parse_notes: string | null;
+  source: "ai" | "local";
+  original_input: string;
 }
 
 /**
@@ -88,7 +90,7 @@ Rules:
     
     // Parse and validate
     const result = JSON.parse(raw) as FoodParseResult;
-    return validateFoodParseResult(result);
+    return { ...validateFoodParseResult(result), source: "ai", original_input: text };
   }) as Promise<FoodParseResult>;
 }
 
