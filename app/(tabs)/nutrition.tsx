@@ -19,6 +19,7 @@ import {
   getLast7DaysNutrition,
 } from "../../lib/db/queries/nutrition";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getUserProfile } from "../../lib/db/queries/profile";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -65,17 +66,18 @@ export default function NutritionScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
+  const [targets, setTargets] = useState(USER_PROFILE.targets);
 
   const loadData = useCallback(async () => {
     try {
-      const [nutritionData, logsData, weekData] = await Promise.all([
+      const [nutritionData, logsData, weekData, profile] = await Promise.all([
         getDailyNutrition(selectedDate),
         getFoodLogsForDate(selectedDate),
-        getLast7DaysNutrition(),
+        getLast7DaysNutrition(), getUserProfile(),
       ]);
       setNutrition(nutritionData);
       setFoodLogs(logsData);
-      setLast7Days(weekData);
+      setLast7Days(weekData); if (profile) setTargets({ calories: profile.calories_target ?? targets.calories, protein_g: profile.protein_target_g ?? targets.protein_g, carbs_g: profile.carbs_target_g ?? targets.carbs_g, fat_g: profile.fat_target_g ?? targets.fat_g });
     } catch (err) {
       console.error("Nutrition load error:", err);
     } finally {
@@ -174,12 +176,12 @@ export default function NutritionScreen() {
               {calories.toFixed(0)}
             </Text>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
-              of {USER_PROFILE.targets.calories} kcal
+              of {targets.calories} kcal
             </Text>
           </View>
-          <MacroBar label="Protein" current={protein} target={USER_PROFILE.targets.protein_g} color={M3.colors.secondary} />
-          <MacroBar label="Carbs" current={carbs} target={USER_PROFILE.targets.carbs_g} color={M3.colors.success} />
-          <MacroBar label="Fat" current={fat} target={USER_PROFILE.targets.fat_g} color={M3.macroColors.fat} />
+          <MacroBar label="Protein" current={protein} target={targets.protein_g} color={M3.colors.secondary} />
+          <MacroBar label="Carbs" current={carbs} target={targets.carbs_g} color={M3.colors.success} />
+          <MacroBar label="Fat" current={fat} target={targets.fat_g} color={M3.macroColors.fat} />
         </Card>
 
         {/* ── Log Mode Buttons ── */}
@@ -332,7 +334,7 @@ export default function NutritionScreen() {
             </Text>
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: 60 }}>
               {last7Days.map((day, i) => {
-                const pct = Math.min(1, day.total_protein_g / USER_PROFILE.targets.protein_g);
+                const pct = Math.min(1, day.total_protein_g / targets.protein_g);
                 const hit = day.protein_target_met === 1;
                 return (
                   <View key={i} style={{ flex: 1, alignItems: "center", gap: 4 }}>
