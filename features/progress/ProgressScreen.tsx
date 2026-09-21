@@ -19,6 +19,7 @@ import { computeNutritionSummary } from "../../../lib/analytics/nutrition-analyt
 import { computeBodySummary } from "../../../lib/analytics/body-analytics";
 import { Card } from "../../../components/ui/Card";
 import { EmptyState } from "../../../components/ui/EmptyState";
+import { ErrorState } from "../../../components/ui/ErrorState";
 import { CardSkeleton } from "../../../components/ui/SkeletonLoader";
 import { ScreenHeader } from "../../../components/ui/ScreenHeader";
 import { SegmentedControl } from "../../../components/ui/SegmentedControl";
@@ -32,6 +33,7 @@ export default function ProgressScreen() {
   const [activeSection, setActiveSection] = useState<ProgressSection>("body");
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Week navigation state
   const todayStr = getTodayKey();
@@ -69,6 +71,7 @@ export default function ProgressScreen() {
 
   const loadData = useCallback(async () => {
     try {
+      setLoadError(null);
       const [prsData, weightData, inBodyData, nutritionData, recoveryData, profileData] = await Promise.all([
         getAllPRs(),
         getWeightHistory(90), // Get 90 days to cover multiple weeks
@@ -86,6 +89,7 @@ export default function ProgressScreen() {
       setCalorieTarget(profileData?.calories_target ?? null);
     } catch (err) {
       console.error("Progress load error:", err);
+      setLoadError("We couldn’t load progress data. Your saved data is unchanged.");
     } finally {
       setIsLoading(false);
       setRefreshing(false);
@@ -139,6 +143,14 @@ export default function ProgressScreen() {
     { key: "nutrition", label: "Nutrition", icon: "pie-chart" },
     { key: "recovery", label: "Recovery", icon: "moon" },
   ];
+
+  if (loadError && !isLoading) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+        <ErrorState onRetry={() => { setIsLoading(true); void loadData(); }} />
+      </SafeAreaView>
+    );
+  }
 
   if (isLoading) {
     return (
