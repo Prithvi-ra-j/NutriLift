@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { parseFoodInput, type ParsedFoodItem } from "../../lib/ai/parsers";
+import type { FoodLog } from "../../lib/db/schema";
 import { insertFoodLog, getDistinctRecentFoods, getMostRecentMealLogsBeforeDate } from "../../lib/db/queries/nutrition";
 import { useUIStore } from "../../lib/stores/ui.store";
 import { Card } from "../../components/ui/Card";
@@ -55,7 +56,7 @@ export default function LogFoodModal() {
   const [savedMeal, setSavedMeal] = useState<MealType | null>(null);
   const [savedCalories, setSavedCalories] = useState(0);
   const [savedProtein, setSavedProtein] = useState(0);
-  const [recentFoods, setRecentFoods] = useState<import("../../../lib/db/schema").FoodLog[]>([]);
+  const [recentFoods, setRecentFoods] = useState<FoodLog[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [manualName, setManualName] = useState("");
   const [manualCalories, setManualCalories] = useState("");
@@ -92,7 +93,7 @@ export default function LogFoodModal() {
       source: "manual",
       raw_input: searchQuery,
       created_at: Math.floor(Date.now() / 1000),
-    } as import("../../../lib/db/schema").FoodLog);
+    } as FoodLog);
   };
 
   const handleRepeatMeal = async () => {
@@ -122,7 +123,7 @@ export default function LogFoodModal() {
 
 
 
-  const handleQuickAdd = async (food: import("../../../lib/db/schema").FoodLog) => {
+  const handleQuickAdd = async (food: FoodLog) => {
     setIsSaving(true);
     try {
       await insertFoodLog({ ...food, id: uuid.v4() as string, date: today, meal: selectedMeal, created_at: Math.floor(Date.now() / 1000) });
