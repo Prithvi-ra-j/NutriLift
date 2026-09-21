@@ -41,16 +41,11 @@ jobs:
         with:
           node-version: 22.14.0
           cache: npm
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: 54.0.27
-          eas-version: 24.3.0
-          packager: npm
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Verify Expo CLI
+        run: npx expo --version
       - name: Install dependencies
         run: npm ci
       - name: Build Android preview
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas build --platform android --profile preview --non-interactive --verbose-logs
+        run: npx eas-cli@24.3.0 build --platform android --profile preview --non-interactive --verbose-logs
