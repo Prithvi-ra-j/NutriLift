@@ -178,7 +178,7 @@ export default function LogFoodModal() {
                   alignItems: "center",
                 }}
               >
-                <Text style={{ color: selectedMeal === meal ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
+                <Text style={{ color: selectedMeal === meal ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
                   {meal}
                 </Text>
               </TouchableOpacity>
@@ -291,7 +291,7 @@ export default function LogFoodModal() {
           {/* ── Parsed Items ── */}
           {parsedItems && parsedItems.length > 0 && (
             <>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                 CONFIRM ITEMS
               </Text>
 
@@ -302,14 +302,14 @@ export default function LogFoodModal() {
                       <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
                         {item.name}
                       </Text>
-                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                         {item.quantity}
                       </Text>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                       {item.confidence === "low" && (
                         <View style={{ backgroundColor: M3.colors.warningContainer, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                          <Text style={{ color: M3.colors.warning, fontSize: 9, fontFamily: "DMSans_700Bold" }}>LOW CONF</Text>
+                          <Text style={{ color: M3.colors.warning, fontSize: 12, fontFamily: "DMSans_700Bold" }}>LOW CONF</Text>
                         </View>
                       )}
                       <TouchableOpacity onPress={() => removeItem(index)}>
@@ -326,7 +326,7 @@ export default function LogFoodModal() {
                       { label: "F(g)", field: "fat_g" as const, color: M3.macroColors.fat },
                     ].map(({ label, field, color }) => (
                       <View key={field} style={{ flex: 1 }}>
-                        <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular", marginBottom: 3, textAlign: "center" }}>
+                        <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 3, textAlign: "center" }}>
                           {label}
                         </Text>
                         <TextInput
@@ -354,7 +354,7 @@ export default function LogFoodModal() {
               {/* Total */}
               {totalMacros && (
                 <Card>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
                     TOTAL
                   </Text>
                   <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
