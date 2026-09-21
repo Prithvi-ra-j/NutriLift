@@ -122,13 +122,13 @@ export default function ProgressScreen() {
   const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
 
   const goToPreviousWeek = () => {
-    const prev = new Date(selectedDate);
+    const prev = parseDateKey(selectedDate);
     prev.setDate(prev.getDate() - 7);
     setSelectedDate(getLocalDateKey(prev));
   };
 
   const goToNextWeek = () => {
-    const next = new Date(selectedDate);
+    const next = parseDateKey(selectedDate);
     next.setDate(next.getDate() + 7);
     setSelectedDate(getLocalDateKey(next));
   };
@@ -482,7 +482,7 @@ export default function ProgressScreen() {
                         <View key={i} style={{ flex: 1, alignItems: "center", gap: 3 }}>
                           <View style={{ width: "100%", height: Math.max(4, pct * 52), backgroundColor: color, borderRadius: 3 }} />
                           <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 8, fontFamily: "DMSans_400Regular" }}>
-                            {new Date(log.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
+                            {parseDateKey(log.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                           </Text>
                         </View>
                       );
