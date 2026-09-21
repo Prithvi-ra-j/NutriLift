@@ -10,6 +10,7 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useTodayStore } from "../../../lib/stores/today.store";
 import {
@@ -20,6 +21,7 @@ import {
   insertExerciseLog,
   insertSetLog,
   updateSetLog,
+  updateSession,
   deleteSetLog,
   deleteExerciseLog,
   updateExerciseLog,
@@ -167,6 +169,9 @@ export default function WorkoutScreen() {
   const [previousPerformance, setPreviousPerformance] = useState<Record<string, string>>({});
   const [restTimerDuration, setRestTimerDuration] = useState(90);
   const restTimer = useRestTimer(restTimerDuration);
+  const [previousPerformance, setPreviousPerformance] = useState<Record<string, string>>({});
+  const [restTimerDuration, setRestTimerDuration] = useState(90);
+  const restTimer = useRestTimer(restTimerDuration);
 
   // ── Set form state ──
   const [addSetForm, setAddSetForm] = useState<SetForm | null>(null);
@@ -190,6 +195,7 @@ export default function WorkoutScreen() {
   const [editExerciseName, setEditExerciseName] = useState("");
   const [editExerciseMuscle, setEditExerciseMuscle] = useState("");
   const [editExerciseEquip, setEditExerciseEquip] = useState("");
+  const [isFinishing, setIsFinishing] = useState(false);
   const [isFinishing, setIsFinishing] = useState(false);
 
   // ─── Load ──────────────────────────────────────────────────────────────────
