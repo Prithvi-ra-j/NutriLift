@@ -26,7 +26,7 @@ export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
 }
 
 export async function getRecentRecoveryLogs(days: number = 7): Promise<RecoveryLog[]> {
-  const cutoffStr = getDateDaysAgo(days);
+  const cutoffStr = getDateDaysAgo(Math.max(0, days - 1));
 
   return db
     .select()
