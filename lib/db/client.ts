@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import * as schema from "./schema";
+import { USER_PROFILE } from "../constants/user-profile";
 
 // Platform-specific imports and initialization
 let sqlite: any = null;
