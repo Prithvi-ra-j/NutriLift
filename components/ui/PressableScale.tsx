@@ -1,4 +1,4 @@
-import { Pressable, View, type PressableProps, type ViewStyle, type StyleProp } from "react-native";
+import { Pressable, AccessibilityInfo, type PressableProps, type ViewStyle, type StyleProp } from "react-native";
 import { useEffect } from "react";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { impactLight } from "../../lib/haptics";
@@ -15,13 +15,21 @@ interface Props extends PressableProps {
 
 export function PressableScale({ children, style, haptic = false, scale = 0.96, onPressIn, onPressOut, disabled, ...props }: Props) {
   const progress = useSharedValue(0);
+  const reduceMotion = useSharedValue(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled?.().then((enabled) => { if (mounted) reduceMotion.value = !!enabled; });
+    const subscription = AccessibilityInfo.addEventListener("reduceMotionChanged", (enabled) => { reduceMotion.value = !!enabled; });
+    return () => { mounted = false; subscription.remove(); };
+  }, [reduceMotion]);
 
   useEffect(() => {
     progress.value = 0;
   }, [progress]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: withSpring(progress.value ? scale : 1, { damping: 18, stiffness: 280 }) }],
+    transform: [{ scale: reduceMotion.value ? 1 : withSpring(progress.value ? scale : 1, { damping: 18, stiffness: 280 }) }],
   }));
 
   return (
