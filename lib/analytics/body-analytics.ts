@@ -42,10 +42,12 @@ export function computeBodySummary(
       ? currentWeight - sevenDaysAgo.weight_kg
       : null;
 
-  // 30-day change
-  const thirtyDaysAgo = sorted[0];
+  // 30-day change: compare with the closest measurement at least 29 local days earlier.
+  const thirtyDayCutoff = new Date(parseDateKey(latest.date));
+  thirtyDayCutoff.setDate(thirtyDayCutoff.getDate() - 29);
+  const thirtyDaysAgo = sorted.find((stat) => parseDateKey(stat.date).getTime() <= thirtyDayCutoff.getTime());
   const weightChange30d =
-    thirtyDaysAgo && currentWeight && thirtyDaysAgo.weight_kg
+    thirtyDaysAgo && currentWeight != null && thirtyDaysAgo.weight_kg != null
       ? currentWeight - thirtyDaysAgo.weight_kg
       : null;
 
