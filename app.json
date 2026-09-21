@@ -4,60 +4,11 @@
     "slug": "apex",
     "owner": "prithviraj_12",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "runtimeVersion": "1.0.0",
     "updates": {
       "url": "https://u.expo.dev/4d082b22-8f1b-4d8d-abd2-dfe2c41a172b"
     },
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A0A0F"
-    },
-    "ios": {
-      "supportsTablet": false,
-      "bundleIdentifier": "com.prithvi.nutrilift"
-    },
-    "android": {
-      "versionCode": 1,
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0A0A0F"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.prithvi.nutrilift",
-      "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ]
-    },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
-    },
-    "scheme": "nutrilift",
-    "plugins": [
-      "expo-router",
-      "expo-asset",
-      [
-        "expo-sqlite",
-        {
-          "enableFTS": true,
-          "useSQLCipher": false
-        }
-      ],
-      "expo-secure-store",
-      [
-        "expo-audio",
-        {
-          "microphonePermission": "Allow NutriLift to access your microphone for voice food logging."
-        }
-      ]
-    ],
     "experiments": {
       "typedRoutes": true
     },
@@ -66,6 +17,18 @@
       "eas": {
         "projectId": "4d082b22-8f1b-4d8d-abd2-dfe2c41a172b"
       }
+    },
+    "install": {
+      "exclude": [
+        "@react-native-async-storage/async-storage",
+        "@types/jest",
+        "expo",
+        "expo-constants",
+        "expo-file-system",
+        "expo-font",
+        "expo-router",
+        "expo-updates"
+      ]
     }
   }
 }
