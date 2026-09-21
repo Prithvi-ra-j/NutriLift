@@ -231,7 +231,21 @@ export default function LogFoodModal() {
             onPress={handleParse}
           />
 
-          {parseError && (\n            <View style={{ backgroundColor: M3.colors.errorContainer, borderRadius: 10, padding: 12, flexDirection: "row", gap: 8 }}>\n              <Feather name="alert-circle" size={16} color={M3.colors.error} />\n              <Text style={{ color: M3.colors.onErrorContainer, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>{parseError}</Text>\n            </View>\n          )}\n\n          {saved && (\n            <View style={{ backgroundColor: M3.colors.successContainer, borderRadius: 10, padding: 12, flexDirection: "row", gap: 8 }}>\n              <Feather name="check-circle" size={16} color={M3.colors.success} />\n              <Text style={{ color: M3.colors.onSuccessContainer, fontSize: 13, fontFamily: "DMSans_500Medium" }}>Food saved</Text>\n            </View>\n          )}\n\n          {/* ── Parse Notes ── */}
+          {parseError && (
+            <View style={{ backgroundColor: M3.colors.errorContainer, borderRadius: 10, padding: 12, flexDirection: "row", gap: 8 }}>
+              <Feather name="alert-circle" size={16} color={M3.colors.error} />
+              <Text style={{ color: M3.colors.onErrorContainer, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>{parseError}</Text>
+            </View>
+          )}
+
+          {saved && (
+            <View style={{ backgroundColor: M3.colors.successContainer, borderRadius: 10, padding: 12, flexDirection: "row", gap: 8 }}>
+              <Feather name="check-circle" size={16} color={M3.colors.success} />
+              <Text style={{ color: M3.colors.onSuccessContainer, fontSize: 13, fontFamily: "DMSans_500Medium" }}>Food saved</Text>
+            </View>
+          )}
+
+          {/* ── Parse Notes ── */}
           {parseNotes && (
             <View style={{ backgroundColor: M3.colors.warningContainer, borderRadius: 8, padding: 10, flexDirection: "row", gap: 8 }}>
               <Feather name="alert-circle" size={14} color={M3.colors.warning} />
