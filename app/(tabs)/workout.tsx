@@ -604,7 +604,7 @@ export default function WorkoutScreen() {
           {exerciseType === "weight_reps" && (
             <>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
                   Weight (kg)
                 </Text>
                 <TextInput
@@ -617,7 +617,7 @@ export default function WorkoutScreen() {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
                   Reps
                 </Text>
                 <TextInput
@@ -630,7 +630,7 @@ export default function WorkoutScreen() {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
                   RPE
                 </Text>
                 <TextInput
@@ -648,7 +648,7 @@ export default function WorkoutScreen() {
           {exerciseType === "reps_only" && (
             <>
               <View style={{ flex: 2 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
                   Reps / Count
                 </Text>
                 <TextInput
@@ -661,7 +661,7 @@ export default function WorkoutScreen() {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
                   RPE
                 </Text>
                 <TextInput
@@ -678,7 +678,7 @@ export default function WorkoutScreen() {
 
           {exerciseType === "duration" && (
             <View style={{ flex: 1 }}>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
                 Duration (seconds)
               </Text>
               <TextInput
@@ -695,7 +695,7 @@ export default function WorkoutScreen() {
           {exerciseType === "distance_duration" && (
             <>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
                   Distance (km)
                 </Text>
                 <TextInput
@@ -708,7 +708,7 @@ export default function WorkoutScreen() {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
                   Duration (min)
                 </Text>
                 <TextInput
@@ -833,7 +833,7 @@ export default function WorkoutScreen() {
         {!session && new Date(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                 RECOVERY & CARDIO
               </Text>
             </View>
@@ -860,10 +860,10 @@ export default function WorkoutScreen() {
         {!session && new Date(selectedDate).getDay() !== 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                 SELECT DAY TYPE
               </Text>
-              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                 Completed this week are hidden
               </Text>
             </View>
@@ -925,7 +925,7 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
                   {session.day_type}
                 </Text>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                   Day Type
                 </Text>
               </View>
@@ -933,7 +933,7 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
                   {exercises.length}
                 </Text>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                   Exercises
                 </Text>
               </View>
@@ -941,7 +941,7 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
                   {Object.values(sets).reduce((a, b) => a + b.length, 0)}
                 </Text>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                   Sets
                 </Text>
               </View>
@@ -949,10 +949,10 @@ export default function WorkoutScreen() {
                 <Text style={{ color: M3.colors.primary, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
                   {((session.total_volume_kg ?? 0) / 1000).toFixed(1)}t
                 </Text>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                   Volume
                 </Text>
-                <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
+                <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                   ({(session.total_volume_kg ?? 0).toFixed(0)}kg)
                 </Text>
               </View>
@@ -988,18 +988,18 @@ export default function WorkoutScreen() {
                   </Text>
                   <View style={{ flexDirection: "row", gap: 6, marginTop: 3 }}>
                     <View style={{ backgroundColor: M3.colors.surfaceVariant, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
                         {exercise.muscle_group}
                       </Text>
                     </View>
                     <View style={{ backgroundColor: M3.colors.surfaceVariant, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
                         {exercise.equipment}
                       </Text>
                     </View>
                     {/* Exercise type badge */}
                     <View style={{ backgroundColor: "#0D2D24", borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ color: M3.colors.primary, fontSize: 10, fontFamily: "DMSans_500Medium" }}>
+                      <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                         {exType === "weight_reps" ? "Weight" : exType === "reps_only" ? "Reps" : exType === "duration" ? "Duration" : "Cardio"}
                       </Text>
                     </View>
@@ -1010,11 +1010,11 @@ export default function WorkoutScreen() {
                 <View style={{ alignItems: "flex-end", gap: 6 }}>
                   {exType === "weight_reps" && (
                     <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                         {totalVolume.toFixed(0)}kg vol
                       </Text>
                       {!!estimated1RM && (
-                        <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
+                        <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                           ~{estimated1RM.toFixed(0)}kg 1RM
                         </Text>
                       )}
@@ -1058,7 +1058,7 @@ export default function WorkoutScreen() {
               {!!progressionAlerts[exercise.id] && (
                 <View style={{ backgroundColor: M3.colors.warningContainer, borderRadius: 6, padding: 8, marginBottom: 8, flexDirection: "row", gap: 6 }}>
                   <Feather name="trending-up" size={12} color={M3.colors.warning} />
-                  <Text style={{ color: M3.colors.warning, fontSize: 11, fontFamily: "DMSans_500Medium", flex: 1 }}>
+                  <Text style={{ color: M3.colors.warning, fontSize: 12, fontFamily: "DMSans_500Medium", flex: 1 }}>
                     {progressionAlerts[exercise.id]}
                   </Text>
                 </View>
@@ -1107,7 +1107,7 @@ export default function WorkoutScreen() {
                           width: "100%",
                         }}>
                           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                            <Text style={{ color: M3.colors.secondary, fontSize: 11, fontFamily: "DMSans_700Bold" }}>
+                            <Text style={{ color: M3.colors.secondary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
                               EDIT SET {set.set_number}
                             </Text>
                             <TouchableOpacity
@@ -1186,22 +1186,22 @@ export default function WorkoutScreen() {
             <Card elevated style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
                 <Feather name="info" size={12} color={M3.colors.secondary} />
-                <Text style={{ color: M3.colors.secondary, fontSize: 10, fontFamily: "DMSans_700Bold" }}>
+                <Text style={{ color: M3.colors.secondary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
                   RPE
                 </Text>
               </View>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular", lineHeight: 14 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 14 }}>
                 Rate of Perceived Exertion (1-10). How hard the set felt.
               </Text>
             </Card>
             <Card elevated style={{ flex: 1 }}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
                 <Feather name="info" size={12} color={M3.colors.primary} />
-                <Text style={{ color: M3.colors.primary, fontSize: 10, fontFamily: "DMSans_700Bold" }}>
+                <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
                   VOLUME
                 </Text>
               </View>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular", lineHeight: 14 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 14 }}>
                 Weight × reps (weight exercises only). 1t = 1,000kg
               </Text>
             </Card>
@@ -1262,7 +1262,7 @@ export default function WorkoutScreen() {
                           {ex.name}
                         </Text>
                         <View style={{ flexDirection: "row", gap: 6, marginTop: 3, alignItems: "center" }}>
-                          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", textTransform: "capitalize" }}>
+                          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", textTransform: "capitalize" }}>
                             {ex.muscle_group} · {ex.equipment}
                           </Text>
                           <View style={{
@@ -1274,7 +1274,7 @@ export default function WorkoutScreen() {
                             paddingVertical: 1,
                           }}>
                             <Text style={{
-                              fontSize: 9,
+                              fontSize: 12,
                               fontFamily: "DMSans_700Bold",
                               color: ex.exercise_type === "weight_reps" ? M3.colors.primary :
                                 ex.exercise_type === "reps_only" ? M3.colors.secondary :
@@ -1341,7 +1341,7 @@ export default function WorkoutScreen() {
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={{ gap: 16 }}>
                   <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
                       Exercise Name
                     </Text>
                     <TextInput
@@ -1363,7 +1363,7 @@ export default function WorkoutScreen() {
                   </View>
 
                   <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
                       Exercise Type
                     </Text>
                     <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -1389,7 +1389,7 @@ export default function WorkoutScreen() {
                   </View>
                   
                   <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
                       Muscle Group (Optional)
                     </Text>
                     <TextInput
@@ -1480,7 +1480,7 @@ export default function WorkoutScreen() {
                           <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_500Medium" }}>
                             {ex.name}
                           </Text>
-                          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 2, textTransform: "capitalize" }}>
+                          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2, textTransform: "capitalize" }}>
                             {ex.muscle_group} · {ex.equipment} · {ex.sets} sets × {ex.reps} reps
                           </Text>
                         </View>
@@ -1582,7 +1582,7 @@ export default function WorkoutScreen() {
                           {ex.name}
                         </Text>
                         <View style={{ flexDirection: "row", gap: 6, marginTop: 3, alignItems: "center" }}>
-                          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", textTransform: "capitalize" }}>
+                          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", textTransform: "capitalize" }}>
                             {ex.muscle_group} · {ex.equipment}
                           </Text>
                           <View style={{
@@ -1594,7 +1594,7 @@ export default function WorkoutScreen() {
                             paddingVertical: 1,
                           }}>
                             <Text style={{
-                              fontSize: 9,
+                              fontSize: 12,
                               fontFamily: "DMSans_700Bold",
                               color: ex.exercise_type === "weight_reps" ? M3.colors.primary :
                                 ex.exercise_type === "reps_only" ? M3.colors.secondary :
@@ -1634,7 +1634,7 @@ export default function WorkoutScreen() {
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={{ gap: 16 }}>
                   <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
                       Exercise Name
                     </Text>
                     <TextInput
@@ -1654,7 +1654,7 @@ export default function WorkoutScreen() {
                   </View>
                   
                   <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
                       Muscle Group (Optional)
                     </Text>
                     <TextInput
@@ -1676,7 +1676,7 @@ export default function WorkoutScreen() {
                   </View>
 
                   <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
                       Equipment (Optional)
                     </Text>
                     <TextInput
