@@ -1,5 +1,5 @@
 import type { BodyStat } from "../db/schema";
-import { getTodayKey, getDateDaysAgo, getLocalDateKey } from "../dates";
+import { getTodayKey, getDateDaysAgo, getLocalDateKey, parseDateKey } from "../dates";
 
 export interface BodyCompositionSummary {
   currentWeight: number | null;
@@ -33,7 +33,7 @@ export function computeBodySummary(
   // 7-day change
   const sevenDaysAgo = sorted.find((s) => {
     const diff =
-      (new Date(latest.date).getTime() - new Date(s.date).getTime()) /
+      (parseDateKey(latest.date).getTime() - parseDateKey(s.date).getTime()) /
       (1000 * 60 * 60 * 24);
     return diff >= 6;
   });
@@ -63,7 +63,7 @@ export function computeBodySummary(
   if (latestInBody?.body_fat_pct && Number(targetBodyFat) > 0) {
     const currentBF = latestInBody.body_fat_pct;
     const targetBF = Number(targetBodyFat);
-    const goalDate = new Date("2026-12-31");
+    const goalDate = parseDateKey("2026-12-31");
     const today = new Date();
     const daysToGoal = (goalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
 
