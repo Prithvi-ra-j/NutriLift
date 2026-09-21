@@ -83,7 +83,7 @@ export function computeNutritionSummary(days: DailyNutrition[], proteinTarget?: 
   if (proteinGap <= 0) {
     proteinGapAnalysis = `Averaging ${avgProtein.toFixed(0)}g — ${Math.abs(proteinGap).toFixed(0)}g above your ${target}g target. Solid.`;
   } else {
-    proteinGapAnalysis = `Averaged ${avgProtein.toFixed(0)}g — ${proteinGap.toFixed(0)}g short of your ${USER_PROFILE.targets.protein_g}g target.`;
+    proteinGapAnalysis = `Averaged ${avgProtein.toFixed(0)}g — ${proteinGap.toFixed(0)}g short of your ${target}g target.`;
   }
 
   return {
