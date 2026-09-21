@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { getTodayKey } from "../../lib/dates";
+import { getTodayKey, getLocalDateKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -221,7 +221,7 @@ export default function WorkoutScreen() {
     const curr = new Date(selectedDate);
     const first = curr.getDate() - curr.getDay() + 1;
     const monday = new Date(curr.setDate(first));
-    const mondayStr = monday.toISOString().split("T")[0];
+    const mondayStr = getLocalDateKey(monday);
     const { getSessionsInRange } = await import("../../lib/db/queries/workout");
     const sessions = await getSessionsInRange(mondayStr, selectedDate);
     setCompletedDayTypes(new Set(sessions.map((s) => s.day_type)));
