@@ -394,7 +394,7 @@ export default function MoreScreen() {
                       {supp.name}
                     </Text>
                     <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 1 }}>
-                      {supp.dose} · {supp.timing}
+                      Logged today
                     </Text>
                   </View>
                 </View>
