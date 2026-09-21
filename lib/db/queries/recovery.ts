@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { eq, gte, lte, and, desc } from "drizzle-orm";
+import { getDateDaysAgo } from "../../dates";
 import { db } from "../client";
 import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, type SupplementLog } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
@@ -27,7 +28,7 @@ export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
 export async function getRecentRecoveryLogs(days: number = 7): Promise<RecoveryLog[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = getDateDaysAgo(days);
 
   return db
     .select()
@@ -99,7 +100,7 @@ export async function upsertSupplementLog(
 export async function getSupplementAdherence30d(): Promise<Record<string, number>> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 29);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = getDateDaysAgo(days);
 
   const logs = await db
     .select()
