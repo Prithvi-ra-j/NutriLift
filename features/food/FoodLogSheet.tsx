@@ -40,7 +40,7 @@ export default function LogFoodModal() {
   const mealParam = params.meal as MealType | undefined;
   
   const { logFoodMeal, logFoodMode } = useUIStore();
-  const [mode, setMode] = useState<"type" | "voice" | "paste">(logFoodMode);
+  const [mode, setMode] = useState<"type" | "paste" | "manual">(logFoodMode === "paste" ? "paste" : "type");
   const [selectedMeal, setSelectedMeal] = useState<MealType>(
     mealParam ?? (logFoodMeal as MealType) ?? suggestedMeal()
   );
@@ -68,6 +68,46 @@ export default function LogFoodModal() {
     } catch {
       setParseError("Couldn't save that food. Please try again.");
     } finally { setIsSaving(false); }
+  };
+
+  const handleManualSave = async () => {
+    if (!manualName.trim()) {
+      setParseError("Add a food name before saving.");
+      return;
+    }
+    const values = [manualCalories, manualProtein, manualCarbs, manualFat].map(Number);
+    if (values.some((value) => !Number.isFinite(value) || value < 0) || values[0] === 0) {
+      setParseError("Enter valid calorie and macro values.");
+      return;
+    }
+    setIsSaving(true);
+    setParseError(null);
+    try {
+      await insertFoodLog({
+        id: uuid.v4() as string,
+        date: today,
+        meal: selectedMeal,
+        name: manualName.trim(),
+        quantity_g: null,
+        calories: values[0],
+        protein_g: values[1],
+        carbs_g: values[2],
+        fat_g: values[3],
+        fiber_g: null,
+        sugar_g: null,
+        sodium_mg: null,
+        source: "manual",
+        raw_input: manualName.trim(),
+        created_at: Math.floor(Date.now() / 1000),
+      });
+      success();
+      setSaved(true);
+      setTimeout(() => router.back(), 350);
+    } catch {
+      setParseError("Couldn't save that food. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleParse = async () => {
@@ -201,33 +241,54 @@ export default function LogFoodModal() {
             </View>
           )}
 
-          {/* ── Mode Selector ── */}
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            {(["type", "paste"] as const).map((m) => (
-              <TouchableOpacity
-                key={m}
-                onPress={() => setMode(m)}
-                style={{
-                  flex: 1,
-                  backgroundColor: mode === m ? M3.colors.surfaceVariant : M3.colors.surface,
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: mode === m ? M3.colors.primary : M3.colors.surfaceContainer,
-                  padding: 10,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 6,
-                }}
-              >
-                <Feather name={m === "type" ? "edit-3" : "clipboard"} size={14} color={mode === m ? M3.colors.primary : M3.colors.onSurfaceVariant} />
-                <Text style={{ color: mode === m ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
-                  {m}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          {/* ── Entry methods ── */}
+          <View style={{ gap: 10 }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_700Bold" }}>Add food</Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {[
+                ["type", "edit-3", "Describe"],
+                ["manual", "edit", "Manual"],
+              ].map(([key, icon, label]) => (
+                <PressableScale key={key} onPress={() => setMode(key as "type" | "manual")} accessibilityRole="button" style={{ flex: 1, minHeight: 54, borderRadius: M3.shape.medium, backgroundColor: mode === key ? M3.colors.primaryContainer : M3.colors.surface, borderWidth: 1, borderColor: mode === key ? M3.colors.primary : M3.colors.outline, alignItems: "center", justifyContent: "center", gap: 4 }}>
+                  <Feather name={icon as React.ComponentProps<typeof Feather>["name"]} size={18} color={mode === key ? M3.colors.primary : M3.colors.onSurfaceVariant} />
+                  <Text style={{ color: mode === key ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>{label}</Text>
+                </PressableScale>
+              ))}
+              <PressableScale onPress={() => router.push("/modals/barcode-scanner")} accessibilityRole="button" accessibilityLabel="Scan barcode" style={{ flex: 1, minHeight: 54, borderRadius: M3.shape.medium, backgroundColor: M3.colors.surface, borderWidth: 1, borderColor: M3.colors.outline, alignItems: "center", justifyContent: "center", gap: 4 }}>
+                <Feather name="camera" size={18} color={M3.colors.onSurfaceVariant} />
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>Scan</Text>
+              </PressableScale>
+              <PressableScale onPress={() => router.push("/modals/voice-input")} accessibilityRole="button" accessibilityLabel="Log food by voice" style={{ flex: 1, minHeight: 54, borderRadius: M3.shape.medium, backgroundColor: M3.colors.surface, borderWidth: 1, borderColor: M3.colors.outline, alignItems: "center", justifyContent: "center", gap: 4 }}>
+                <Feather name="mic" size={18} color={M3.colors.onSurfaceVariant} />
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>Voice</Text>
+              </PressableScale>
+            </View>
+            <PressableScale onPress={() => setMode("paste")} accessibilityRole="button" style={{ minHeight: 48, borderRadius: M3.shape.medium, backgroundColor: mode === "paste" ? M3.colors.primaryContainer : M3.colors.surface, borderWidth: 1, borderColor: mode === "paste" ? M3.colors.primary : M3.colors.outline, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+              <Feather name="clipboard" size={17} color={mode === "paste" ? M3.colors.primary : M3.colors.onSurfaceVariant} />
+              <Text style={{ color: mode === "paste" ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_500Medium" }}>Paste / structured input</Text>
+            </PressableScale>
           </View>
 
+          {/* ── Input ── */}
+          {mode === "manual" ? (
+            <Card>
+              <TextInput value={manualName} onChangeText={setManualName} placeholder="Food name" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, padding: 12, color: M3.colors.onSurface, fontSize: 15 }} />
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                {[
+                  ["Calories", manualCalories, setManualCalories],
+                  ["Protein", manualProtein, setManualProtein],
+                  ["Carbs", manualCarbs, setManualCarbs],
+                  ["Fat", manualFat, setManualFat],
+                ].map(([label, value, setter]) => (
+                  <View key={label as string} style={{ width: "48%" }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, marginBottom: 4 }}>{label as string}</Text>
+                    <TextInput value={value as string} onChangeText={setter as (v: string) => void} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, padding: 10, color: M3.colors.onSurface, fontSize: 14 }} />
+                  </View>
+                ))}
+              </View>
+              <Button label={isSaving ? "Saving..." : "Save manual food"} icon="save" loading={isSaving} onPress={handleManualSave} />
+            </Card>
+          ) : (
           {/* ── Input ── */}
           <View>
             <TextInput
@@ -256,6 +317,8 @@ export default function LogFoodModal() {
             />
           </View>
 
+
+          )}
           <Button
             label={isParsing ? "Parsing..." : "Parse with AI"}
             icon="cpu"
