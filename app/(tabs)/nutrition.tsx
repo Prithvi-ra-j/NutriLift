@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -56,7 +57,7 @@ function groupByMeal(logs: FoodLog[]): MealGroup[] {
 }
 
 export default function NutritionScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getTodayKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const { nutrition, foodLogs, setNutrition, setFoodLogs } = useTodayStore();
 
