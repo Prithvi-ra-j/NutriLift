@@ -1,7 +1,8 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, ScrollView } from "react-native";
+import { PressableScale } from "./PressableScale";
 import { Feather } from "@expo/vector-icons";
 import { M3 } from "../../design-system/tokens";
-import { getLocalDateKey, parseDateKey, getDateDaysFrom, addDaysToDateKey } from "../../lib/dates";
+import { getLocalDateKey, parseDateKey } from "../../lib/dates";
 
 interface DateNavigatorProps {
   selectedDate: string; // YYYY-MM-DD
@@ -102,7 +103,9 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
             </Text>
           </View>
           {!isToday(selected) && (
-            <TouchableOpacity
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel="Go to today"
               onPress={goToToday}
               style={{
                 backgroundColor: M3.colors.primaryContainer,
@@ -116,7 +119,7 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
               <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold" }}>
                 TODAY
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
           )}
         </View>
       )}
@@ -124,7 +127,9 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
       {/* Week Navigation */}
       {!isCurrentWeek() && (
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4 }}>
-          <TouchableOpacity
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel="Previous week"
             onPress={goToPreviousWeek}
             style={{
               flexDirection: "row",
@@ -142,13 +147,15 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
               Prev Week
             </Text>
-          </TouchableOpacity>
+          </PressableScale>
           
           <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
             Week of {days[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })}
           </Text>
           
-          <TouchableOpacity
+          <PressableScale
+            accessibilityRole="button"
+            accessibilityLabel="Next week"
             onPress={goToNextWeek}
             style={{
               flexDirection: "row",
@@ -166,13 +173,15 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
               Next Week
             </Text>
             <Feather name="chevrons-right" size={14} color={M3.colors.onSurfaceVariant} />
-          </TouchableOpacity>
+          </PressableScale>
         </View>
       )}
 
       {/* Date Scroller - Current Week */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-        <TouchableOpacity
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel="Previous day"
           onPress={goToPrevious}
           style={{
             width: 32,
@@ -186,7 +195,7 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
           }}
         >
           <Feather name="chevron-left" size={16} color={M3.colors.onSurfaceVariant} />
-        </TouchableOpacity>
+        </PressableScale>
 
         <ScrollView
           horizontal
@@ -201,8 +210,11 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
             const sunday = isSunday(date);
 
             return (
-              <TouchableOpacity
+              <PressableScale
                 key={index}
+                accessibilityRole="button"
+                accessibilityLabel={date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                accessibilityState={{ selected }}
                 onPress={() => onDateChange(dateStr)}
                 style={{
                   width: 48,
@@ -234,12 +246,14 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
                 >
                   {formatDate(date)}
                 </Text>
-              </TouchableOpacity>
+              </PressableScale>
             );
           })}
         </ScrollView>
 
-        <TouchableOpacity
+        <PressableScale
+          accessibilityRole="button"
+          accessibilityLabel="Next day"
           onPress={goToNext}
           style={{
             width: 32,
@@ -253,7 +267,7 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
           }}
         >
           <Feather name="chevron-right" size={16} color={M3.colors.onSurfaceVariant} />
-        </TouchableOpacity>
+        </PressableScale>
       </View>
     </View>
   );
