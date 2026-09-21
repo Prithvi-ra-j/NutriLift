@@ -1,6 +1,5 @@
 import { Platform } from "react-native";
 import * as schema from "./schema";
-import { USER_PROFILE } from "../constants/user-profile";
 
 // Platform-specific imports and initialization
 let sqlite: any = null;
@@ -388,9 +387,5 @@ export async function runMigrations(): Promise<void> {
     );
   `);
 
-  await sqlite.runAsync(
-    `INSERT OR IGNORE INTO user_profile (id, display_name, age, sex, height_cm, calories_target, protein_target_g, carbs_target_g, fat_target_g, units, target_source, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'metric', 'migrated_default', ?, ?)`,
-    ["default", USER_PROFILE.name, USER_PROFILE.age, USER_PROFILE.sex, USER_PROFILE.height_cm, USER_PROFILE.targets.calories, USER_PROFILE.targets.protein_g, USER_PROFILE.targets.carbs_g, USER_PROFILE.targets.fat_g, new Date().toISOString(), new Date().toISOString()]
-  );
+
 }
