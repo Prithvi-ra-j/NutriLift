@@ -46,7 +46,7 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
     const startDate = new Date(year, monthNum - 1, 1);
     const endDate = new Date(year, monthNum, 0); // Last day of month
     const startStr = getLocalDateKey(startDate);
-    const endStr = endDate.toISOString().split('T')[0];
+    const endStr = getLocalDateKey(endDate);
 
     // Gather month data
     const [nutrition, workouts, recovery, bodyStats] = await Promise.all([
