@@ -68,7 +68,7 @@ export default function ProgressScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [prsData, weightData, inBodyData, nutritionData, recoveryData] = await Promise.all([
+      const [prsData, weightData, inBodyData, nutritionData, recoveryData, profileData] = await Promise.all([
         getAllPRs(),
         getWeightHistory(90), // Get 90 days to cover multiple weeks
         getAllInBodyRecords(),
