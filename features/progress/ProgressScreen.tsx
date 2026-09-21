@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { getTodayKey, getLocalDateKey } from "../../../lib/dates";
+import { getTodayKey, getLocalDateKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -10,22 +10,22 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { getAllPRs } from "../../../lib/db/queries/workout";
-import { getWeightHistory, getAllInBodyRecords } from "../../../lib/db/queries/body";
-import { getLast30DaysNutrition } from "../../../lib/db/queries/nutrition";
-import { getUserProfile } from "../../../lib/db/queries/profile";
-import { getRecentRecoveryLogs } from "../../../lib/db/queries/recovery";
-import { computeNutritionSummary } from "../../../lib/analytics/nutrition-analytics";
-import { computeBodySummary } from "../../../lib/analytics/body-analytics";
-import { Card } from "../../../components/ui/Card";
-import { EmptyState } from "../../../components/ui/EmptyState";
-import { ErrorState } from "../../../components/ui/ErrorState";
-import { CardSkeleton } from "../../../components/ui/SkeletonLoader";
-import { ScreenHeader } from "../../../components/ui/ScreenHeader";
-import { SegmentedControl } from "../../../components/ui/SegmentedControl";
-import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../../lib/db/schema";
-import { M3 } from "../../../design-system/tokens";
-import { PressableScale } from "../../../components/ui/PressableScale";
+import { getAllPRs } from "../../lib/db/queries/workout";
+import { getWeightHistory, getAllInBodyRecords } from "../../lib/db/queries/body";
+import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
+import { getUserProfile } from "../../lib/db/queries/profile";
+import { getRecentRecoveryLogs } from "../../lib/db/queries/recovery";
+import { computeNutritionSummary } from "../../lib/analytics/nutrition-analytics";
+import { computeBodySummary } from "../../lib/analytics/body-analytics";
+import { Card } from "../../components/ui/Card";
+import { EmptyState } from "../../components/ui/EmptyState";
+import { ErrorState } from "../../components/ui/ErrorState";
+import { CardSkeleton } from "../../components/ui/SkeletonLoader";
+import { ScreenHeader } from "../../components/ui/ScreenHeader";
+import { SegmentedControl } from "../../components/ui/SegmentedControl";
+import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/db/schema";
+import { M3 } from "../../design-system/tokens";
+import { PressableScale } from "../../components/ui/PressableScale";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
 
