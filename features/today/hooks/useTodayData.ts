@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getDailyNutrition, getFoodLogsForDate, getLast7DaysNutrition } from "../../../lib/db/queries/nutrition";
-import { getSessionsForDate } from "../../../lib/db/queries/workout";
+import { getSessionSummaryForDate, type SessionSummary } from "../../../lib/db/queries/workout";
 import { getRecoveryLog } from "../../../lib/db/queries/recovery";
 import { getUserProfile } from "../../../lib/db/queries/profile";
 import { getTodayKey, getDateDaysAgo } from "../../../lib/dates";
-import type { FoodLog, UserProfileRow, DailyNutrition, WorkoutSession } from "../../../lib/db/schema";
+import type { FoodLog, UserProfileRow, DailyNutrition, RecoveryLog } from "../../../lib/db/schema";
 
 const MEALS = ["breakfast", "lunch", "snack", "dinner"] as const;
 
@@ -12,8 +12,9 @@ export function useTodayData() {
   const today = getTodayKey();
   const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
   const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
-  const [session, setSession] = useState<WorkoutSession | null>(null);
+  const [sessionSummary, setSessionSummary] = useState<SessionSummary>({ session: null, exerciseCount: 0, workingSetCount: 0 });
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
+  const [recovery, setRecovery] = useState<RecoveryLog | null>(null);
   const [profile, setProfile] = useState<UserProfileRow | null>(null);
   const [week, setWeek] = useState<{ date: string; hit: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,17 +24,17 @@ export function useTodayData() {
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [n, foods, sessions, last7, recovery, profileData] = await Promise.all([
+      const [n, foods, sessionSummaryData, last7, recovery, profileData] = await Promise.all([
         getDailyNutrition(today),
         getFoodLogsForDate(today),
-        getSessionsForDate(today),
+        getSessionSummaryForDate(today),
         getLast7DaysNutrition(),
         getRecoveryLog(today),
         getUserProfile(),
       ]);
       setNutrition(n);
       setFoodLogs(foods);
-      setSession(sessions[0] ?? null);
+      setSessionSummary(sessionSummaryData);
       setProfile(profileData);
       setWeek(Array.from({ length: 7 }, (_, i) => {
         const date = getDateDaysAgo(6 - i);
@@ -69,7 +70,7 @@ export function useTodayData() {
   };
 
   return {
-    today, nutrition, foodLogs, session, recoveryScore, profile, week, groups, targets,
+    today, nutrition, foodLogs, session: sessionSummary.session, sessionSummary, recoveryScore, recovery, profile, week, groups, targets,
     displayName: profile?.display_name || "there",
     loading, refreshing, error,
     refresh: () => { setRefreshing(true); void load(); },
