@@ -26,7 +26,6 @@ export type {
 
 export async function parseFoodInput(input: string) {
   const normalized = input.trim().toLowerCase();
-  const normalized = input.trim().toLowerCase();
   if (/^\d{8,14}$/.test(normalized)) {
     const cached = await getBarcodeCache(normalized);
     if (cached && cached.name) {
