@@ -352,6 +352,13 @@ export default function WorkoutScreen() {
       await insertExerciseLog(newExercise);
       setExercises((prev) => [...prev, newExercise]);
       setSets((prev) => ({ ...prev, [exerciseId]: [] }));
+      const previous = await getPreviousSessionForDayType(selectedDayType, selectedDate);
+      const previousExercise = previous?.exercises.find((entry) => entry.exercise.exercise_name === ex.name);
+      if (previousExercise) {
+        const working = previousExercise.sets.filter((set) => !set.is_warmup);
+        const preview = working.slice(0, 3).map((set) => `${set.weight_kg}kg × ${set.reps}`).join(" · ");
+        if (preview) setPreviousPerformance((prev) => ({ ...prev, [exerciseId]: preview }));
+      }
     }
 
     setShowTemplateSelector(false);
@@ -556,6 +563,23 @@ export default function WorkoutScreen() {
         },
       ]
     );
+  };
+
+  const finishWorkout = async () => {
+    if (!session || session.ended_at || isFinishing) return;
+    setIsFinishing(true);
+    try {
+      const endedAt = Math.floor(Date.now() / 1000);
+      const startedAt = session.started_at ?? endedAt;
+      const durationMin = Math.max(0, Math.round((endedAt - startedAt) / 60));
+      await updateSession(session.id, { ended_at: endedAt, duration_min: durationMin });
+      setSession({ ...session, ended_at: endedAt, duration_min: durationMin });
+      restTimer.reset();
+    } catch {
+      Alert.alert("Couldn’t finish workout", "Your current sets are still saved. Try again.");
+    } finally {
+      setIsFinishing(false);
+    }
   };
 
   // ─── Filter Helpers ────────────────────────────────────────────────────────
