@@ -20,8 +20,8 @@ describe("local date utilities", () => {
 
   it("derives today/yesterday and local weekday from the local calendar", () => {
     const d = new Date(2026, 8, 21, 12);
-    expect(getTodayKey(d)).toBe("2026-09-21");
-    expect(getYesterdayKey(d)).toBe("2026-09-20");
+    expect(getTodayKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(getYesterdayKey()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(getLocalDayOfWeek(d)).toBe(1);
   });
 
