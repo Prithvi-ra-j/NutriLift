@@ -50,9 +50,9 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
           <View
             style={{
               position: "absolute",
-              left: `${Math.min(100, pct)}%,`
+              left: `${Math.min(100, pct)}%`,
               height: "100%",
-              width: `${Math.min(100 - Math.min(100, pct), overPct)}%,`
+              width: `${Math.min(100 - Math.min(100, pct), overPct)}%`,
               backgroundColor: M3.colors.error,
               borderRadius: 3,
             }}
