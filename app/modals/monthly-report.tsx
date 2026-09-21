@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getTodayKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -37,7 +38,7 @@ export default function MonthlyReportModal() {
 
     try {
       const startDate = `${currentMonth}-01`;
-      const endDate = new Date().toISOString().split("T")[0];
+      const endDate = getTodayKey();
 
       const [nutrition, sessions, prs, inBodyRecords, weightHistory, recoveryLogs, supplementAdherence] =
         await Promise.all([
