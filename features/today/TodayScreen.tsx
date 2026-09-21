@@ -1,16 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { View, Text, ScrollView, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useTodayStore } from "../../lib/stores/today.store";
 import { useUIStore } from "../../lib/stores/ui.store";
-import { getDailyNutrition, getFoodLogsForDate, getLast7DaysNutrition } from "../../lib/db/queries/nutrition";
-import { getSessionsForDate } from "../../lib/db/queries/workout";
-import { getRecoveryLog } from "../../lib/db/queries/recovery";
-import { getUserProfile } from "../../lib/db/queries/profile";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
-import { getTodayKey, getDateDaysAgo, parseDateKey, formatDateKey } from "../../lib/dates";
+import { useTodayData } from "./hooks/useTodayData";import { parseDateKey, formatDateKey } from "../../lib/dates";
 import { formatCalories, formatGrams } from "../../lib/format";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
@@ -64,41 +58,20 @@ function MealRow({ meal, logs, onAdd }: { meal: string; logs: FoodLog[]; onAdd: 
 }
 
 export default function TodayScreen() {
-  const today = getTodayKey();
-  const { nutrition, session, setNutrition, setSession, setFoodLogs, foodLogs } = useTodayStore();
   const { coachInsight } = useUIStore();
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
-  const [profile, setProfile] = useState<{ display_name: string; calories_target: number | null; protein_target_g: number | null; carbs_target_g: number | null; fat_target_g: number | null } | null>(null);
-  const [week, setWeek] = useState<{date:string; hit:boolean}[]>([]);
-
-  const load = useCallback(async () => {
-    try {
-      setLoadError(null);
-      const [n, foods, sessions, last7, recovery, profileData] = await Promise.all([
-        getDailyNutrition(today), getFoodLogsForDate(today), getSessionsForDate(today),
-        getLast7DaysNutrition(), getRecoveryLog(today), getUserProfile(),
-      ]);
-      setNutrition(n); setFoodLogs(foods); setSession(sessions[0] ?? null); setProfile(profileData);
-      setWeek(Array.from({length:7}, (_,i) => {
-        const date = getDateDaysAgo(6-i);
-        const row = last7.find(x => x.date === date);
-        return { date, hit: row?.protein_target_met === 1 };
-      }));
-      setRecoveryScore(recovery ? Math.round((((recovery.sleep_quality ?? 3)+(recovery.energy_level ?? 3)+(6-(recovery.muscle_soreness ?? 3)))/3/5)*100) : null);
-    } catch (e) {
-      console.error("Today load failed", e);
-      setLoadError("We couldn’t load today’s data. Your saved data is unchanged.");
-    } finally { setLoading(false); setRefreshing(false); }
-  }, [today, setNutrition, setFoodLogs, setSession]);
-
-  useEffect(() => { load(); }, [load]);
+  const {
+    today, nutrition, session, recoveryScore, profile, week, groups, targets,
+    displayName, loading, refreshing, error: loadError, refresh, retry,
+  } = useTodayData();
+  const calories = nutrition?.total_calories ?? 0;
+  const protein = nutrition?.total_protein_g ?? 0;
+  const carbs = nutrition?.total_carbs_g ?? 0;
+  const fat = nutrition?.total_fat_g ?? 0;
+  const nextMeal = ["breakfast", "lunch", "snack", "dinner"].find((meal) => groups[meal].length === 0) ?? null;
 
   if (loadError && !loading) return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
-      <ErrorState onRetry={() => { setLoading(true); load(); }} />
+      <ErrorState onRetry={retry} />
     </SafeAreaView>
   );
 
@@ -131,7 +104,7 @@ export default function TodayScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 20, paddingBottom: 170, gap: 16 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={M3.colors.primary} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={M3.colors.primary} />}>
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13 }}>{formatDateKey(today)}</Text>
