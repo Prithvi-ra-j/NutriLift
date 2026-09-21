@@ -380,7 +380,6 @@ export default function LogFoodModal() {
               <Button label={isSaving ? "Saving..." : "Save manual food"} icon="save" loading={isSaving} onPress={handleManualSave} />
             </Card>
           ) : (
-          {/* ── Input ── */}
           <View>
             <TextInput
               value={input}
