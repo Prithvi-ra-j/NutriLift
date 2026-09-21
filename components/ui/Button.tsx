@@ -1,4 +1,4 @@
-import { Text, ActivityIndicator, type ViewStyle } from "react-native";
+import { Text, ActivityIndicator, type ViewStyle, type StyleProp } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { M3 } from "../../design-system/tokens";
 import { PressableScale } from "./PressableScale";
@@ -12,7 +12,7 @@ interface ButtonProps {
   icon?: React.ComponentProps<typeof Feather>["name"];
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle | ViewStyle[];
+  style?: StyleProp<ViewStyle>;
 }
 
 /** Shared button primitive — replaces the hand-rolled TouchableOpacity styling repeated across screens. */
