@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getTodayKey } from "../../lib/dates";
 import {
   View,
@@ -14,13 +14,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { parseFoodInput, type ParsedFoodItem } from "../../lib/ai/parsers";
-import { insertFoodLog } from "../../lib/db/queries/nutrition";
+import { insertFoodLog, getDistinctRecentFoods } from "../../lib/db/queries/nutrition";
 import { useUIStore } from "../../lib/stores/ui.store";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { PressableScale } from "../../components/ui/PressableScale";
 import { success } from "../../lib/haptics";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
@@ -50,8 +51,24 @@ export default function LogFoodModal() {
   const [parseError, setParseError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [recentFoods, setRecentFoods] = useState<import("../../lib/db/schema").FoodLog[]>([]);
 
   const today = getTodayKey();
+
+  useEffect(() => { getDistinctRecentFoods(8).then(setRecentFoods).catch(() => setRecentFoods([])); }, []);
+
+
+  const handleQuickAdd = async (food: import("../../lib/db/schema").FoodLog) => {
+    setIsSaving(true);
+    try {
+      await insertFoodLog({ ...food, id: uuid.v4() as string, date: today, meal: selectedMeal, created_at: Math.floor(Date.now() / 1000) });
+      success();
+      setSaved(true);
+      setTimeout(() => router.back(), 350);
+    } catch {
+      setParseError("Couldn't save that food. Please try again.");
+    } finally { setIsSaving(false); }
+  };
 
   const handleParse = async () => {
     if (!input.trim()) return;
@@ -167,6 +184,22 @@ export default function LogFoodModal() {
               </TouchableOpacity>
             ))}
           </View>
+
+          {recentFoods.length > 0 && (
+            <View>
+              <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 8 }}>
+                <Text style={{ flex: 1, color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_700Bold" }}>Recent</Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>Tap to add again</Text>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {recentFoods.map(food => (
+                  <PressableScale key={food.id} onPress={() => handleQuickAdd(food)} haptic accessibilityRole="button" accessibilityLabel={`Add ${food.name}`} style={{ minHeight: 40, paddingHorizontal: 12, borderRadius: 20, backgroundColor: M3.colors.surfaceVariant, borderWidth: 1, borderColor: M3.colors.outline, justifyContent: "center" }}>
+                    <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_500Medium", fontSize: 13 }}>{food.name}</Text>
+                  </PressableScale>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* ── Mode Selector ── */}
           <View style={{ flexDirection: "row", gap: 8 }}>
