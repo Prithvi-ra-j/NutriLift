@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getTodayKey } from "../../lib/dates";
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -92,7 +93,7 @@ export default function VoiceInputModal() {
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getTodayKey();
       const meal = parsedFood.meal_suggestion || "snack";
 
       // Save each food item
