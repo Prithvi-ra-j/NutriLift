@@ -594,7 +594,7 @@ export async function generateProgressPDF(options: ExportOptions = {}): Promise<
 export async function exportLast30Days() {
   return generateProgressPDF({
     startDate: getDateDaysAgo(30),
-    endDate: new Date().toISOString().split("T")[0],
+    endDate: getTodayKey(),
   });
 }
 
@@ -606,8 +606,8 @@ export async function exportCurrentMonth() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   
   return generateProgressPDF({
-    startDate: startOfMonth.toISOString().split("T")[0],
-    endDate: now.toISOString().split("T")[0],
+    startDate: getLocalDateKey(startOfMonth),
+    endDate: getTodayKey(),
   });
 }
 
