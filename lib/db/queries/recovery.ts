@@ -26,8 +26,6 @@ export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
 }
 
 export async function getRecentRecoveryLogs(days: number = 7): Promise<RecoveryLog[]> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = getDateDaysAgo(days);
 
   return db
@@ -98,9 +96,7 @@ export async function upsertSupplementLog(
 }
 
 export async function getSupplementAdherence30d(): Promise<Record<string, number>> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 29);
-  const cutoffStr = getDateDaysAgo(days);
+  const cutoffStr = getDateDaysAgo(29);
 
   const logs = await db
     .select()
