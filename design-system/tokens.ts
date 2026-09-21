@@ -66,6 +66,8 @@ export const surfaces = {
 
 export { motion } from "./motion";
 import { motion } from "./motion";
+export { shadows } from "./shadows";
+import { shadows } from "./shadows";
 
 // ─── Export namespace ─────────────────────────────────────────────────────────
 
@@ -79,6 +81,7 @@ export const M3 = {
   dayTypeColors,
   macroColors,
   motion,
+  shadows,
 } as const;
 
 export default M3;
