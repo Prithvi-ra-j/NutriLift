@@ -3,6 +3,7 @@ import { parseExerciseFromText } from "../groq/parseExercise";
 import { parseInBodyText } from "../groq/parseInBody";
 import { INDIAN_FOOD_DB } from "../data/indianFoodDB";
 import { searchPersonalFoods } from "../db/queries/personal-foods";
+import { searchPersonalFoods } from "../db/queries/personal-foods";
 import { getBarcodeCache } from "../db/queries/barcode";
 
 // Re-export types for backward compatibility
@@ -68,6 +69,41 @@ export async function parseFoodInput(input: string) {
       original_input: input,
     };
   }
+
+  try {
+    const personal = await searchPersonalFoods(input, 1);
+    const match = personal[0];
+    if (match && match.per100g_calories != null) {
+      let grams = 100;
+      try {
+        const servings = match.serving_sizes ? JSON.parse(match.serving_sizes) as Array<{ grams?: number }> : [];
+        grams = servings[0]?.grams ?? 100;
+      } catch {
+        grams = 100;
+      }
+      const factor = grams / 100;
+      return {
+        items: [{
+          name: match.name,
+          quantity: grams + "g",
+          quantity_g: grams,
+          calories: (match.per100g_calories ?? 0) * factor,
+          protein_g: (match.per100g_protein ?? 0) * factor,
+          carbs_g: (match.per100g_carbs ?? 0) * factor,
+          fat_g: (match.per100g_fat ?? 0) * factor,
+          fiber_g: match.per100g_fiber != null ? match.per100g_fiber * factor : null,
+          confidence: "high" as const,
+        }],
+        meal_suggestion: null,
+        parse_notes: "Matched a personal food; review the serving if needed.",
+        source: "local" as const,
+        original_input: input,
+      };
+    }
+  } catch {
+    // Personal-food lookup is optional; continue to the AI fallback.
+  }
+
   try {
     return await parseFoodFromText(input);
   } catch (error) {
