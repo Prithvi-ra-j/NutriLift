@@ -3,7 +3,6 @@ import { eq, gte, lte, and, desc } from "drizzle-orm";
 import { getDateDaysAgo } from "../../dates";
 import { db } from "../client";
 import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, type SupplementLog } from "../schema";
-import { USER_PROFILE } from "../../constants/user-profile";
 
 // ─── Recovery Queries ─────────────────────────────────────────────────────────
 
@@ -97,29 +96,13 @@ export async function upsertSupplementLog(
 
 export async function getSupplementAdherence30d(): Promise<Record<string, number>> {
   const cutoffStr = getDateDaysAgo(29);
-
-  const logs = await db
-    .select()
-    .from(supplementLogs)
-    .where(gte(supplementLogs.date, cutoffStr));
-
-  const adherence: Record<string, { taken: number; total: number }> = {};
-
-  for (const supplement of USER_PROFILE.supplements) {
-    adherence[supplement.name] = { taken: 0, total: 0 };
-  }
-
-  for (const log of logs) {
-    if (adherence[log.supplement_name]) {
-      adherence[log.supplement_name].total++;
-      if (log.taken) adherence[log.supplement_name].taken++;
-    }
-  }
-
+  const logs = await db.select().from(supplementLogs).where(gte(supplementLogs.date, cutoffStr));
   const result: Record<string, number> = {};
-  for (const [name, data] of Object.entries(adherence)) {
-    result[name] = data.total > 0 ? (data.taken / data.total) * 100 : 0;
+  const bySupplement = new Map<string, Set<string>>();
+  for (const log of logs) {
+    if (!bySupplement.has(log.supplement_name)) bySupplement.set(log.supplement_name, new Set());
+    if (log.taken) bySupplement.get(log.supplement_name)!.add(log.date);
   }
-
+  for (const [name, dates] of bySupplement) result[name] = (dates.size / 30) * 100;
   return result;
 }
