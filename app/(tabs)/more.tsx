@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { getTodayKey, getDateDaysAgo, getLocalDateKey } from "../../lib/dates";
 import {
   View,
   Text,
@@ -32,7 +33,7 @@ type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "a
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
 
 export default function MoreScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayKey();
   const params = useLocalSearchParams<{ section?: string }>();
   const [activeSection, setActiveSection] = useState<MoreSection>("menu");
   // Body stats
