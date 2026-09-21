@@ -115,7 +115,7 @@ export default function TodayScreen() {
             <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13 }}>{formatDateKey(today)}</Text>
             <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 25, marginTop: 3 }}>{greeting()}, {displayName}</Text>
           </View>
-          <PressableScale onPress={() => router.push("/(tabs)/more?section=account")} accessibilityRole="button" accessibilityLabel="Open profile" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
+          <PressableScale onPress={() => router.push("/profile")} accessibilityRole="button" accessibilityLabel="Open profile" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: M3.colors.primary, fontFamily: "DMSans_700Bold", fontSize: 17 }}>{displayName.charAt(0)}</Text>
           </PressableScale>
         </View>
