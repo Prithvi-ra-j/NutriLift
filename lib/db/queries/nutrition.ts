@@ -39,7 +39,7 @@ export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, da
 
 
 export async function getMostRecentMealLogsBeforeDate(meal: string, beforeDate: string): Promise<FoodLog[]> {
-  const rows = await db.select().from(foodLogs).where(eq(foodLogs.meal, meal)).orderBy(desc(foodLogs.date), desc(foodLogs.created_at)).limit(100);
+  const rows: FoodLog[] = await db.select().from(foodLogs).where(eq(foodLogs.meal, meal)).orderBy(desc(foodLogs.date), desc(foodLogs.created_at)).limit(100);
   const previousDate = rows.find((row) => row.date < beforeDate)?.date;
   return previousDate ? rows.filter((row) => row.date === previousDate) : [];
 }
