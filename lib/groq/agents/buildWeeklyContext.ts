@@ -15,11 +15,8 @@ import { getUserProfile } from "../../db/queries/profile";
  * Build weekly context from SQLite database for AI coach analysis
  */
 export async function buildWeeklyContext(): Promise<WeeklyContext> {
-  const now = new Date();
   const profile = await getUserProfile();
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  const weekAgoStr = getDateDaysAgo(7);
+  const weekAgoStr = getDateDaysAgo(6);
   const nowStr = getTodayKey();
 
   // Fetch all data in parallel
