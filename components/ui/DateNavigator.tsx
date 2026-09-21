@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { M3 } from "../../design-system/tokens";
+import { getLocalDateKey, parseDateKey, getDateDaysFrom, addDaysToDateKey } from "../../lib/dates";
 
 interface DateNavigatorProps {
   selectedDate: string; // YYYY-MM-DD
@@ -10,7 +11,7 @@ interface DateNavigatorProps {
 
 export function DateNavigator({ selectedDate, onDateChange, showFullDate = true }: DateNavigatorProps) {
   const today = new Date();
-  const selected = new Date(selectedDate);
+  const selected = parseDateKey(selectedDate);
 
   // Get week for a given date (Monday to Sunday)
   const getWeekForDate = (date: Date) => {
@@ -32,11 +33,11 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
   const days = getWeekForDate(selected);
 
   const isToday = (date: Date) => {
-    return date.toISOString().split("T")[0] === today.toISOString().split("T")[0];
+    return getLocalDateKey(date) === getLocalDateKey(today);
   };
 
   const isSelected = (date: Date) => {
-    return date.toISOString().split("T")[0] === selectedDate;
+    return getLocalDateKey(date) === selectedDate;
   };
 
   const formatDay = (date: Date) => {
@@ -55,13 +56,13 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
   const goToPrevious = () => {
     const prev = new Date(selected);
     prev.setDate(prev.getDate() - 1);
-    onDateChange(prev.toISOString().split("T")[0]);
+    onDateChange(getLocalDateKey(prev));
   };
 
   const goToNext = () => {
     const next = new Date(selected);
     next.setDate(next.getDate() + 1);
-    onDateChange(next.toISOString().split("T")[0]);
+    onDateChange(getLocalDateKey(next));
   };
 
   const goToPreviousWeek = () => {
@@ -77,14 +78,14 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
   };
 
   const goToToday = () => {
-    onDateChange(today.toISOString().split("T")[0]);
+    onDateChange(getLocalDateKey(today));
   };
 
   // Check if selected week is current week
   const isCurrentWeek = () => {
     const todayWeek = getWeekForDate(today);
     const selectedWeek = getWeekForDate(selected);
-    return todayWeek[0].toISOString().split("T")[0] === selectedWeek[0].toISOString().split("T")[0];
+    return getLocalDateKey(todayWeek[0]) === getLocalDateKey(selectedWeek[0]);
   };
 
   return (
@@ -194,7 +195,7 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
           style={{ flex: 1 }}
         >
           {days.map((date, index) => {
-            const dateStr = date.toISOString().split("T")[0];
+            const dateStr = getLocalDateKey(date);
             const selected = isSelected(date);
             const todayDate = isToday(date);
             const sunday = isSunday(date);
