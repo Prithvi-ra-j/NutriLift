@@ -266,7 +266,7 @@ export default function ProgressScreen() {
                         style={{
                           flex: 1,
                           height: Math.max(4, pct * 50 + 10),
-                          backgroundColor: "#00D4AA44",
+                          backgroundColor: M3.colors.primary + "44",
                           borderRadius: 2,
                           borderTopWidth: 2,
                           borderTopColor: M3.colors.primary,
@@ -371,7 +371,7 @@ export default function ProgressScreen() {
                       </Text>
                     </View>
                     <View style={{ alignItems: "flex-end", gap: 2 }}>
-                      <Text style={{ color: "#FFD700", fontSize: 16, fontFamily: "BebasNeue_400Regular" }}>
+                      <Text style={{ color: M3.colors.pr, fontSize: 16, fontFamily: "BebasNeue_400Regular" }}>
                         {pr.best_weight_kg}kg × {pr.best_reps_at_best_weight}
                       </Text>
                       {!!pr.best_1rm_estimated && (
