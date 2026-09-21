@@ -61,7 +61,7 @@ function MealRow({ meal, logs, onAdd }: { meal: string; logs: FoodLog[]; onAdd: 
 export default function TodayScreen() {
   const { coachInsight } = useUIStore();
   const {
-    today, nutrition, session, recoveryScore, week, groups, targets,
+    today, nutrition, session, sessionSummary, recovery, recoveryScore, week, groups, targets,
     displayName, loading, refreshing, error: loadError, refresh, retry,
   } = useTodayData();
   const calories = nutrition?.total_calories ?? 0;
@@ -163,24 +163,33 @@ export default function TodayScreen() {
               <Feather name="activity" size={21} color={M3.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>{session ? `${session.day_type} · Completed` : dayTypeForToday()}</Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 3 }}>{session ? `${formatCalories(session.total_volume_kg ?? 0)}kg volume` : "Ready when you are"}</Text>
+              <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>{session ? `${session.day_type} · ${session.ended_at ? "Completed" : "In progress"}` : dayTypeForToday()}</Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 3 }}>{session ? `${sessionSummary.exerciseCount} exercises · ${sessionSummary.workingSetCount} working sets` : "Ready when you are"}</Text>
             </View>
             <Feather name={session ? "check-circle" : "play-circle"} size={22} color={session ? M3.colors.success : M3.colors.primary} />
           </View>
         </Card>
 
-        <Card>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: M3.colors.successContainer, alignItems: "center", justifyContent: "center" }}>
-              <Feather name="heart" size={18} color={M3.colors.success} />
+        <PressableScale onPress={() => router.push({ pathname: "/(tabs)/more", params: { section: "recovery" } })} accessibilityRole="button" accessibilityLabel="Open recovery details">
+          <Card>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: M3.colors.successContainer, alignItems: "center", justifyContent: "center" }}>
+                <Feather name="heart" size={18} color={M3.colors.success} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>Recovery</Text>
+                {recovery ? (
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 2 }}>
+                    {`${recoveryScore ?? 0}/100 · Sleep ${recovery.sleep_duration_hr != null ? `${recovery.sleep_duration_hr.toFixed(1)}h` : "—"} · Energy ${recovery.energy_level ?? "—"}/5 · Soreness ${recovery.muscle_soreness ?? "—"}/5`}
+                  </Text>
+                ) : (
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 2 }}>No recovery check-in yet · Tap to add one</Text>
+                )}
+              </View>
+              <Feather name="chevron-right" size={18} color={M3.colors.onSurfaceMuted} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>Recovery</Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 2 }}>{recoveryScore == null ? "No recovery check-in yet" : `${recoveryScore}/100 · based on today's check-in`}</Text>
-            </View>
-          </View>
-        </Card>
+          </Card>
+        </PressableScale>rd>
 
         <View>
           <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
