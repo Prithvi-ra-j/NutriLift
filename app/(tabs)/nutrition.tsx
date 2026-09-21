@@ -28,6 +28,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { PressableScale } from "../../components/ui/PressableScale";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -187,7 +188,7 @@ export default function NutritionScreen() {
         {/* ── Log Mode Buttons ── */}
         <View style={{ flexDirection: "row", gap: 8 }}>
           {(["type", "voice", "paste", "scan"] as const).map((mode) => (
-            <TouchableOpacity
+            <PressableScale
               key={mode}
               onPress={() => {
                 if (mode === "scan") {
@@ -215,7 +216,7 @@ export default function NutritionScreen() {
                 shadowRadius: 4,
                 elevation: 2,
               }}
-              activeOpacity={0.7}
+             
             >
               <View
                 style={{
@@ -244,14 +245,14 @@ export default function NutritionScreen() {
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
                 {mode}
               </Text>
-            </TouchableOpacity>
+            </PressableScale>
           ))}
         </View>
 
         {/* ── Meal Accordion ── */}
         {mealGroups.map((group) => (
           <Card key={group.meal}>
-            <TouchableOpacity
+            <PressableScale
               onPress={() => toggleMeal(group.meal)}
               style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}
             >
@@ -267,7 +268,7 @@ export default function NutritionScreen() {
                 </View>
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                <TouchableOpacity
+                <PressableScale
                   onPress={() => router.push(`/modals/log-food?meal=${group.meal}`)}
                   style={{
                     width: 28,
@@ -279,14 +280,14 @@ export default function NutritionScreen() {
                   }}
                 >
                   <Feather name="plus" size={14} color={M3.colors.primary} />
-                </TouchableOpacity>
+                </PressableScale>
                 <Feather
                   name={expandedMeals.has(group.meal) ? "chevron-up" : "chevron-down"}
                   size={16}
                   color={M3.colors.onSurfaceMuted}
                 />
               </View>
-            </TouchableOpacity>
+            </PressableScale>
 
             {expandedMeals.has(group.meal) && (
               <View style={{ marginTop: 12, gap: 8 }}>
@@ -315,9 +316,9 @@ export default function NutritionScreen() {
                           {item.calories.toFixed(0)} kcal · P:{item.protein_g.toFixed(0)}g · C:{item.carbs_g.toFixed(0)}g · F:{item.fat_g.toFixed(0)}g
                         </Text>
                       </View>
-                      <TouchableOpacity onPress={() => handleDeleteFood(item)}>
+                      <PressableScale onPress={() => handleDeleteFood(item)}>
                         <Feather name="trash-2" size={14} color={M3.colors.error} />
-                      </TouchableOpacity>
+                      </PressableScale>
                     </View>
                   ))
                 )}
