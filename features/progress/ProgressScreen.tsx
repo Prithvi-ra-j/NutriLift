@@ -13,10 +13,10 @@ import { router } from "expo-router";
 import { getAllPRs } from "../../lib/db/queries/workout";
 import { getWeightHistory, getAllInBodyRecords } from "../../lib/db/queries/body";
 import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
+import { getUserProfile } from "../../lib/db/queries/profile";
 import { getRecentRecoveryLogs } from "../../lib/db/queries/recovery";
 import { computeNutritionSummary } from "../../lib/analytics/nutrition-analytics";
 import { computeBodySummary } from "../../lib/analytics/body-analytics";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
@@ -42,6 +42,7 @@ export default function ProgressScreen() {
   const [inBodyRecords, setInBodyRecords] = useState<BodyStat[]>([]);
   const [nutritionHistory, setNutritionHistory] = useState<DailyNutrition[]>([]);
   const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>([]);
+  const [proteinTarget, setProteinTarget] = useState<number | null>(null);
 
   // Get week range for selected date
   const getWeekRange = (dateStr: string) => {
@@ -73,12 +74,14 @@ export default function ProgressScreen() {
         getAllInBodyRecords(),
         getLast30DaysNutrition(),
         getRecentRecoveryLogs(30), // Get 30 days to cover multiple weeks
+        getUserProfile(),
       ]);
       setPRs(prsData);
       setWeightHistory(weightData);
       setInBodyRecords(inBodyData);
       setNutritionHistory(nutritionData);
       setRecoveryLogs(recoveryData);
+      setProteinTarget(profileData?.protein_target_g ?? null);
     } catch (err) {
       console.error("Progress load error:", err);
     } finally {
@@ -108,7 +111,7 @@ export default function ProgressScreen() {
     (pr) => pr.achieved_date >= weekRange.start && pr.achieved_date <= weekRange.end
   );
 
-  const nutritionSummary = computeNutritionSummary(weekNutritionHistory);
+  const nutritionSummary = computeNutritionSummary(weekNutritionHistory, proteinTarget);
   const latestInBody = inBodyRecords[inBodyRecords.length - 1] ?? null;
   const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
 
