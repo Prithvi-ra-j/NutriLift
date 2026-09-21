@@ -68,13 +68,13 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
   const goToPreviousWeek = () => {
     const prev = new Date(selected);
     prev.setDate(prev.getDate() - 7);
-    onDateChange(prev.toISOString().split("T")[0]);
+    onDateChange(getLocalDateKey(prev));
   };
 
   const goToNextWeek = () => {
     const next = new Date(selected);
     next.setDate(next.getDate() + 7);
-    onDateChange(next.toISOString().split("T")[0]);
+    onDateChange(getLocalDateKey(next));
   };
 
   const goToToday = () => {
