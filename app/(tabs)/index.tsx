@@ -42,7 +42,7 @@ function MealRow({ meal, logs, onAdd }: { meal: string; logs: FoodLog[]; onAdd: 
           <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16, textTransform: "capitalize" }}>{meal}</Text>
           {logs.length > 0 ? (
             <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 3 }}>
-              {logs.slice(0, 2).map(x => x.name).join(" · ")}{logs.length > 2 ? \` +\${logs.length - 2}\` : ""}
+              {logs.slice(0, 2).map(x => x.name).join(" · ")}{logs.length > 2 ? ` +${logs.length - 2}` : ""}
             </Text>
           ) : (
             <Text style={{ color: M3.colors.onSurfaceMuted, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 3 }}>Nothing logged yet</Text>
@@ -54,7 +54,7 @@ function MealRow({ meal, logs, onAdd }: { meal: string; logs: FoodLog[]; onAdd: 
             <Text style={{ color: M3.colors.secondary, fontFamily: "DMSans_500Medium", fontSize: 12, marginTop: 2 }}>{formatGrams(protein)} protein</Text>
           </View>
         ) : null}
-        <PressableScale onPress={onAdd} haptic accessibilityRole="button" accessibilityLabel={\`Add food to \${meal}\`} style={{ marginLeft: 12, width: 40, height: 40, borderRadius: 20, backgroundColor: M3.colors.surfaceVariant, alignItems: "center", justifyContent: "center" }}>
+        <PressableScale onPress={onAdd} haptic accessibilityRole="button" accessibilityLabel={`Add food to ${meal}`} style={{ marginLeft: 12, width: 40, height: 40, borderRadius: 20, backgroundColor: M3.colors.surfaceVariant, alignItems: "center", justifyContent: "center" }}>
           <Feather name="plus" size={20} color={M3.colors.primary} />
         </PressableScale>
       </View>
@@ -173,8 +173,8 @@ export default function TodayScreen() {
               <Feather name="activity" size={21} color={M3.colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>{session ? \`\${session.day_type} · Completed\` : dayTypeForToday()}</Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 3 }}>{session ? \`\${formatCalories(session.total_volume_kg ?? 0)}kg volume\` : "Ready when you are"}</Text>
+              <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>{session ? `${session.day_type} · Completed` : dayTypeForToday()}</Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 3 }}>{session ? `${formatCalories(session.total_volume_kg ?? 0)}kg volume` : "Ready when you are"}</Text>
             </View>
             <Feather name={session ? "check-circle" : "play-circle"} size={22} color={session ? M3.colors.success : M3.colors.primary} />
           </View>
@@ -187,7 +187,7 @@ export default function TodayScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>Recovery</Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 2 }}>{recoveryScore == null ? "No recovery check-in yet" : \`\${recoveryScore}/100 · based on today's check-in\`}</Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 2 }}>{recoveryScore == null ? "No recovery check-in yet" : `${recoveryScore}/100 · based on today's check-in`}</Text>
             </View>
           </View>
         </Card>
