@@ -9,28 +9,41 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+
+concurrency:
+  group: nutrilift-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
+    name: Expo diagnostics, typecheck, tests and web build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
           cache: npm
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
+
       - name: Expo diagnostics
         run: npx expo-doctor
+
       - name: Typecheck
         run: npx tsc --noEmit
+
       - name: Focused sync contract tests
         run: npx jest --runInBand src/__tests__/nutrilift-sync.test.ts src/__tests__/nutrilift-record-mappers.test.ts
+
       - name: Full tests
         run: npm test -- --runInBand
+
       - name: Web export
         run: npm run build:web
