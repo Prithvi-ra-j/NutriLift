@@ -289,7 +289,7 @@ export default function MoreScreen() {
         {/* ── Menu List ── */}
         {activeSection === "menu" && (
           <View style={{ gap: 12 }}>
-            <Pressable
+            <TouchableOpacity
               onPress={() => router.push("/profile")}
               style={{ backgroundColor: M3.colors.primaryContainer, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: M3.colors.primary + "44" }}
             >
@@ -303,7 +303,7 @@ export default function MoreScreen() {
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 12, marginTop: 2 }}>{profileData ? "Personal details and nutrition targets" : "Set your identity and targets"}</Text>
               </View>
               <Feather name="chevron-right" size={18} color={M3.colors.primary} />
-            </Pressable>
+            </TouchableOpacity>
             {sections.map((s) => (
               <ListRow
                 key={s.key}
