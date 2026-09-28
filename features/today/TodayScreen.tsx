@@ -181,9 +181,14 @@ export default function TodayScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>Recovery</Text>
                 {recovery ? (
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 2 }}>
-                    {`${recoveryScore ?? 0}/100 · Sleep ${recovery.sleep_duration_hr != null ? `${recovery.sleep_duration_hr.toFixed(1)}h` : "—"} · Energy ${recovery.energy_level ?? "—"}/5 · Soreness ${recovery.muscle_soreness ?? "—"}/5`}
-                  </Text>
+                  <View style={{ marginTop: 2 }}>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13 }}>
+                      {"Self-reported · Sleep "}{recovery.sleep_duration_hr != null ? `${recovery.sleep_duration_hr.toFixed(1)}h` : "—"}{" · Energy "}{recovery.energy_level ?? "—"}/5{" · Soreness "}{recovery.muscle_soreness ?? "—"}/5
+                    </Text>
+                    <Text style={{ color: M3.colors.onSurfaceMuted, fontFamily: "DMSans_400Regular", fontSize: 11, marginTop: 3 }}>
+                      {"Based on "}{[recovery.sleep_duration_hr, recovery.sleep_quality, recovery.energy_level, recovery.muscle_soreness, recovery.stress_level].filter((value) => value != null).length}{"/5 check-in signals · not a clinical score"}
+                    </Text>
+                  </View>
                 ) : (
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginTop: 2 }}>No recovery check-in yet · Tap to add one</Text>
                 )}
