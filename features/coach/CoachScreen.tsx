@@ -137,7 +137,7 @@ export default function CoachScreen() {
       const errMsg: AiConversation = {
         id: uuid.v4() as string,
         role: "assistant",
-        content: `Error: ${errorMsg}. Please check your Groq API configuration.`,
+        content: `Error: ${errorMsg}. Check your connection or sign-in status and try again.`,
         context_snapshot: null,
         created_at: Math.floor(Date.now() / 1000),
       };
@@ -205,12 +205,12 @@ export default function CoachScreen() {
           </PressableScale>
         </View>
 
-        {/* ── Groq API warning ── */}
+        {/* ── AI gateway status ── */}
         {groqConfigured === false && (
           <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: M3.shape.medium, padding: 12, flexDirection: "row", gap: 8, borderWidth: 1, borderColor: M3.colors.error }}>
             <Feather name="alert-circle" size={14} color={M3.colors.error} />
             <Text style={{ color: M3.colors.onErrorContainer, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
-              Groq API key is not configured. Please add GROQ_API_KEY to your .env file or Settings.
+              AI gateway is unavailable. Sign in and make sure Supabase is configured.
             </Text>
           </View>
         )}
