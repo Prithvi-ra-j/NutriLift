@@ -10,17 +10,17 @@ type IconName = React.ComponentProps<typeof Feather>["name"];
 
 function Item({ name, label, focused }: { name: IconName; label: string; focused: boolean }) {
   return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+    <View style={{ flex: 1, alignItems: "center", justifyContent: "center", minWidth: 0 }}>
       <View style={{
-        minWidth: 42, height: 30, paddingHorizontal: 9, borderRadius: M3.shape.full,
+        minWidth: 34, height: 28, paddingHorizontal: 6, borderRadius: M3.shape.full,
         alignItems: "center", justifyContent: "center",
         backgroundColor: focused ? M3.colors.primaryContainer : "transparent",
       }}>
-        <Feather name={name} size={22} color={focused ? M3.colors.primary : M3.colors.onSurfaceVariant} />
+        <Feather name={name} size={20} color={focused ? M3.colors.primary : M3.colors.onSurfaceVariant} />
       </View>
       <Text style={{
         marginTop: 2, ...M3.typescale.labelMedium,
-        lineHeight: 15, textAlign: "center",
+        lineHeight: 14, textAlign: "center", fontSize: 10.5,
         fontFamily: focused ? "DMSans_700Bold" : "DMSans_500Medium",
         color: focused ? M3.colors.primary : M3.colors.onSurfaceVariant,
       }}>{label}</Text>
@@ -36,12 +36,12 @@ function LogAction() {
       onPress={() => router.push("/modals/log-food")}
       haptic
       style={{
-        width: 48, height: 48, borderRadius: 24, marginTop: -18,
+        width: 46, height: 46, borderRadius: 23, marginTop: -17,
         backgroundColor: M3.colors.primary, alignItems: "center", justifyContent: "center",
         borderWidth: 4, borderColor: M3.colors.background,
       }}
     >
-      <Feather name="plus" size={26} color={M3.colors.onPrimary} />
+      <Feather name="plus" size={25} color={M3.colors.onPrimary} />
     </PressableScale>
   );
 }
@@ -54,7 +54,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          position: "absolute", left: 12, right: 12, bottom,
+          position: "absolute", left: 8, right: 8, bottom,
           height: 72, paddingTop: 5, paddingBottom: 4,
           backgroundColor: M3.colors.surfaceContainer,
           borderTopWidth: 0, borderWidth: 1, borderColor: M3.colors.outline,
@@ -62,7 +62,7 @@ export default function TabsLayout() {
           shadowColor: M3.colors.shadow, shadowOpacity: 0.25, shadowRadius: 14,
           shadowOffset: { width: 0, height: 6 }, elevation: 10,
         },
-        tabBarItemStyle: { height: 62, paddingVertical: 2 },
+        tabBarItemStyle: { height: 62, paddingVertical: 2, flex: 1, minWidth: 0 },
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
       }}
@@ -72,7 +72,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="nutrition" options={{ tabBarButton: () => <LogAction /> }} />
       <Tabs.Screen name="progress" options={{ tabBarIcon: ({ focused }) => <Item name="trending-up" label="Progress" focused={focused} /> }} />
       <Tabs.Screen name="coach" options={{ tabBarIcon: ({ focused }) => <Item name="message-circle" label="Coach" focused={focused} /> }} />
-      <Tabs.Screen name="more" options={{ href: null }} />
+      <Tabs.Screen name="more" options={{ tabBarIcon: ({ focused }) => <Item name="more-horizontal" label="More" focused={focused} /> }} />
     </Tabs>
   );
 }
