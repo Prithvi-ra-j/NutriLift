@@ -23,6 +23,7 @@ import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { AiConversation, DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { router } from "expo-router";
 import { PressableScale } from "../../components/ui/PressableScale";
 
 // Suggested prompts for coach
@@ -207,11 +208,24 @@ export default function CoachScreen() {
 
         {/* ── AI gateway status ── */}
         {groqConfigured === false && (
-          <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: M3.shape.medium, padding: 12, flexDirection: "row", gap: 8, borderWidth: 1, borderColor: M3.colors.error }}>
-            <Feather name="alert-circle" size={14} color={M3.colors.error} />
-            <Text style={{ color: M3.colors.onErrorContainer, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
-              AI gateway is unavailable. Sign in and make sure Supabase is configured.
-            </Text>
+          <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.surface, borderRadius: M3.shape.medium, padding: 12, gap: 10, borderWidth: 1, borderColor: M3.colors.outline }}>
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 9 }}>
+              <Feather name="cloud-off" size={16} color={M3.colors.warning} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>Coach needs a connection</Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 17, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
+                  Connect your NutriLift account to use the AI coach. Your local nutrition and training data still works offline.
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <PressableScale onPress={() => router.push({ pathname: "/(tabs)/more", params: { section: "account" } })} style={{ flex: 1, minHeight: 38, borderRadius: 19, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: M3.colors.primary, fontFamily: "DMSans_700Bold", fontSize: 12 }}>Open Account</Text>
+              </PressableScale>
+              <PressableScale onPress={checkConfiguration} style={{ width: 82, minHeight: 38, borderRadius: 19, backgroundColor: M3.colors.surfaceVariant, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_700Bold", fontSize: 12 }}>Retry</Text>
+              </PressableScale>
+            </View>
           </View>
         )}
 
@@ -219,7 +233,7 @@ export default function CoachScreen() {
         <ScrollView
           ref={scrollRef}
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, paddingTop: messages.length === 0 ? 24 : 0, gap: 20, paddingBottom: 16, flexGrow: 1 }}
+          contentContainerStyle={{ padding: 20, paddingTop: messages.length === 0 ? 24 : 0, gap: 20, paddingBottom: 110, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
         >
           {messages.length === 0 && (
@@ -332,7 +346,7 @@ export default function CoachScreen() {
         </ScrollView>
 
         {/* ── Composer ── */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Platform.OS === "ios" ? 8 : 16 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Platform.OS === "ios" ? 8 : 16, marginBottom: 76 }}>
           <View
             style={{
               flexDirection: "row",
