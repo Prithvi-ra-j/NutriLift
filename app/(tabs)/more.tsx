@@ -97,11 +97,11 @@ export default function MoreScreen() {
         setRecoveryNotes(recovery.notes ?? "");
       }
       setReports(allReports);
-      setSignedInEmail(session?.user?.email ?? null);
+      setSignedInEmail(session?.data?.session?.user?.email ?? null);
       setAuthChecked(true);
       setLastSyncAt(sync.lastSuccessAt);
       setSyncError(sync.lastError);
-      setSyncStatus(session?.user ? "Ready to sync" : "Sign in before syncing");
+      setSyncStatus(session?.data?.session ? "Ready to sync" : "Sign in before syncing");
     }).catch((error) => {
       console.warn("More screen data load failed", error);
       if (mounted) setAuthChecked(true);
