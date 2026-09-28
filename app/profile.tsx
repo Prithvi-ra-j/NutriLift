@@ -40,6 +40,7 @@ export default function ProfileScreen() {
   }, []);
 
   const save = async () => {
+    if (!name.trim()) return;
     setSaving(true);
     try {
       await upsertUserProfile({
@@ -89,8 +90,25 @@ export default function ProfileScreen() {
           <TextInput value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor={M3.colors.onSurfaceMuted}
             style={{ backgroundColor: M3.colors.surfaceVariant, borderRadius: 10, paddingHorizontal: 14, height: 48, color: M3.colors.onSurface, fontFamily: "DMSans_500Medium", fontSize: 15 }} />
           <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-            <TextInput value={age} onChangeText={setAge} placeholder="Age" keyboardType="number-pad" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ flex: 1, backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, paddingHorizontal: 12, height: 48, color: M3.colors.onSurface, fontSize: 15 }} />
-            <TextInput value={height} onChangeText={setHeight} placeholder="Height cm" keyboardType="decimal-pad" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ flex: 1, backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, paddingHorizontal: 12, height: 48, color: M3.colors.onSurface, fontSize: 15 }} />
+            <View style={{ flex: 1 }}><TextInput value={age} onChangeText={setAge} placeholder="Age" keyboardType="number-pad" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ width: "100%", backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, paddingHorizontal: 12, height: 48, color: M3.colors.onSurface, fontSize: 15 }} /></View>
+            <View style={{ flex: 1 }}><TextInput value={height} onChangeText={setHeight} placeholder="Height cm" keyboardType="decimal-pad" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ width: "100%", backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, paddingHorizontal: 12, height: 48, color: M3.colors.onSurface, fontSize: 15 }} /></View>
+          </View>
+          </View>
+        </Card>
+
+        <Card>
+          <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 17, marginBottom: 10 }}>About you</Text>
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, marginBottom: 8 }}>Used to keep your nutrition setup consistent.</Text>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {["male", "female", "other"].map((value) => (
+              <PressableScale
+                key={value}
+                onPress={() => setSex(value)}
+                style={{ flex: 1, minHeight: 44, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: sex === value ? M3.colors.primaryContainer : M3.colors.surfaceVariant, borderWidth: 1, borderColor: sex === value ? M3.colors.primary : M3.colors.outline }}
+              >
+                <Text style={{ color: sex === value ? M3.colors.primary : M3.colors.onSurfaceVariant, fontFamily: "DMSans_500Medium", fontSize: 13, textTransform: "capitalize" }}>{value}</Text>
+              </PressableScale>
+            ))}
           </View>
         </Card>
 
@@ -109,7 +127,7 @@ export default function ProfileScreen() {
           </View>
         </Card>
 
-        <Button label={saving ? "Saving..." : "Save changes"} loading={saving} onPress={save} icon="check" />
+        <Button label={saving ? "Saving..." : "Save changes"} loading={saving} onPress={save} disabled={!name.trim()} icon="check" />
       </ScrollView>
     </SafeAreaView>
   );
