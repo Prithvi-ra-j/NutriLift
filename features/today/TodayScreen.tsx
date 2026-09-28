@@ -102,26 +102,43 @@ export default function TodayScreen() {
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13 }}>{formatDateKey(today)}</Text>
-            <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 25, marginTop: 3 }}>{greeting()}, {displayName}</Text>
+            <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 25, marginTop: 3 }}>{greeting()}{displayName ? `, ${displayName}` : ""}</Text>
           </View>
           <PressableScale onPress={() => router.push("/profile")} accessibilityRole="button" accessibilityLabel="Open profile" style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
             <Text style={{ color: M3.colors.primary, fontFamily: "DMSans_700Bold", fontSize: 17 }}>{displayName.charAt(0)}</Text>
           </PressableScale>
         </View>
 
-        <Card>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-            <MacroRing protein={protein} carbs={carbs} fat={fat} proteinTarget={targets.protein_g} carbsTarget={targets.carbs_g} fatTarget={targets.fat_g} calories={calories} caloriesTarget={targets.calories} />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_500Medium" }}>Today's nutrition</Text>
-              <Text style={{ color: M3.colors.onSurface, fontSize: 23, fontFamily: "BebasNeue_400Regular", marginTop: 2 }}>{formatGrams(protein)} protein</Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginBottom: 10 }}>of {targets.protein_g}g target</Text>
-              <MacroBar label="Protein" current={protein} target={targets.protein_g} color={M3.macroColors.protein} />
-              <MacroBar label="Carbs" current={carbs} target={targets.carbs_g} color={M3.macroColors.carbs} />
-              <MacroBar label="Fat" current={fat} target={targets.fat_g} color={M3.macroColors.fat} />
+        {targets.calories > 0 || targets.protein_g > 0 || targets.carbs_g > 0 || targets.fat_g > 0 ? (
+          <Card>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+              <MacroRing protein={protein} carbs={carbs} fat={fat} proteinTarget={targets.protein_g} carbsTarget={targets.carbs_g} fatTarget={targets.fat_g} calories={calories} caloriesTarget={targets.calories} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_500Medium" }}>Today's nutrition</Text>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 23, fontFamily: "BebasNeue_400Regular", marginTop: 2 }}>{formatGrams(protein)} protein</Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginBottom: 10 }}>of {targets.protein_g}g target</Text>
+                <MacroBar label="Protein" current={protein} target={targets.protein_g} color={M3.macroColors.protein} />
+                <MacroBar label="Carbs" current={carbs} target={targets.carbs_g} color={M3.macroColors.carbs} />
+                <MacroBar label="Fat" current={fat} target={targets.fat_g} color={M3.macroColors.fat} />
+              </View>
             </View>
-          </View>
-        </Card>
+          </Card>
+        ) : (
+          <Card variant="elevated">
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+              <View style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: M3.colors.primaryContainer, alignItems: "center", justifyContent: "center" }}>
+                <Feather name="target" size={21} color={M3.colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>Set your nutrition targets</Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 13, lineHeight: 18, marginTop: 3 }}>Add your profile and targets so Today can calculate your progress.</Text>
+              </View>
+              <PressableScale onPress={() => router.push("/profile")} haptic style={{ minHeight: 40, paddingHorizontal: 12, borderRadius: 20, backgroundColor: M3.colors.primary, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: M3.colors.onPrimary, fontFamily: "DMSans_700Bold", fontSize: 12 }}>Set up</Text>
+              </PressableScale>
+            </View>
+          </Card>
+        )}
 
         <View style={{ flexDirection: "row", alignItems: "center" }}>
           <Text style={{ flex: 1, color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 19 }}>Meals</Text>
