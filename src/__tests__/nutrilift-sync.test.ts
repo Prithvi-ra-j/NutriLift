@@ -9,6 +9,7 @@ describe("NutriLift sync contract", () => {
     expect(SUPPORTED_RECORD_TYPES).toContain("body.training.session");
     expect(SUPPORTED_RECORD_TYPES).toContain("body.measurement");
     expect(SUPPORTED_RECORD_TYPES).toContain("body.nutrition.adherence");
+    expect(SUPPORTED_RECORD_TYPES).toContain("body.nutrition.food");
   });
 
   it("accepts a valid NutriLift sync payload", () => {
@@ -53,6 +54,21 @@ describe("NutriLift sync contract", () => {
         userId: "user-123",
       })
     ).toEqual({ valid: false, errors: expect.arrayContaining(["Unknown recordType"]) });
+  });
+
+
+  it("requires sourceUpdatedAt for incremental sync", () => {
+    const result = validateSyncRecord({
+      schemaVersion: 1,
+      sourceApp: "nutrilift",
+      externalId: "nutrilift:food_log:1",
+      recordType: "body.nutrition.food",
+      occurredAt: "2026-09-20T18:30:00Z",
+      payload: { calories: 500 },
+      deleted: false,
+      userId: "user-123",
+    });
+    expect(result).toEqual({ valid: false, errors: expect.arrayContaining(["sourceUpdatedAt is invalid"]) });
   });
 
   it("builds deterministic fact ids for repeated imports", () => {
