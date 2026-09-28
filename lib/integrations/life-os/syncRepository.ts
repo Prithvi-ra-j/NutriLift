@@ -46,6 +46,27 @@ export async function saveSyncState(values: { cursor?: string; error?: string | 
   );
 }
 
+export type SyncStatus = {
+  cursor: string | null;
+  lastSyncedAt: string | null;
+  lastSuccessAt: string | null;
+  lastError: string | null;
+};
+
+export async function getSyncStatus(): Promise<SyncStatus> {
+  const database = requireNativeSqlite();
+  const row = await database.getFirstAsync(
+    "SELECT cursor, last_synced_at, last_success_at, last_error FROM sync_state WHERE source_app = ?",
+    [SOURCE_APP]
+  );
+  return {
+    cursor: row?.cursor ?? null,
+    lastSyncedAt: row?.last_synced_at ?? null,
+    lastSuccessAt: row?.last_success_at ?? null,
+    lastError: row?.last_error ?? null,
+  };
+}
+
 export async function getChangedRecords(cursor: string | null): Promise<SyncRecord[]> {
   const database = requireNativeSqlite();
   const since = cursor ?? "1970-01-01T00:00:00.000Z";
