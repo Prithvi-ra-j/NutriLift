@@ -291,6 +291,11 @@ export default function CoachScreen() {
                     </Text>
                   </View>
                 )}
+                {!isUser && msg.context_snapshot && msg.content !== "..." && (
+                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10.5, fontFamily: "DMSans_400Regular", marginBottom: 5, paddingLeft: 28 }}>
+                    Based on your logged nutrition, training, recovery and profile data
+                  </Text>
+                )}
                 <View
                   style={
                     isUser
