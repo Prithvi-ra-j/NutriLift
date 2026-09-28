@@ -5,49 +5,79 @@ on:
     branches:
       - main
       - "redesign/**"
+      - "release/**"
   pull_request:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
+
+concurrency:
+  group: nutrilift-android-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
     name: Typecheck and tests
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
           cache: npm
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
+
       - name: Expo diagnostics
         run: npx expo-doctor
+
       - name: Typecheck
         run: npx tsc --noEmit
+
       - name: Tests
         run: npm test -- --runInBand
 
   build:
     name: Build Android APK
     needs: quality
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/heads/redesign/') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22.14.0
           cache: npm
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
+
       - name: Verify Expo CLI
         run: npx expo --version
+
+      - name: Require EAS credentials for remote build
+        if: env.EXPO_TOKEN == ''
+        run: |
+          echo "EXPO_TOKEN is not configured for this repository/environment."
+          echo "Skipping remote EAS build. Quality checks have already passed."
+          exit 0
+
       - name: Build Android preview
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: npx eas-cli@24.3.0 build --platform android --profile preview --non-interactive --verbose-logs
+        if: env.EXPO_TOKEN != ''
+        run: npx eas-cli@24.3.0 build --platform android --profile preview --non-interactive --verbose
