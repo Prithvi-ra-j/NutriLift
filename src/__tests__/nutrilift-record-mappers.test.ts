@@ -1,6 +1,7 @@
 import {
   buildPersonalRecordExternalId,
   mapDailyNutrition,
+  mapFoodLog,
   mapTombstone,
   mapRecoveryLog,
   mapWorkoutSession,
@@ -36,6 +37,34 @@ describe("NutriLift record mappers", () => {
       "body.recovery.sleep",
       "body.recovery.energy",
     ]);
+  });
+
+
+  it("maps food logs with stable identity and source timestamps", () => {
+    const record = mapFoodLog({
+      id: "food-1",
+      date: "2026-09-20",
+      meal: "lunch",
+      name: "Rice and dal",
+      quantity_g: 350,
+      calories: 540,
+      protein_g: 18,
+      carbs_g: 95,
+      fat_g: 8,
+      source: "manual",
+      raw_input: "rice and dal",
+      created_at: 1770000000,
+      updated_at: "2026-09-20T18:00:00.000Z",
+    });
+
+    expect(record.externalId).toBe("nutrilift:food_log:food-1");
+    expect(record.recordType).toBe("body.nutrition.food");
+    expect(record.sourceUpdatedAt).toBe("2026-09-20T18:00:00.000Z");
+  });
+
+  it("rejects a syncable row without a real updated_at", () => {
+    expect(() => mapFoodLog({ id: "food-2", date: "2026-09-20", name: "Rice", updated_at: null }))
+      .toThrow("missing a valid updated_at");
   });
 
   it("preserves corrections with an idempotent cloud key", () => {
