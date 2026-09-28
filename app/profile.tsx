@@ -93,7 +93,6 @@ export default function ProfileScreen() {
             <View style={{ flex: 1 }}><TextInput value={age} onChangeText={setAge} placeholder="Age" keyboardType="number-pad" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ width: "100%", backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, paddingHorizontal: 12, height: 48, color: M3.colors.onSurface, fontSize: 15 }} /></View>
             <View style={{ flex: 1 }}><TextInput value={height} onChangeText={setHeight} placeholder="Height cm" keyboardType="decimal-pad" placeholderTextColor={M3.colors.onSurfaceMuted} style={{ width: "100%", backgroundColor: M3.colors.surfaceVariant, borderRadius: M3.shape.small, paddingHorizontal: 12, height: 48, color: M3.colors.onSurface, fontSize: 15 }} /></View>
           </View>
-          </View>
         </Card>
 
         <Card>
