@@ -58,6 +58,10 @@ export function validateSyncRecord(record: Partial<SyncRecord> | null | undefine
     errors.push("occurredAt is invalid");
   }
 
+  if (!record.sourceUpdatedAt || Number.isNaN(Date.parse(record.sourceUpdatedAt))) {
+    errors.push("sourceUpdatedAt is invalid");
+  }
+
   if (record.payload && typeof record.payload === "object") {
     const payloadSize = JSON.stringify(record.payload).length;
     if (payloadSize > 200000) {
