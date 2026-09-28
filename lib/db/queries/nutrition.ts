@@ -17,7 +17,7 @@ export async function getFoodLogsByMeal(date: string, meal: string): Promise<Foo
 }
 
 export async function insertFoodLog(log: NewFoodLog): Promise<void> {
-  await db.insert(foodLogs).values(log);
+  await db.insert(foodLogs).values({ ...log, updated_at: new Date().toISOString() });
   await recomputeDailyNutrition(log.date);
 }
 
@@ -27,7 +27,7 @@ export async function deleteFoodLog(id: string, date: string): Promise<void> {
 }
 
 export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, date: string): Promise<void> {
-  await db.update(foodLogs).set(updates).where(eq(foodLogs.id, id));
+  await db.update(foodLogs).set({ ...updates, updated_at: new Date().toISOString() }).where(eq(foodLogs.id, id));
   await recomputeDailyNutrition(date);
 }
 
