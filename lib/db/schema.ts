@@ -35,6 +35,7 @@ export const foodLogs = sqliteTable("food_logs", {
   source: text("source").notNull(), // 'manual' | 'voice' | 'paste'
   raw_input: text("raw_input"), // original text that was parsed
   created_at: integer("created_at").notNull(), // unix timestamp
+  updated_at: text("updated_at"), // ISO source modification timestamp for sync
 });
 
 // ─── Daily Nutrition Summary ──────────────────────────────────────────────────
