@@ -73,7 +73,7 @@ export function useTodayData() {
 
   return {
     today, nutrition, foodLogs, session: sessionSummary.session, sessionSummary, recoveryScore, recovery, profile, week, groups, targets,
-    displayName: profile?.display_name || "there",
+    displayName: profile?.display_name?.trim() || "",
     loading, refreshing, error,
     refresh: () => { setRefreshing(true); void load(); },
     retry: () => { setLoading(true); void load(); },
