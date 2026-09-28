@@ -178,6 +178,7 @@ export function mapTombstone(
     personal_record: "body.performance",
     body_stat: "body.measurement",
     daily_nutrition: "body.nutrition.adherence",
+    food_log: "body.nutrition.food",
   };
   const recordType = recordTypeByEntity[entityType];
   if (!recordType) return null;
