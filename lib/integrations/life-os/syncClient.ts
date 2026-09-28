@@ -56,7 +56,12 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   const repository = await import("./syncRepository");
   const cursor = await repository.getSyncCursor();
   const changedRecords = await repository.getChangedRecords(cursor);
-  const validChangedRecords = changedRecords.filter((record) => validateSyncRecord({ ...record, userId: user.id }).valid);
+  const validation = changedRecords.map((record) => ({
+    record,
+    result: validateSyncRecord({ ...record, userId: user.id }),
+  }));
+  const validChangedRecords = validation.filter((entry) => entry.result.valid).map((entry) => entry.record);
+  const invalidChangedRecords = validation.filter((entry) => !entry.result.valid);
   await repository.enqueueRecords(validChangedRecords);
 
   const queuedRecords = await repository.getQueuedRecords(batchSize);
@@ -78,13 +83,35 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   }
 
   await repository.setQueueState(externalIds, "uploaded");
-  const nextCursor = repository.newestSourceTimestamp(queuedRecords) ?? cursor;
-  await repository.saveSyncState({ cursor: nextCursor ?? undefined, success: true });
+
+  // Never move the global source cursor past unvalidated records or an
+  // unprocessed batch. Re-reading already-uploaded records is intentional:
+  // upsert + stable external_id makes the operation idempotent.
+  const allValidChangedUploaded = invalidChangedRecords.length === 0 &&
+    validChangedRecords.length <= batchSize &&
+    queuedRecords.some((record) => validChangedRecords.length === 0 || validChangedRecords.some((changed) => changed.externalId === record.externalId));
+
+  const nextCursor = allValidChangedUploaded
+    ? (repository.newestSourceTimestamp(queuedRecords) ?? cursor)
+    : cursor;
+
+  if (invalidChangedRecords.length > 0) {
+    await repository.saveSyncState({
+      cursor: cursor ?? undefined,
+      error: `${invalidChangedRecords.length} changed record(s) were rejected; cursor was not advanced.`,
+    });
+  } else {
+    await repository.saveSyncState({ cursor: nextCursor ?? undefined, success: true });
+  }
+
   return {
     uploaded: queuedRecords.length,
     queued: validChangedRecords.length,
-    skipped: changedRecords.length - validChangedRecords.length,
+    skipped: invalidChangedRecords.length,
     cursor: nextCursor,
+    error: invalidChangedRecords.length > 0
+      ? `${invalidChangedRecords.length} changed record(s) were rejected; retry after fixing the source data.`
+      : undefined,
   };
 }
 

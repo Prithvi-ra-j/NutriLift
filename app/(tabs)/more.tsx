@@ -26,13 +26,13 @@ import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/auth";
 import { M3 } from "../../design-system/tokens";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getTodayKey } from "../../lib/dates";
 
 type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "account" | "settings";
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
 
 export default function MoreScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayKey();
   const params = useLocalSearchParams<{ section?: string }>();
   const [activeSection, setActiveSection] = useState<MoreSection>("menu");
   // Body stats
@@ -62,89 +62,7 @@ export default function MoreScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const isWeb = Platform.OS === "web";
 
-  // Groq API Key
-  const [groqKeyInput, setGroqKeyInput] = useState("");
-  const [groqKeySaved, setGroqKeySaved] = useState(false);
-  const [isVerifyingGroq, setIsVerifyingGroq] = useState(false);
-
-  const loadData = useCallback(async () => {
-    const [weight, suppLogs, recoveryLog, reportsData] = await Promise.all([
-      getLatestWeight(),
-      getSupplementLogsForDate(today),
-      getRecoveryLog(today),
-      getAllReports(),
-    ]);
-
-    setLatestWeight(weight?.weight_kg ?? null);
-    setSupplementLogs(suppLogs);
-    setReports(reportsData);
-
-    if (recoveryLog) {
-      setSleepHr(recoveryLog.sleep_duration_hr?.toString() ?? "7");
-      setSleepQuality(recoveryLog.sleep_quality ?? 3);
-      setEnergyLevel(recoveryLog.energy_level ?? 3);
-      setSoreness(recoveryLog.muscle_soreness ?? 3);
-      setStressLevel(recoveryLog.stress_level ?? 3);
-      setRecoveryNotes(recoveryLog.notes ?? "");
-      setRecoverySaved(true);
-    }
-  }, [today]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  useEffect(() => {
-    // Reads the locally persisted session (no network call) so sign-in survives app restarts / pull-to-refresh.
-    getCurrentSession().then(({ data }) => {
-      setSignedInEmail(data.session?.user.email ?? null);
-      setAuthChecked(true);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (params.section && VALID_SECTIONS.includes(params.section as MoreSection)) {
-      setActiveSection(params.section as MoreSection);
-    }
-  }, [params.section]);
-
-  useEffect(() => {
-    AsyncStorage.getItem("GROQ_API_KEY").then((key) => {
-      if (key) setGroqKeySaved(true);
-    });
-  }, []);
-
-  const handleVerifyGroq = async () => {
-    if (!groqKeyInput.trim()) {
-      Alert.alert("Missing Key", "Enter a Groq API Key.");
-      return;
-    }
-    setIsVerifyingGroq(true);
-    try {
-      const response = await fetch("https://api.groq.com/openai/v1/models", {
-        headers: { Authorization: `Bearer ${groqKeyInput.trim()}` },
-      });
-      if (response.ok) {
-        await AsyncStorage.setItem("GROQ_API_KEY", groqKeyInput.trim());
-        setGroqKeySaved(true);
-        setGroqKeyInput("");
-        Alert.alert("Success", "Groq API Key verified and saved.");
-      } else {
-        Alert.alert("Invalid Key", "Could not verify this API key with Groq.");
-      }
-    } catch (e) {
-      Alert.alert("Error", "Network error while verifying key.");
-    } finally {
-      setIsVerifyingGroq(false);
-    }
-  };
-
-  const handleClearGroq = async () => {
-    await AsyncStorage.removeItem("GROQ_API_KEY");
-    setGroqKeySaved(false);
-    Alert.alert("Removed", "Groq API Key removed from device.");
-  };
-
+  // AI credentials are managed by the authenticated Supabase Edge Function.
   const logWeight = async () => {
     const weight = parseFloat(weightInput);
     if (isNaN(weight) || weight < 30 || weight > 300) {
@@ -590,58 +508,15 @@ export default function MoreScreen() {
             </Card>
 
             <Card>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
-                  GROQ API KEY
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: signedInEmail && isSupabaseConfigured ? M3.colors.success : M3.colors.onSurfaceMuted }} />
+                <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
+                  AI Coach
                 </Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    backgroundColor: groqKeySaved ? M3.colors.successContainer : M3.colors.surfaceVariant,
-                    borderRadius: M3.shape.full,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                  }}
-                >
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: groqKeySaved ? M3.colors.success : M3.colors.onSurfaceMuted }} />
-                  <Text style={{ color: groqKeySaved ? M3.colors.onSuccessContainer : M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_700Bold", letterSpacing: 0.3 }}>
-                    {groqKeySaved ? "READY" : "NOT CONFIGURED"}
-                  </Text>
-                </View>
               </View>
-
-              {groqKeySaved ? (
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>
-                    API key is securely stored on this device.
-                  </Text>
-                  <TouchableOpacity onPress={handleClearGroq}>
-                    <Text style={{ color: M3.colors.error, fontSize: 13, fontFamily: "DMSans_700Bold" }}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={{ gap: 10 }}>
-                  <Input 
-                    value={groqKeyInput} 
-                    onChangeText={setGroqKeyInput} 
-                    autoCapitalize="none" 
-                    autoCorrect={false} 
-                    secureTextEntry 
-                    placeholder="gsk_..." 
-                  />
-                  <Button 
-                    label={isVerifyingGroq ? "Verifying…" : "Verify & Save"} 
-                    onPress={handleVerifyGroq} 
-                    disabled={isVerifyingGroq} 
-                    loading={isVerifyingGroq} 
-                  />
-                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-                    Your key is stored persistently on-device.
-                  </Text>
-                </View>
-              )}
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18, fontFamily: "DMSans_400Regular" }}>
+                AI requests use the authenticated NutriLift gateway. Your provider API key is never stored in the mobile app.
+              </Text>
             </Card>
           </>
         )}
