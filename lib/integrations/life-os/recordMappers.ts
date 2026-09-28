@@ -11,7 +11,10 @@ function dateToIso(date: string | null | undefined, timestamp?: unknown): string
 }
 
 function sourceUpdatedAt(row: SyncableRow): string {
-  return row.updated_at ?? new Date().toISOString();
+  if (typeof row.updated_at !== "string" || Number.isNaN(Date.parse(row.updated_at))) {
+    throw new Error("Syncable source row is missing a valid updated_at timestamp");
+  }
+  return row.updated_at;
 }
 
 function createRecord(
@@ -88,6 +91,31 @@ export function mapBodyStat(row: SyncableRow): SyncRecord {
       leanBodyMassKg: row.lean_body_mass_kg,
       bmi: row.bmi,
       visceralFatLevel: row.visceral_fat_level,
+    }
+  );
+}
+
+export function mapFoodLog(row: SyncableRow): SyncRecord {
+  const id = String(row.id);
+  return createRecord(
+    "body.nutrition.food",
+    `nutrilift:food_log:${id}`,
+    dateToIso(row.date),
+    sourceUpdatedAt(row),
+    {
+      meal: row.meal,
+      name: row.name,
+      quantityG: row.quantity_g,
+      calories: row.calories,
+      proteinG: row.protein_g,
+      carbsG: row.carbs_g,
+      fatG: row.fat_g,
+      fiberG: row.fiber_g,
+      sugarG: row.sugar_g,
+      sodiumMg: row.sodium_mg,
+      source: row.source,
+      rawInput: row.raw_input,
+      createdAt: row.created_at,
     }
   );
 }
