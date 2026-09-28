@@ -288,7 +288,22 @@ export default function MoreScreen() {
 
         {/* ── Menu List ── */}
         {activeSection === "menu" && (
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: 12 }}>
+            <Pressable
+              onPress={() => router.push("/profile")}
+              style={{ backgroundColor: M3.colors.primaryContainer, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: M3.colors.primary + "44" }}
+            >
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: M3.colors.primary, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ color: M3.colors.onPrimary, fontFamily: "DMSans_700Bold", fontSize: 17 }}>
+                  {(profileData?.display_name?.trim()?.charAt(0) || "?").toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold", fontSize: 16 }}>{profileData?.display_name || "Complete your profile"}</Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 12, marginTop: 2 }}>{profileData ? "Personal details and nutrition targets" : "Set your identity and targets"}</Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={M3.colors.primary} />
+            </Pressable>
             {sections.map((s) => (
               <ListRow
                 key={s.key}
