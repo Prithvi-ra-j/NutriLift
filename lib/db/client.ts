@@ -340,6 +340,8 @@ export async function runMigrations(): Promise<void> {
   await addColumnIfMissing("set_logs", "distance_km", "REAL");
   await addColumnIfMissing("exercise_logs", "exercise_type", "TEXT");
   await addColumnIfMissing("food_logs", "updated_at", "TEXT");
+  // Backfill legacy food rows deterministically from their original creation time.
+  await sqlite.execAsync(`UPDATE food_logs SET updated_at = datetime(created_at, "unixepoch") WHERE updated_at IS NULL;`);
   await addColumnIfMissing("daily_nutrition", "updated_at", "TEXT");
   await addColumnIfMissing("workout_sessions", "updated_at", "TEXT");
   await addColumnIfMissing("personal_records", "updated_at", "TEXT");
