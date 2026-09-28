@@ -66,6 +66,49 @@ export default function MoreScreen() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const isWeb = Platform.OS === "web";
 
+  useEffect(() => {
+    const requested = params.section;
+    if (requested && VALID_SECTIONS.includes(requested as MoreSection)) {
+      setActiveSection(requested as MoreSection);
+    }
+  }, [params.section]);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      getUserProfile(),
+      getLatestWeight(),
+      getSupplementLogsForDate(today),
+      getRecoveryLog(today),
+      getAllReports(),
+      getCurrentSession(),
+      getSyncStatus(),
+    ]).then(([profile, weight, supplements, recovery, allReports, session, sync]) => {
+      if (!mounted) return;
+      setProfileData(profile);
+      setLatestWeight(weight ?? null);
+      setSupplementLogs(supplements);
+      if (recovery) {
+        setSleepHr(recovery.sleep_duration_hr != null ? String(recovery.sleep_duration_hr) : "7");
+        setSleepQuality(recovery.sleep_quality ?? 3);
+        setEnergyLevel(recovery.energy_level ?? 3);
+        setSoreness(recovery.muscle_soreness ?? 3);
+        setStressLevel(recovery.stress_level ?? 3);
+        setRecoveryNotes(recovery.notes ?? "");
+      }
+      setReports(allReports);
+      setSignedInEmail(session?.user?.email ?? null);
+      setAuthChecked(true);
+      setLastSyncAt(sync.lastSuccessAt);
+      setSyncError(sync.lastError);
+      setSyncStatus(session?.user ? "Ready to sync" : "Sign in before syncing");
+    }).catch((error) => {
+      console.warn("More screen data load failed", error);
+      if (mounted) setAuthChecked(true);
+    });
+    return () => { mounted = false; };
+  }, [today]);
+
   // AI provider credentials are held by the authenticated Supabase Edge Function.
   const logWeight = async () => {
     const weight = parseFloat(weightInput);
