@@ -86,7 +86,7 @@ export default function MoreScreen() {
     ]).then(([profile, weight, supplements, recovery, allReports, session, sync]) => {
       if (!mounted) return;
       setProfileData(profile);
-      setLatestWeight(weight ?? null);
+      setLatestWeight(weight?.weight_kg ?? null);
       setSupplementLogs(supplements);
       if (recovery) {
         setSleepHr(recovery.sleep_duration_hr != null ? String(recovery.sleep_duration_hr) : "7");
