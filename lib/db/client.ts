@@ -84,7 +84,8 @@ export async function runMigrations(): Promise<void> {
       sodium_mg REAL,
       source TEXT NOT NULL,
       raw_input TEXT,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      updated_at TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_food_logs_date ON food_logs(date);
@@ -338,6 +339,7 @@ export async function runMigrations(): Promise<void> {
   await addColumnIfMissing("set_logs", "duration_sec", "INTEGER");
   await addColumnIfMissing("set_logs", "distance_km", "REAL");
   await addColumnIfMissing("exercise_logs", "exercise_type", "TEXT");
+  await addColumnIfMissing("food_logs", "updated_at", "TEXT");
   await addColumnIfMissing("daily_nutrition", "updated_at", "TEXT");
   await addColumnIfMissing("workout_sessions", "updated_at", "TEXT");
   await addColumnIfMissing("personal_records", "updated_at", "TEXT");
