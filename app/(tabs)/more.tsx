@@ -512,6 +512,12 @@ export default function MoreScreen() {
               <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
                 {isWeb ? "Web uses a no-op database; use Android for local-first sync." : signedInEmail ? "Sync uploads locally queued changes to your Supabase account." : "Sign in above before syncing."}
               </Text>
+              {!isWeb && (
+                <View style={{ marginTop: 10, gap: 4 }}>
+                  {lastSyncAt && <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>Last successful sync: {new Date(lastSyncAt).toLocaleString()}</Text>}
+                  {syncError && <Text style={{ color: M3.colors.error, fontSize: 11, fontFamily: "DMSans_500Medium" }}>Needs attention: {syncError}</Text>}
+                </View>
+              )}
             </Card>
 
             <Card>
