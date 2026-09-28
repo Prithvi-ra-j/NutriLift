@@ -24,6 +24,7 @@ import { ListRow } from "../../components/ui/ListRow";
 import type { SupplementLog, MonthlyReport } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
+import { getSyncStatus } from "../../lib/integrations/life-os/syncRepository";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/auth";
 import { M3 } from "../../design-system/tokens";
@@ -56,6 +57,8 @@ export default function MoreScreen() {
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState("Not synced yet");
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
@@ -138,6 +141,8 @@ export default function MoreScreen() {
     }
 
     setSyncStatus(`Uploaded ${result.uploaded}, skipped ${result.skipped}`);
+    setSyncError(result.error ?? null);
+    try { setLastSyncAt((await getSyncStatus()).lastSuccessAt); } catch {}
     Alert.alert("Sync complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
   };
 
