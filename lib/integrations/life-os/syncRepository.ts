@@ -54,17 +54,22 @@ export type SyncStatus = {
 };
 
 export async function getSyncStatus(): Promise<SyncStatus> {
-  const database = requireNativeSqlite();
-  const row = await database.getFirstAsync(
-    "SELECT cursor, last_synced_at, last_success_at, last_error FROM sync_state WHERE source_app = ?",
-    [SOURCE_APP]
-  );
-  return {
-    cursor: row?.cursor ?? null,
-    lastSyncedAt: row?.last_synced_at ?? null,
-    lastSuccessAt: row?.last_success_at ?? null,
-    lastError: row?.last_error ?? null,
-  };
+  try {
+    const database = requireNativeSqlite();
+    const row = await database.getFirstAsync(
+      "SELECT cursor, last_synced_at, last_success_at, last_error FROM sync_state WHERE source_app = ?",
+      [SOURCE_APP]
+    );
+    return {
+      cursor: row?.cursor ?? null,
+      lastSyncedAt: row?.last_synced_at ?? null,
+      lastSuccessAt: row?.last_success_at ?? null,
+      lastError: row?.last_error ?? null,
+    };
+  } catch {
+    // Web has no local sync queue; report a neutral state instead of breaking More/Settings.
+    return { cursor: null, lastSyncedAt: null, lastSuccessAt: null, lastError: null };
+  }
 }
 
 export async function getChangedRecords(cursor: string | null): Promise<SyncRecord[]> {
