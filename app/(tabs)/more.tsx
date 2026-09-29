@@ -75,37 +75,66 @@ export default function MoreScreen() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([
-      getUserProfile(),
-      getLatestWeight(),
-      getSupplementLogsForDate(today),
-      getRecoveryLog(today),
-      getAllReports(),
-      getCurrentSession(),
-      getSyncStatus(),
-    ]).then(([profile, weight, supplements, recovery, allReports, session, sync]) => {
+
+    const loadMoreData = async () => {
+      // Keep independent sections usable if one native-only query fails on web
+      // or a single local record is malformed.
+      const results = await Promise.allSettled([
+        getUserProfile(),
+        getLatestWeight(),
+        getSupplementLogsForDate(today),
+        getRecoveryLog(today),
+        getAllReports(),
+        getCurrentSession(),
+        getSyncStatus(),
+      ]);
+
       if (!mounted) return;
-      setProfileData(profile);
-      setLatestWeight(weight?.weight_kg ?? null);
-      setSupplementLogs(supplements);
-      if (recovery) {
-        setSleepHr(recovery.sleep_duration_hr != null ? String(recovery.sleep_duration_hr) : "7");
-        setSleepQuality(recovery.sleep_quality ?? 3);
-        setEnergyLevel(recovery.energy_level ?? 3);
-        setSoreness(recovery.muscle_soreness ?? 3);
-        setStressLevel(recovery.stress_level ?? 3);
-        setRecoveryNotes(recovery.notes ?? "");
+
+      const [profile, weight, supplements, recovery, allReports, session, sync] = results;
+
+      if (profile.status === "fulfilled") setProfileData(profile.value);
+      else console.warn("More profile load failed", profile.reason);
+
+      if (weight.status === "fulfilled") setLatestWeight(weight.value?.weight_kg ?? null);
+      else console.warn("More weight load failed", weight.reason);
+
+      if (supplements.status === "fulfilled") setSupplementLogs(supplements.value);
+      else console.warn("More supplements load failed", supplements.reason);
+
+      if (recovery.status === "fulfilled" && recovery.value) {
+        setSleepHr(recovery.value.sleep_duration_hr != null ? String(recovery.value.sleep_duration_hr) : "7");
+        setSleepQuality(recovery.value.sleep_quality ?? 3);
+        setEnergyLevel(recovery.value.energy_level ?? 3);
+        setSoreness(recovery.value.muscle_soreness ?? 3);
+        setStressLevel(recovery.value.stress_level ?? 3);
+        setRecoveryNotes(recovery.value.notes ?? "");
+      } else if (recovery.status === "rejected") {
+        console.warn("More recovery load failed", recovery.reason);
       }
-      setReports(allReports);
-      setSignedInEmail(session?.data?.session?.user?.email ?? null);
+
+      if (allReports.status === "fulfilled") setReports(allReports.value);
+      else console.warn("More reports load failed", allReports.reason);
+
+      if (session.status === "fulfilled") {
+        setSignedInEmail(session.value?.data?.session?.user?.email ?? null);
+        setSyncStatus(session.value?.data?.session ? "Ready to sync" : "Sign in before syncing");
+      } else {
+        console.warn("More auth session load failed", session.reason);
+      }
+
+      if (sync.status === "fulfilled") {
+        setLastSyncAt(sync.value.lastSuccessAt);
+        setSyncError(sync.value.lastError);
+      } else {
+        console.warn("More sync status load failed", sync.reason);
+      }
+
       setAuthChecked(true);
-      setLastSyncAt(sync.lastSuccessAt);
-      setSyncError(sync.lastError);
-      setSyncStatus(session?.data?.session ? "Ready to sync" : "Sign in before syncing");
-    }).catch((error) => {
-      console.warn("More screen data load failed", error);
-      if (mounted) setAuthChecked(true);
-    });
+    };
+
+    void loadMoreData();
+
     return () => { mounted = false; };
   }, [today]);
 
@@ -179,6 +208,7 @@ export default function MoreScreen() {
 
     if (result.error) {
       setSyncStatus(result.error);
+      setSyncError(result.error);
       Alert.alert("Sync unavailable", result.error);
       return;
     }
