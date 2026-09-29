@@ -1,0 +1,69 @@
+name: NutriLift E2E
+
+on:
+  push:
+    branches:
+      - main
+      - "redesign/**"
+      - "release/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: nutrilift-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright critical journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.14.0
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build web app
+        run: npm run build:web
+
+      - name: Install Playwright Chromium
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
+
+      - name: Serve web export
+        run: |
+          npx --yes http-server@14.1.1 dist -p 8081 > /tmp/nutrilift-web.log 2>&1 &
+          for i in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:8081/ > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/nutrilift-web.log
+          exit 1
+
+      - name: Run Playwright
+        env:
+          BASE_URL: http://127.0.0.1:8081
+          CI: true
+        run: npx --yes playwright@1.55.0 test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nutrilift-playwright-report
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
