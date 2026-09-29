@@ -1,4 +1,4 @@
-import { test, expect } from "playwright/test";
+import { test, expect } from "@playwright/test";
 import { openApp, expectNavigation, openMore, openProfile } from "./helpers/app";
 
 test.describe("NutriLift critical user journey", () => {
