@@ -571,18 +571,23 @@ export default function WorkoutScreen() {
     })),
   ];
 
-  const filteredExercises = allExercises.filter((e) => {
-    const isSunday = parseDateKey(selectedDate).getDay() === 0;
-    if (isSunday) {
-      if (!e.day_types.includes("Cardio")) return false;
-    } else {
+  const filteredExercises = allExercises
+    .filter((e) => {
+      const isSunday = parseDateKey(selectedDate).getDay() === 0;
+      if (isSunday) {
+        if (e.day_types.includes("Cardio") && !e.day_types.includes(selectedDayType)) return true;
+        return e.day_types.includes("Cardio");
+      }
       if (e.day_types.includes("Cardio") && e.day_types.length === 1) return false;
-    }
-    return (
-      e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
-      e.muscle_group.toLowerCase().includes(exerciseSearch.toLowerCase())
-    );
-  });
+      return e.name.toLowerCase().includes(exerciseSearch.toLowerCase()) ||
+        e.muscle_group.toLowerCase().includes(exerciseSearch.toLowerCase());
+    })
+    .sort((a, b) => {
+      const aSuggested = a.day_types.includes(selectedDayType);
+      const bSuggested = b.day_types.includes(selectedDayType);
+      if (aSuggested !== bSuggested) return aSuggested ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
 
   const swapFilteredExercises = allExercises.filter((e) => {
     if (!swapSearch) return true;
@@ -883,7 +888,7 @@ export default function WorkoutScreen() {
                 SELECT DAY TYPE
               </Text>
               <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                Completed this week are hidden
+                Days you've finished this week are hidden
               </Text>
             </View>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
@@ -1009,10 +1014,6 @@ export default function WorkoutScreen() {
           </View>
         )}
 
-        {!session?.ended_at && session && exercises.length > 0 && (
-          <Button label={isFinishing ? "Finishing..." : "Finish workout"} icon="check-circle" loading={isFinishing} onPress={finishWorkout} />
-        )}
-
         {/* ── Exercise List ── */}
         {exercises.map((exercise) => {
           const exerciseSets = sets[exercise.id] ?? [];
@@ -1051,80 +1052,6 @@ export default function WorkoutScreen() {
               }}
               onDelete={() => confirmDeleteExercise(exercise.id, exercise.exercise_name)}
             >
-              {/* Exercise header */}
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
-                    {exercise.exercise_name}
-                  </Text>
-                  <View style={{ flexDirection: "row", gap: 6, marginTop: 3 }}>
-                    <View style={{ backgroundColor: M3.colors.surfaceVariant, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
-                        {exercise.muscle_group}
-                      </Text>
-                    </View>
-                    <View style={{ backgroundColor: M3.colors.surfaceVariant, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
-                        {exercise.equipment}
-                      </Text>
-                    </View>
-                    {/* Exercise type badge */}
-                    <View style={{ backgroundColor: M3.colors.primaryContainer, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                      <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
-                        {exType === "weight_reps" ? "Weight" : exType === "reps_only" ? "Reps" : exType === "duration" ? "Duration" : "Cardio"}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Right side: volume + action icons */}
-                <View style={{ alignItems: "flex-end", gap: 6 }}>
-                  {exType === "weight_reps" && (
-                    <View style={{ alignItems: "flex-end" }}>
-                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                        {totalVolume.toFixed(0)}kg vol
-                      </Text>
-                      {!!estimated1RM && (
-                        <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                          ~{estimated1RM.toFixed(0)}kg 1RM
-                        </Text>
-                      )}
-                    </View>
-                  )}
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    {/* Edit exercise */}
-                    <PressableScale
-                      onPress={() => {
-                        setEditingExerciseId(exercise.id);
-                        setEditExerciseName(exercise.exercise_name);
-                        setEditExerciseMuscle(exercise.muscle_group || "");
-                        setEditExerciseEquip(exercise.equipment || "");
-                      }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Feather name="edit-2" size={15} color={M3.colors.primary} />
-                    </PressableScale>
-                    {/* Swap exercise */}
-                    <PressableScale
-                      onPress={() => {
-                        setSwapExerciseId(exercise.id);
-                        setSwapSearch("");
-                      }}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Feather name="repeat" size={15} color={M3.colors.onSurfaceVariant} />
-                    </PressableScale>
-                    {/* Delete exercise */}
-                    <PressableScale
-                      onPress={() => confirmDeleteExercise(exercise.id, exercise.exercise_name)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Feather name="trash-2" size={15} color={M3.colors.error} />
-                    </PressableScale>
-                  </View>
-                </View>
-              </View>
-
               {/* Double progression alert */}
               {!!progressionAlerts[exercise.id] && (
                 <View style={{ backgroundColor: M3.colors.warningContainer, borderRadius: 6, padding: 8, marginBottom: 8, flexDirection: "row", gap: 6 }}>
@@ -1236,33 +1163,12 @@ export default function WorkoutScreen() {
           </Card>
         )}
 
-        {/* ── Info Cards ── */}
-        {session && exercises.length > 0 && (
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Card elevated style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <Feather name="info" size={12} color={M3.colors.secondary} />
-                <Text style={{ color: M3.colors.secondary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
-                  RPE
-                </Text>
-              </View>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 14 }}>
-                Rate of Perceived Exertion (1-10). How hard the set felt.
-              </Text>
-            </Card>
-            <Card elevated style={{ flex: 1 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <Feather name="info" size={12} color={M3.colors.primary} />
-                <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
-                  VOLUME
-                </Text>
-              </View>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 14 }}>
-                Weight × reps (weight exercises only). 1t = 1,000kg
-              </Text>
-            </Card>
+        {!session?.ended_at && session && exercises.length > 0 && (
+          <View style={{ marginTop: 4 }}>
+            <Button label={isFinishing ? "Finishing…" : "Finish workout"} icon="check-circle" loading={isFinishing} onPress={finishWorkout} />
           </View>
         )}
+
       </ScrollView>
 
       {/* ── Add Exercise Modal ── */}
@@ -1272,7 +1178,7 @@ export default function WorkoutScreen() {
             <View style={{ padding: 20, gap: 16, flex: 1 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-                  ADD EXERCISE
+                  Add exercise
                 </Text>
                 <PressableScale onPress={() => setShowAddExercise(false)}>
                   <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
@@ -1282,7 +1188,7 @@ export default function WorkoutScreen() {
               <TextInput
                 value={exerciseSearch}
                 onChangeText={setExerciseSearch}
-                placeholder="Search exercises..."
+                placeholder="Search exercises"
                 placeholderTextColor={M3.colors.onSurfaceMuted}
                 style={{
                   backgroundColor: M3.colors.surface,
@@ -1387,7 +1293,7 @@ export default function WorkoutScreen() {
             <View style={{ padding: 20, gap: 16, flex: 1 }}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
                 <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-                  CREATE CUSTOM EXERCISE
+                  Create custom exercise
                 </Text>
                 <PressableScale onPress={() => setShowCreateCustom(false)}>
                   <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
