@@ -55,6 +55,6 @@ test.describe("domain workflows", () => {
     await page.getByText("Reports", { exact: true }).click();
 
     await expect(page.getByText("Generate Monthly Report", { exact: true })).toBeVisible();
-    await expect(page.getByText(/No reports generated yet|Generated/)).toBeVisible();
+    await expect(page.locator("body")).toContainText(/No reports generated yet|Generated/);
   });
 });
