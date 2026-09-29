@@ -55,7 +55,7 @@ test.describe("NutriLift critical user journey", () => {
 
   test("Coach failure state remains actionable instead of being a blocking error banner", async ({ page }) => {
     await openApp(page);
-    await page.getByText("Coach", { exact: true }).click();
+    await page.getByText("Coach", { exact: true }).last().click();
 
     await expect(page.getByText(/Coach needs a connection/i)).toBeVisible();
     await expect(page.getByRole("button", { name: "Open Account" })).toBeVisible();
