@@ -1,4 +1,4 @@
-import { test, expect } from "playwright/test";
+import { test, expect } from "@playwright/test";
 import { openApp } from "./helpers/app";
 
 test.describe("failure-path UX", () => {
