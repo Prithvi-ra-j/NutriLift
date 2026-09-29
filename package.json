@@ -10,7 +10,11 @@
     "build:web": "expo export -p web",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "test:e2e": "npx --yes playwright@1.55.0 test",
+    "test:e2e:headed": "npx --yes playwright@1.55.0 test --headed",
+    "test:e2e:debug": "npx --yes playwright@1.55.0 test --debug",
+    "test:e2e:report": "npx --yes playwright@1.55.0 show-report"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",
