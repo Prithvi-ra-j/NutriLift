@@ -18,14 +18,14 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
         flex: 1,
         alignItems: "center",
         justifyContent: "center",
-        padding: M3.spacing.xxxl,
+        padding: M3.spacing.xl,
         gap: M3.spacing.md,
       }}
     >
       <View
         style={{
-          width: 64,
-          height: 64,
+          width: 56,
+          height: 56,
           borderRadius: M3.shape.full,
           backgroundColor: M3.colors.surfaceVariant,
           alignItems: "center",
@@ -38,7 +38,7 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
       <Text
         style={{
           color: M3.colors.onSurface,
-          fontSize: 17,
+          fontSize: 20,
           fontFamily: "DMSans_700Bold",
           textAlign: "center",
         }}
@@ -52,6 +52,7 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
           fontFamily: "DMSans_400Regular",
           textAlign: "center",
           lineHeight: 20,
+          maxWidth: 320,
         }}
       >
         {subtitle}
@@ -63,14 +64,15 @@ export function EmptyState({ icon, title, subtitle, actionLabel, onAction }: Emp
             marginTop: 8,
             backgroundColor: M3.colors.primary,
             borderRadius: 8,
+            minHeight: 48,
             paddingHorizontal: 20,
-            paddingVertical: 10,
+            paddingVertical: 12,
           }}
         >
           <Text
             style={{
               color: M3.colors.background,
-              fontSize: 14,
+              fontSize: 16,
               fontFamily: "DMSans_700Bold",
             }}
           >
