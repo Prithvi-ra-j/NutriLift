@@ -48,7 +48,7 @@ test.describe("NutriLift critical user journey", () => {
     await page.getByText("Log food", { exact: true }).first().click();
 
     await expect(page.getByText(/Log food/i).first()).toBeVisible();
-    await expect(page.getByText("Search", { exact: true })).toBeVisible();
+    await expect(page.getByPlaceholder("Search foods")).toBeVisible();
     await expect(page.getByText("Manual", { exact: true })).toBeVisible();
     await expect(page.getByText("Voice", { exact: true })).toBeVisible();
   });
