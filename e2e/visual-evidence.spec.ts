@@ -1,4 +1,4 @@
-import { test } from "playwright/test";
+import { test } from "@playwright/test";
 import { openApp, openMore, openProfile } from "./helpers/app";
 
 test.describe("visual evidence", () => {
