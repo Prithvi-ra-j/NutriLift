@@ -1,4 +1,4 @@
-import { test, expect } from "playwright/test";
+import { test, expect } from "@playwright/test";
 import { openApp, openMore } from "./helpers/app";
 
 test.describe("domain workflows", () => {
