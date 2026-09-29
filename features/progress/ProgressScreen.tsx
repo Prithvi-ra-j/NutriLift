@@ -192,7 +192,7 @@ export default function ProgressScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 4,
-                backgroundColor: isCurrentWeek ? M3.colors.surfaceVariant : M3.colors.surface,
+                backgroundColor: M3.colors.surface,
                 borderRadius: 6,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
