@@ -18,12 +18,12 @@ export function ScreenHeader({ title, subtitle, actionIcon, actionLabel, onActio
         <Text
           style={{
             color: M3.colors.onSurface,
-            fontSize: 30,
+            fontSize: 36,
             fontFamily: "BebasNeue_400Regular",
             letterSpacing: 1,
           }}
         >
-          {title}
+          {title ? title.charAt(0) + title.slice(1).toLowerCase() : title}
         </Text>
         {subtitle ? (
           <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
