@@ -612,6 +612,27 @@ export default function WorkoutScreen() {
     textAlign: "center" as const,
   };
 
+  const renderRpeChips = (form: SetForm, onChange: (partial: Partial<SetForm>) => void) => (
+    <View style={{ flex: 1 }}>
+      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
+        RPE
+      </Text>
+      <View style={{ flexDirection: "row", gap: 3 }}>
+        {[6, 7, 8, 9, 10].map((rpe) => (
+          <PressableScale
+            key={rpe}
+            onPress={() => onChange({ rpe: String(rpe) })}
+            accessibilityRole="button"
+            accessibilityLabel={`RPE ${rpe}`}
+            style={{ flex: 1, minHeight: 40, alignItems: "center", justifyContent: "center", borderRadius: 8, backgroundColor: form.rpe === String(rpe) ? M3.colors.primaryContainer : M3.colors.surfaceVariant, borderWidth: 1, borderColor: form.rpe === String(rpe) ? M3.colors.primary : M3.colors.outline }}
+          >
+            <Text style={{ color: form.rpe === String(rpe) ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_700Bold" }}>{rpe}</Text>
+          </PressableScale>
+        ))}
+      </View>
+    </View>
+  );
+
   /** Renders the correct input fields for a set form based on exercise type */
   const renderSetFormFields = (
     form: SetForm,
@@ -655,19 +676,7 @@ export default function WorkoutScreen() {
                   style={inputStyle}
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
-                  RPE
-                </Text>
-                <TextInput
-                  value={form.rpe}
-                  onChangeText={(v) => onChange({ rpe: v })}
-                  keyboardType="number-pad"
-                  placeholder="—"
-                  placeholderTextColor={M3.colors.onSurfaceMuted}
-                  style={inputStyle}
-                />
-              </View>
+              {renderRpeChips(form, onChange)}
             </>
           )}
 
@@ -686,19 +695,7 @@ export default function WorkoutScreen() {
                   style={inputStyle}
                 />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
-                  RPE
-                </Text>
-                <TextInput
-                  value={form.rpe}
-                  onChangeText={(v) => onChange({ rpe: v })}
-                  keyboardType="number-pad"
-                  placeholder="—"
-                  placeholderTextColor={M3.colors.onSurfaceMuted}
-                  style={inputStyle}
-                />
-              </View>
+              {renderRpeChips(form, onChange)}
             </>
           )}
 
