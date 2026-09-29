@@ -31,8 +31,8 @@ const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
 function suggestedMeal(): MealType {
   const hour = new Date().getHours();
   if (hour < 11) return "breakfast";
-  if (hour < 16) return "lunch";
-  if (hour < 19) return "snack";
+  if (hour < 15) return "lunch";
+  if (hour < 18) return "snack";
   return "dinner";
 }
 
@@ -446,7 +446,7 @@ export default function LogFoodModal() {
           {parsedItems && parsedItems.length > 0 && (
             <>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
-                CONFIRM ITEMS
+                Review items
               </Text>
 
               {parsedItems.map((item, index) => (
