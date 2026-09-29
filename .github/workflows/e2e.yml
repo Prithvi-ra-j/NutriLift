@@ -55,7 +55,7 @@ jobs:
         env:
           BASE_URL: http://127.0.0.1:8081
           CI: true
-        run: npx --yes playwright@1.55.0 test --config=playwright.config.ts
+        run: npx playwright test --config=playwright.config.ts
 
       - name: Upload Playwright report
         if: always()
