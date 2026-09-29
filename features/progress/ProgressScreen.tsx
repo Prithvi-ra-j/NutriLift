@@ -437,37 +437,36 @@ export default function ProgressScreen() {
                 onAction={() => router.push("/modals/log-food")}
               />
             ) : (
-            <Card>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-                {isCurrentWeek ? "THIS WEEK" : "WEEK"} NUTRITION SUMMARY
-              </Text>
-              {[
-                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: calorieTarget != null ? `${calorieTarget}` : "Not set" },
-                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: proteinTarget != null ? `${proteinTarget}g` : "Not set" },
-                { label: "Protein Hit Rate", value: `${nutritionSummary.proteinHitRate.toFixed(0)}%`, target: "100%" },
-                { label: "Best Streak", value: `${nutritionSummary.bestStreak} days`, target: "" },
-                { label: "Current Streak", value: `${nutritionSummary.currentStreak} days`, target: "" },
-              ].map((item) => (
-                <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: M3.colors.surfaceVariant }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                    {item.label}
+              <>
+                <Card>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12 }}>
+                    {isCurrentWeek ? "This week" : "Week"} nutrition summary
                   </Text>
-                  <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
-                    <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                      {item.value}
-                    </Text>
-                    {!!item.target && (
-                      <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                        / {item.target}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              ))}
-            </Card>
-
-            <Card elevated>
-              <Text style={{ color: M3.            )}         </>
+                  {[
+                    { label: "Avg daily calories", value: nutritionSummary.avgDailyCalories.toFixed(0) + " kcal", target: calorieTarget != null ? String(calorieTarget) : "" },
+                    { label: "Avg daily protein", value: nutritionSummary.avgDailyProtein.toFixed(0) + "g", target: proteinTarget != null ? proteinTarget + "g" : "" },
+                    { label: "Protein hit rate", value: nutritionSummary.proteinHitRate.toFixed(0) + "%" },
+                    { label: "Best streak", value: nutritionSummary.bestStreak + " days" },
+                    { label: "Current streak", value: nutritionSummary.currentStreak + " days" },
+                  ].map((item) => (
+                    <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: M3.colors.surfaceVariant }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
+                      <View style={{ flexDirection: "row", gap: 6 }}>
+                        <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{item.value}</Text>
+                        {item.target ? <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>/ {item.target}</Text> : null}
+                      </View>
+                    </View>
+                  ))}
+                </Card>
+                <Card elevated>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 8 }}>Protein analysis</Text>
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
+                    {nutritionSummary.proteinGapAnalysis}
+                  </Text>
+                </Card>
+              </>
+            )}
+          </>
         )}
 
         {/* ── Recovery ── */}
