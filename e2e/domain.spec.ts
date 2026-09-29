@@ -4,7 +4,7 @@ import { openApp, openMore } from "./helpers/app";
 test.describe("domain workflows", () => {
   test("training surface exposes a deterministic workout start path", async ({ page }) => {
     await openApp(page);
-    await page.getByText("Train", { exact: true }).click();
+    await page.getByText("Train", { exact: true }).last().click();
     await expect(page.locator("body")).toContainText(/Template|workout/i);
     const template = page.getByText(/Use .* Template/).first();
     if (await template.count()) {
