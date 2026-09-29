@@ -29,7 +29,7 @@ export function ModalHeader({ title, subtitle, onClose, rightIcon, onRightPress 
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: M3.colors.onSurface, fontSize: 20, fontFamily: "BebasNeue_400Regular", letterSpacing: 0.5 }}>
-            {title}
+            {title ? title.charAt(0) + title.slice(1).toLowerCase() : title}
           </Text>
           {subtitle ? (
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
