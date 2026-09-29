@@ -118,6 +118,8 @@ export default function ProgressScreen() {
   );
 
   const nutritionSummary = computeNutritionSummary(weekNutritionHistory, proteinTarget);
+  const hasBodyData = weekWeightHistory.length > 0 || latestInBody != null;
+  const hasNutritionData = weekNutritionHistory.length > 0;
   const latestInBody = inBodyRecords[inBodyRecords.length - 1] ?? null;
   const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
 
@@ -190,7 +192,7 @@ export default function ProgressScreen() {
                 flexDirection: "row",
                 alignItems: "center",
                 gap: 4,
-                backgroundColor: M3.colors.surface,
+                backgroundColor: isCurrentWeek ? M3.colors.surfaceVariant : M3.colors.surface,
                 borderRadius: 6,
                 paddingHorizontal: 10,
                 paddingVertical: 6,
@@ -209,7 +211,10 @@ export default function ProgressScreen() {
             </Text>
             
             <PressableScale
-              onPress={goToNextWeek}
+              onPress={isCurrentWeek ? undefined : goToNextWeek}
+              disabled={isCurrentWeek}
+              accessibilityRole="button"
+              accessibilityLabel="Next week"
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -235,31 +240,47 @@ export default function ProgressScreen() {
         {/* ── Body Composition ── */}
         {activeSection === "body" && (
           <>
-            {/* Current stats */}
-            <Card>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-                BODY COMPOSITION
-              </Text>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                {[
-                  { label: "Weight", value: bodySummary.currentWeight ? `${bodySummary.currentWeight.toFixed(1)}kg` : "—", color: M3.colors.onSurface },
-                  { label: "Body Fat", value: latestInBody?.body_fat_pct ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "—", color: M3.colors.error },
-                  { label: "Muscle", value: latestInBody?.skeletal_muscle_mass_kg ? `${latestInBody.skeletal_muscle_mass_kg.toFixed(1)}kg` : "—", color: M3.colors.success },
-                  { label: "InBody", value: latestInBody?.inbody_score ? `${latestInBody.inbody_score}` : "—", color: M3.colors.primary },
-                ].map((stat) => (
-                  <View key={stat.label} style={{ alignItems: "center" }}>
-                    <Text style={{ color: stat.color, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
-                      {stat.value}
-                    </Text>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                      {stat.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </Card>
+            {!hasBodyData ? (
+              <EmptyState
+                icon="user"
+                title="Add your first weigh-in"
+                subtitle="Track weight, body fat and muscle over time."
+                actionLabel="Log weight"
+                onAction={() => router.push("/(tabs)/more?section=body")}
+              />
+            ) : (
+              <Card>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+                  BODY COMPOSITION
+                </Text>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                  {[
+                    { label: "Weight", value: bodySummary.currentWeight ? bodySummary.currentWeight.toFixed(1) + "kg" : "—" },
+                    { label: "Body fat", value: latestInBody?.body_fat_pct != null ? latestInBody.body_fat_pct.toFixed(1) + "%" : "—" },
+                    { label: "Muscle", value: latestInBody?.skeletal_muscle_mass_kg != null ? latestInBody.skeletal_muscle_mass_kg.toFixed(1) + "kg" : "—" },
+                  ].map((stat) => (
+                    <View key={stat.label} style={{ alignItems: "center", flex: 1 }}>
+                      <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>{stat.value}</Text>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>{stat.label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </Card>
+            )}
 
-            <Card elevated>\n              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>\n                <Feather name="target" size={16} color={M3.colors.primary} />\n                <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>Body composition</Text>\n              </View>\n              <View style={{ gap: 8 }}>\n                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>\n                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>Current body fat</Text>\n                  <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{latestInBody?.body_fat_pct != null ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "No InBody data"}</Text>\n                </View>\n                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18 }}>Projections are shown only when a personal body-fat target is configured.</Text>\n              </View>\n            </Card>\n\n            {/* Weight history mini chart */}
+            {hasBodyData && latestInBody?.body_fat_pct != null && (
+              <Card>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                  <Feather name="target" size={16} color={M3.colors.primary} />
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>Body composition</Text>
+                </View>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18 }}>
+                  Latest body fat: {latestInBody.body_fat_pct.toFixed(1)}%.
+                </Text>
+              </Card>
+            )}
+
+            {/* Weight history mini chart */}
             {weekWeightHistory.length > 0 && (
               <Card>
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
@@ -312,7 +333,7 @@ export default function ProgressScreen() {
             {inBodyRecords.length > 1 && (
               <Card>
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-                  INBODY HISTORY
+                  BODY SCAN HISTORY
                 </Text>
                 {inBodyRecords.slice(-5).reverse().map((record) => (
                   <View
@@ -342,15 +363,7 @@ export default function ProgressScreen() {
               </Card>
             )}
 
-            {weightHistory.length === 0 && inBodyRecords.length === 0 && (
-              <EmptyState
-                icon="user"
-                title={isCurrentWeek ? "No body data yet" : "No data for this week"}
-                subtitle={isCurrentWeek ? "Log your daily weight or import an InBody report to start tracking." : "No weight or InBody data logged for this week."}
-                actionLabel={isCurrentWeek ? "Log Weight" : undefined}
-                onAction={isCurrentWeek ? () => router.push("/(tabs)/more?section=body") : undefined}
-              />
-            )}
+
           </>
         )}
 
@@ -415,6 +428,15 @@ export default function ProgressScreen() {
         {/* ── Nutrition ── */}
         {activeSection === "nutrition" && (
           <>
+            {!hasNutritionData ? (
+              <EmptyState
+                icon="pie-chart"
+                title="Log your first meal"
+                subtitle="Weekly calories, protein hit rate and streaks appear after your first logged day."
+                actionLabel="Log food"
+                onAction={() => router.push("/modals/log-food")}
+              />
+            ) : (
             <Card>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 {isCurrentWeek ? "THIS WEEK" : "WEEK"} NUTRITION SUMMARY
@@ -445,24 +467,7 @@ export default function ProgressScreen() {
             </Card>
 
             <Card elevated>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
-                PROTEIN ANALYSIS
-              </Text>
-              <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
-                {nutritionSummary.proteinGapAnalysis}
-              </Text>
-            </Card>
-
-            {weekNutritionHistory.length === 0 && (
-              <EmptyState
-                icon="pie-chart"
-                title={isCurrentWeek ? "No nutrition data" : "No data for this week"}
-                subtitle={isCurrentWeek ? "Start logging food to see your nutrition analytics." : "No nutrition data logged for this week."}
-                actionLabel={isCurrentWeek ? "Log Food" : undefined}
-                onAction={isCurrentWeek ? () => router.push("/(tabs)/nutrition") : undefined}
-              />
-            )}
-          </>
+              <Text style={{ color: M3.            )}         </>
         )}
 
         {/* ── Recovery ── */}
