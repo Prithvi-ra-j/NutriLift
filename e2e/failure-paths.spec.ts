@@ -10,7 +10,7 @@ test.describe("failure-path UX", () => {
 
   test("Coach exposes recovery actions when AI is unavailable", async ({ page }) => {
     await openApp(page);
-    await page.getByText("Coach", { exact: true }).click();
+    await page.getByText("Coach", { exact: true }).last().click();
 
     await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Open Account" })).toBeVisible();
