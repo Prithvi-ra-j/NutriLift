@@ -118,9 +118,9 @@ export default function ProgressScreen() {
   );
 
   const nutritionSummary = computeNutritionSummary(weekNutritionHistory, proteinTarget);
+  const latestInBody = inBodyRecords[inBodyRecords.length - 1] ?? null;
   const hasBodyData = weekWeightHistory.length > 0 || latestInBody != null;
   const hasNutritionData = weekNutritionHistory.length > 0;
-  const latestInBody = inBodyRecords[inBodyRecords.length - 1] ?? null;
   const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
 
   const goToPreviousWeek = () => {
