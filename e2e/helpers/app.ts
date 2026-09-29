@@ -24,6 +24,6 @@ export async function openProfile(page: Page) {
 }
 
 export async function openMore(page: Page) {
-  await page.getByText("More", { exact: true }).click();
+  await page.getByText("More", { exact: true }).last().click();
   await expect(page.getByText("MORE", { exact: true })).toBeVisible();
 }
