@@ -13,7 +13,7 @@ test.describe("visual evidence", () => {
     await openMore(page);
     await page.screenshot({ path: "test-results/more.png", fullPage: true });
 
-    await page.getByText("Coach", { exact: true }).click();
+    await page.getByText("Coach", { exact: true }).last().click();
     await page.screenshot({ path: "test-results/coach.png", fullPage: true });
   });
 });
