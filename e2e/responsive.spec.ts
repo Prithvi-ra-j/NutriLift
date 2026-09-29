@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "playwright/test";
 import { openApp, openMore, openProfile } from "./helpers/app";
 
 for (const viewport of [
