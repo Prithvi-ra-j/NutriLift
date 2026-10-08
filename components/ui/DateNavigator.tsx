@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { M3 } from "../../design-system/tokens";
+import { getLocalDateKey } from "../../lib/utils/date";
 
 interface DateNavigatorProps {
   selectedDate: string; // YYYY-MM-DD
@@ -32,7 +33,7 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
   const days = getWeekForDate(selected);
 
   const isToday = (date: Date) => {
-    return date.toISOString().split("T")[0] === today.toISOString().split("T")[0];
+    return getLocalDateKey(date) === getLocalDateKey(today);
   };
 
   const isSelected = (date: Date) => {
