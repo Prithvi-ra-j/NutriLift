@@ -130,7 +130,7 @@ export default function CoachScreen() {
       const errMsg: AiConversation = {
         id: uuid.v4() as string,
         role: "assistant",
-        content: `Error: ${errorMsg}. Please check your Groq API configuration.`,
+        content: `Error: ${errorMsg}. Please check the AI gateway configuration and try again.`,
         context_snapshot: null,
         created_at: Math.floor(Date.now() / 1000),
       };
