@@ -20,6 +20,7 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { getLocalDateKey } from "../../lib/utils/date";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -39,7 +40,7 @@ export default function LogFoodModal() {
   const [parseNotes, setParseNotes] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateKey();
 
   const handleParse = async () => {
     if (!input.trim()) return;
