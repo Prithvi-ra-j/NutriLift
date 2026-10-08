@@ -22,21 +22,7 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { bottom }]}>
       <View style={styles.bar}>
-        {ITEMS.slice(0, 2).map((item) => (
-          <TabItem key={item.route} item={item} state={state} navigation={navigation} />
-        ))}
-
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel="Quick add"
-          activeOpacity={0.88}
-          onPress={() => router.push("/modals/log-food")}
-          style={styles.addButton}
-        >
-          <Feather name="plus" size={28} color={M3.colors.onPrimary} />
-        </TouchableOpacity>
-
-        {ITEMS.slice(2).map((item) => (
+        {ITEMS.map((item) => (
           <TabItem key={item.route} item={item} state={state} navigation={navigation} />
         ))}
       </View>
@@ -135,16 +121,5 @@ const styles = StyleSheet.create({
   labelActive: {
     color: M3.colors.primary,
     fontFamily: "DMSans_700Bold",
-  },
-  addButton: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    marginHorizontal: 2,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: M3.colors.primary,
-    borderWidth: 5,
-    borderColor: M3.colors.background,
   },
 });
