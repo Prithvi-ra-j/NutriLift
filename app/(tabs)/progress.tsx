@@ -491,7 +491,7 @@ export default function ProgressScreen() {
                 title={isCurrentWeek ? "No nutrition data" : "No data for this week"}
                 subtitle={isCurrentWeek ? "Start logging food to see your nutrition analytics." : "No nutrition data logged for this week."}
                 actionLabel={isCurrentWeek ? "Log Food" : undefined}
-                onAction={isCurrentWeek ? () => router.push("/(tabs)/nutrition") : undefined}
+                onAction={isCurrentWeek ? () => router.push("/modals/log-food") : undefined}
               />
             )}
           </>
