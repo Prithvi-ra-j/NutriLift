@@ -184,7 +184,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 120, gap: 18 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -200,15 +200,15 @@ export default function DashboardScreen() {
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
               {formatDate(new Date())}
             </Text>
-            <Text style={{ color: M3.colors.onSurface, fontSize: 26, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 30, lineHeight: 34, fontFamily: "BebasNeue_400Regular", letterSpacing: 0.4 }}>
               {getGreeting()}, {USER_PROFILE.name}
             </Text>
           </View>
           <View
             style={{
-              width: 44,
-              height: 44,
-              borderRadius: 22,
+              width: 42,
+              height: 42,
+              borderRadius: 21,
               backgroundColor: M3.colors.primaryContainer,
               alignItems: "center",
               justifyContent: "center",
@@ -261,36 +261,29 @@ export default function DashboardScreen() {
           </View>
         </Card>
 
-        {/* ── Stats Row ── */}
-        <View style={{ flexDirection: "row", gap: 12 }}>
+        {/* ── Stats Grid ── */}
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
           {[
             { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${USER_PROFILE.targets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
             { label: "Calories", value: calories.toFixed(0), sub: `/ ${USER_PROFILE.targets.calories}`, color: M3.colors.primary, icon: "zap" as const },
             { label: "Volume", value: session?.total_volume_kg ? `${(session.total_volume_kg / 1000).toFixed(1)}t` : "—", sub: "today", color: M3.colors.tertiary, icon: "trending-up" as const },
             { label: "Recovery", value: recoveryScore ? `${recoveryScore}` : "—", sub: "/ 100", color: M3.colors.success, icon: "heart" as const },
           ].map((stat) => (
-            <Card key={stat.label} style={{ flex: 1, padding: 12, alignItems: "center", gap: 6 }}>
-              <View
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: stat.color + "22",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Feather name={stat.icon} size={13} color={stat.color} />
+            <Card key={stat.label} style={{ width: "48.5%", padding: 14 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
+                <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: stat.color + "18", alignItems: "center", justifyContent: "center" }}>
+                  <Feather name={stat.icon} size={14} color={stat.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
+                    {stat.label.toUpperCase()}
+                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "baseline", gap: 3, marginTop: 2 }}>
+                    <Text style={{ color: stat.color, fontSize: 18, fontFamily: "DMSans_700Bold" }}>{stat.value}</Text>
+                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>{stat.sub}</Text>
+                  </View>
+                </View>
               </View>
-              <Text style={{ color: stat.color, fontSize: 17, fontFamily: "DMSans_700Bold" }}>
-                {stat.value}
-              </Text>
-              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
-                {stat.sub}
-              </Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_500Medium", letterSpacing: 0.3 }}>
-                {stat.label.toUpperCase()}
-              </Text>
             </Card>
           ))}
         </View>
