@@ -23,6 +23,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { getLocalDateKey } from "../../lib/utils/date";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
 
@@ -32,7 +33,7 @@ export default function ProgressScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   // Week navigation state
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getLocalDateKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
@@ -53,8 +54,8 @@ export default function ProgressScreen() {
     sunday.setDate(monday.getDate() + 6);
     
     return {
-      start: monday.toISOString().split("T")[0],
-      end: sunday.toISOString().split("T")[0],
+      start: getLocalDateKey(monday),
+      end: getLocalDateKey(sunday),
       monday,
       sunday,
     };
