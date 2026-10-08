@@ -22,6 +22,7 @@ import { MacroRing } from "../../components/ui/MacroRing";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { getLocalDateKey } from "../../lib/utils/date";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -52,7 +53,7 @@ interface AdherenceDot {
 }
 
 export default function DashboardScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateKey();
   const { nutrition, session, setNutrition, setSession, setFoodLogs } = useTodayStore();
   const { coachInsight } = useUIStore();
 
@@ -117,7 +118,7 @@ export default function DashboardScreen() {
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split("T")[0];
+        const dateStr = getLocalDateKey(d);
         const dayData = last7Days.find((n) => n.date === dateStr);
 
         let status: AdherenceDot["status"] = "empty";
