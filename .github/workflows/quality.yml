@@ -74,4 +74,21 @@ jobs:
 
       - name: Expo diagnostics
         if: always()
-        run: npx expo-doctor
+        run: |
+          set +e
+          npx expo-doctor > expo-doctor.log 2>&1
+          status=$?
+          cat expo-doctor.log
+          echo $status > expo-doctor.exit
+          exit $status
+        continue-on-error: true
+
+      - name: Upload Expo diagnostics
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: expo-doctor-log
+          path: |
+            expo-doctor.log
+            expo-doctor.exit
+          if-no-files-found: error
