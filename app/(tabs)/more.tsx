@@ -559,6 +559,8 @@ export default function MoreScreen() {
                 </View>
               </View>
             </Card>
+          </>
+        )}
 
         {/* ── Settings ── */}
         {activeSection === "settings" && (
