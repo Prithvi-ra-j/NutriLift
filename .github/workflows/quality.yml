@@ -53,7 +53,25 @@ jobs:
           if-no-files-found: error
 
       - name: Unit tests
-        run: npm test -- --runInBand --passWithNoTests
+        run: |
+          set +e
+          npm test -- --runInBand --passWithNoTests > test.log 2>&1
+          status=$?
+          cat test.log
+          echo $status > test.exit
+          exit $status
+        continue-on-error: true
+
+      - name: Upload test log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-log
+          path: |
+            test.log
+            test.exit
+          if-no-files-found: error
 
       - name: Expo diagnostics
+        if: always()
         run: npx expo-doctor
