@@ -1,3 +1,4 @@
+import { getLocalDateKey } from "../../lib/utils/date";
 import { useState } from "react";
 import {
   View,
@@ -37,7 +38,7 @@ export default function MonthlyReportModal() {
 
     try {
       const startDate = `${currentMonth}-01`;
-      const endDate = new Date().toISOString().split("T")[0];
+      const endDate = getLocalDateKey();
 
       const [nutrition, sessions, prs, inBodyRecords, weightHistory, recoveryLogs, supplementAdherence] =
         await Promise.all([
