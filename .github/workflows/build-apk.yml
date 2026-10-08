@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - design/pinterest-polish
   workflow_dispatch:
 
 jobs:
@@ -35,4 +36,20 @@ jobs:
       - name: Build Android preview
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas build --platform android --profile preview --non-interactive
+        run: |
+          set +e
+          eas build --platform android --profile preview --non-interactive 2>&1 | tee eas-build.log
+          status=${PIPESTATUS[0]}
+          echo $status > eas-build.exit
+          exit $status
+        continue-on-error: true
+
+      - name: Upload EAS build log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eas-build-log
+          path: |
+            eas-build.log
+            eas-build.exit
+          if-no-files-found: error
