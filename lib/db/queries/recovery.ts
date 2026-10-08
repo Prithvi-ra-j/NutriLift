@@ -1,3 +1,4 @@
+import { getLocalDateKey } from "../../utils/date";
 // @ts-nocheck
 import { eq, gte, lte, and, desc } from "drizzle-orm";
 import { db } from "../client";
@@ -27,7 +28,7 @@ export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
 export async function getRecentRecoveryLogs(days: number = 7): Promise<RecoveryLog[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = getLocalDateKey(cutoff);
 
   return db
     .select()
