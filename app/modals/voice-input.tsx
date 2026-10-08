@@ -27,7 +27,7 @@ export default function VoiceInputModal() {
       if (!isGroqConfigured()) {
         Alert.alert(
           "AI service unavailable",
-          "Groq API key is not configured. Please add GROQ_API_KEY to your .env file.",
+          "The AI gateway is not configured. Please configure the Supabase AI gateway before using voice logging.",
           [{ text: "OK" }]
         );
         return;
