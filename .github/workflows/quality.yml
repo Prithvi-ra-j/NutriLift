@@ -6,10 +6,8 @@ on:
       - main
   push:
     branches:
-      - design/pinterest-polish
-  push:
-    branches:
       - main
+      - design/pinterest-polish
   workflow_dispatch:
 
 concurrency:
