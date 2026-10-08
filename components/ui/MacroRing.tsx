@@ -1,4 +1,5 @@
 import { View, Text } from "react-native";
+import { Fragment } from "react";
 import Svg, { Circle } from "react-native-svg";
 import { M3 } from "../../design-system/tokens";
 
@@ -39,7 +40,7 @@ export function MacroRing({
             const circumference = 2 * Math.PI * ring.radius;
             const progress = Math.max(0, Math.min(1, ring.pct));
             return (
-              <View key={ring.radius}>
+              <Fragment key={ring.radius}>
                 <Circle
                   cx={center}
                   cy={center}
@@ -61,7 +62,7 @@ export function MacroRing({
                   rotation="-90"
                   origin={center + ", " + center}
                 />
-              </View>
+              </Fragment>
             );
           })}
         </Svg>
