@@ -26,7 +26,7 @@ export default function VoiceInputModal() {
       // Check if Groq is configured
       if (!isGroqConfigured()) {
         Alert.alert(
-          "API Key Required",
+          "AI service unavailable",
           "Groq API key is not configured. Please add GROQ_API_KEY to your .env file.",
           [{ text: "OK" }]
         );
