@@ -1,3 +1,4 @@
+import { getLocalDateKey } from "../utils/date";
 import type { BodyStat } from "../db/schema";
 import { USER_PROFILE } from "../constants/user-profile";
 
@@ -79,7 +80,7 @@ export function computeBodySummary(
       const weeksNeeded = (currentBF - targetBF) / weeklyFatLossPct;
       const projectedDate = new Date(today);
       projectedDate.setDate(today.getDate() + weeksNeeded * 7);
-      projectedBFDate = projectedDate.toISOString().split("T")[0];
+      projectedBFDate = getLocalDateKey(projectedDate);
       onTrackForGoal = projectedDate <= goalDate;
     }
   }
