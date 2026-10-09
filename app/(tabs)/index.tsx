@@ -1,26 +1,21 @@
 import { useEffect, useState, useCallback } from "react";
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-} from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useTodayStore } from "../../lib/stores/today.store";
 import { useUIStore } from "../../lib/stores/ui.store";
-import { getDailyNutrition, getFoodLogsForDate, getLast7DaysNutrition } from "../../lib/db/queries/nutrition";
+import {
+  getDailyNutrition,
+  getFoodLogsForDate,
+  getLast7DaysNutrition,
+} from "../../lib/db/queries/nutrition";
 import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { getRecoveryLog } from "../../lib/db/queries/recovery";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
-import { DAY_TYPES, type DayType } from "../../lib/constants/exercises";
 import { Card } from "../../components/ui/Card";
-import { MacroBar } from "../../components/ui/MacroBar";
-import { MacroRing } from "../../components/ui/MacroRing";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { DailyNutrition, WorkoutSession } from "../../lib/db/schema";
+import type { WorkoutSession } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
 import { getLocalDateKey } from "../../lib/utils/date";
 
@@ -31,25 +26,18 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
-}
-
-function getDayTypeBadgeColor(dayType: string): string {
-  if (dayType.startsWith("Push")) return "#FF6B6B";
-  if (dayType.startsWith("Pull")) return "#4ECDC4";
-  if (dayType.startsWith("Legs")) return "#45B7D1";
-  if (dayType === "Marathon" || dayType === "Cardio") return M3.colors.error;
-  return M3.colors.onSurfaceVariant;
-}
-
-interface AdherenceDot {
-  date: string;
-  status: "green" | "amber" | "red" | "empty";
+function getTodayDayType(): string {
+  const dayOfWeek = new Date().getDay();
+  if (dayOfWeek === 0) return "Cardio";
+  const dayTypeMap: Record<number, string> = {
+    1: "Push A",
+    2: "Pull A",
+    3: "Legs A",
+    4: "Push B",
+    5: "Pull B",
+    6: "Legs B",
+  };
+  return dayTypeMap[dayOfWeek] || "";
 }
 
 export default function DashboardScreen() {
@@ -59,31 +47,9 @@ export default function DashboardScreen() {
 
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [adherenceDots, setAdherenceDots] = useState<AdherenceDot[]>([]);
+  const [weeklyProteinPct, setWeeklyProteinPct] = useState(0);
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
-
-  // Determine today's day type based on day of week
-  const getTodayDayType = (): string => {
-    const dayOfWeek = new Date().getDay();
-    
-    // Sunday = Cardio (Marathon day)
-    if (dayOfWeek === 0) return "Cardio";
-    
-    // Monday = Push A, Tuesday = Pull A, Wednesday = Legs A
-    // Thursday = Push B, Friday = Pull B, Saturday = Legs B
-    const dayTypeMap: Record<number, string> = {
-      1: "Push A", // Monday
-      2: "Pull A", // Tuesday
-      3: "Legs A", // Wednesday
-      4: "Push B", // Thursday
-      5: "Pull B", // Friday
-      6: "Legs B", // Saturday
-    };
-    
-    return dayTypeMap[dayOfWeek] || "";
-  };
-
-  const [todayDayType, setTodayDayType] = useState<string>(getTodayDayType());
+  const [todayDayType, setTodayDayType] = useState(getTodayDayType());
 
   const loadData = useCallback(async () => {
     try {
@@ -98,40 +64,18 @@ export default function DashboardScreen() {
 
       setNutrition(nutritionData);
       setFoodLogs(foodLogsData);
-      
-      // Handle session and day type
+
       if (sessionsData[0]) {
         setSession(sessionsData[0]);
-        // On Sunday, always show "Cardio" regardless of what workout was logged
-        if (new Date().getDay() === 0) {
-          setTodayDayType("Cardio");
-        } else {
-          setTodayDayType(sessionsData[0].day_type);
-        }
+        setTodayDayType(new Date().getDay() === 0 ? "Cardio" : sessionsData[0].day_type);
       } else {
         setSession(null);
         setTodayDayType(getTodayDayType());
       }
 
-      // Build 7-day adherence dots
-      const dots: AdherenceDot[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = getLocalDateKey(d);
-        const dayData = last7Days.find((n) => n.date === dateStr);
+      const completedDays = last7Days.filter((day) => day.protein_target_met === 1).length;
+      setWeeklyProteinPct(Math.round((completedDays / 7) * 100));
 
-        let status: AdherenceDot["status"] = "empty";
-        if (dayData) {
-          if (dayData.protein_target_met === 1) status = "green";
-          else if ((dayData.adherence_score ?? 0) >= 60) status = "amber";
-          else status = "red";
-        }
-        dots.push({ date: dateStr, status });
-      }
-      setAdherenceDots(dots);
-
-      // Recovery score
       if (recoveryData) {
         const score =
           ((recoveryData.sleep_quality ?? 3) +
@@ -139,6 +83,8 @@ export default function DashboardScreen() {
             (6 - (recoveryData.muscle_soreness ?? 3))) /
           3;
         setRecoveryScore(Math.round((score / 5) * 100));
+      } else {
+        setRecoveryScore(null);
       }
     } catch (err) {
       console.error("Dashboard load error:", err);
@@ -146,7 +92,7 @@ export default function DashboardScreen() {
       setIsLoading(false);
       setRefreshing(false);
     }
-  }, [today]);
+  }, [today, setNutrition, setFoodLogs, setSession]);
 
   useEffect(() => {
     loadData();
@@ -161,13 +107,12 @@ export default function DashboardScreen() {
   const protein = nutrition?.total_protein_g ?? 0;
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
-
-  const caloriePct = Math.min(100, (calories / USER_PROFILE.targets.calories) * 100);
-
-  // Protein pace
-  const mealsLogged = 2; // simplified — would count distinct meals
-  const proteinRemaining = Math.max(0, USER_PROFILE.targets.protein_g - protein);
-  const mealsLeft = Math.max(1, 4 - mealsLogged);
+  const proteinTarget = USER_PROFILE.targets.protein_g;
+  const caloriesTarget = USER_PROFILE.targets.calories;
+  const proteinRemaining = Math.max(0, proteinTarget - protein);
+  const caloriePct = Math.min(100, (calories / caloriesTarget) * 100);
+  const proteinPct = Math.min(100, (protein / proteinTarget) * 100);
+  const mealsLeft = Math.max(1, 4 - Math.min(3, Math.floor((nutrition?.meal_count ?? 0))));
   const proteinPerMeal = proteinRemaining / mealsLeft;
 
   if (isLoading) {
@@ -185,7 +130,12 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
-        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 12, paddingBottom: 120, gap: 18 }}
+        contentContainerStyle={{
+          paddingHorizontal: 18,
+          paddingTop: 12,
+          paddingBottom: 120,
+          gap: 18,
+        }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -195,21 +145,33 @@ export default function DashboardScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-          <View>
-            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-              {formatDate(new Date())}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end" }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
             </Text>
-            <Text style={{ color: M3.colors.onSurface, fontSize: 30, lineHeight: 34, fontFamily: "BebasNeue_400Regular", letterSpacing: 0.4 }}>
+            <Text
+              style={{
+                color: M3.colors.onSurface,
+                fontSize: 30,
+                lineHeight: 34,
+                fontFamily: "BebasNeue_400Regular",
+                letterSpacing: 0.4,
+                marginTop: 2,
+              }}
+            >
               {getGreeting()}, {USER_PROFILE.name}
             </Text>
           </View>
           <View
             style={{
-              width: 42,
-              height: 42,
-              borderRadius: 21,
+              width: 40,
+              height: 40,
+              borderRadius: 20,
               backgroundColor: M3.colors.primaryContainer,
               alignItems: "center",
               justifyContent: "center",
@@ -217,144 +179,190 @@ export default function DashboardScreen() {
               borderColor: M3.colors.primary + "55",
             }}
           >
-            <Text style={{ color: M3.colors.primary, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
+            <Text style={{ color: M3.colors.primary, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
               {USER_PROFILE.name?.charAt(0).toUpperCase() ?? "N"}
             </Text>
           </View>
         </View>
 
-        {/* ── Calorie Ring + Macro Summary ── */}
         <Card>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-            {/* Macro ring */}
-            <MacroRing
-              protein={protein}
-              carbs={carbs}
-              fat={fat}
-              proteinTarget={USER_PROFILE.targets.protein_g}
-              carbsTarget={USER_PROFILE.targets.carbs_g}
-              fatTarget={USER_PROFILE.targets.fat_g}
-              calories={calories}
-              caloriesTarget={USER_PROFILE.targets.calories}
-            />
+          <Text
+            style={{
+              color: M3.colors.onSurfaceVariant,
+              fontSize: 11,
+              letterSpacing: 1,
+              fontFamily: "DMSans_700Bold",
+            }}
+          >
+            TODAY AT A GLANCE
+          </Text>
 
-            {/* Macro bars */}
+          <View style={{ flexDirection: "row", gap: 18, marginTop: 16 }}>
             <View style={{ flex: 1 }}>
-              <MacroBar
-                label="Protein"
-                current={protein}
-                target={USER_PROFILE.targets.protein_g}
-                color={M3.colors.secondary}
-              />
-              <MacroBar
-                label="Carbs"
-                current={carbs}
-                target={USER_PROFILE.targets.carbs_g}
-                color={M3.colors.success}
-              />
-              <MacroBar
-                label="Fat"
-                current={fat}
-                target={USER_PROFILE.targets.fat_g}
-                color={M3.macroColors.fat}
-              />
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+                Protein
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "baseline", marginTop: 3 }}>
+                <Text style={{ color: M3.colors.secondary, fontSize: 24, fontFamily: "DMSans_700Bold" }}>
+                  {protein.toFixed(0)}g
+                </Text>
+                <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                  {" "}/ {proteinTarget}g
+                </Text>
+              </View>
+              <View style={{ height: 5, borderRadius: 3, backgroundColor: M3.colors.surfaceContainerHighest, marginTop: 8 }}>
+                <View
+                  style={{
+                    width: `${proteinPct}%`,
+                    height: "100%",
+                    borderRadius: 3,
+                    backgroundColor: M3.colors.secondary,
+                  }}
+                />
+              </View>
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+                Calories
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "baseline", marginTop: 3 }}>
+                <Text style={{ color: M3.colors.primary, fontSize: 24, fontFamily: "DMSans_700Bold" }}>
+                  {calories.toFixed(0)}
+                </Text>
+                <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                  {" "}/ {caloriesTarget}
+                </Text>
+              </View>
+              <View style={{ height: 5, borderRadius: 3, backgroundColor: M3.colors.surfaceContainerHighest, marginTop: 8 }}>
+                <View
+                  style={{
+                    width: `${caloriePct}%`,
+                    height: "100%",
+                    borderRadius: 3,
+                    backgroundColor: M3.colors.primary,
+                  }}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 18,
+              marginTop: 18,
+              paddingTop: 14,
+              borderTopWidth: 1,
+              borderTopColor: M3.colors.outline,
+            }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+                Recovery
+              </Text>
+              <Text style={{ color: M3.colors.success, fontSize: 18, marginTop: 3, fontFamily: "DMSans_700Bold" }}>
+                {recoveryScore === null ? "Not logged" : `${recoveryScore}/100`}
+              </Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+                Training
+              </Text>
+              <Text style={{ color: M3.colors.tertiary, fontSize: 18, marginTop: 3, fontFamily: "DMSans_700Bold" }}>
+                {session ? "Done" : todayDayType || "Rest"}
+              </Text>
             </View>
           </View>
         </Card>
 
-        {/* ── Stats Grid ── */}
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-          {[
-            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${USER_PROFILE.targets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
-            { label: "Calories", value: calories.toFixed(0), sub: `/ ${USER_PROFILE.targets.calories}`, color: M3.colors.primary, icon: "zap" as const },
-            { label: "Volume", value: session?.total_volume_kg ? `${(session.total_volume_kg / 1000).toFixed(1)}t` : "—", sub: "today", color: M3.colors.tertiary, icon: "trending-up" as const },
-            { label: "Recovery", value: recoveryScore ? `${recoveryScore}` : "—", sub: "/ 100", color: M3.colors.success, icon: "heart" as const },
-          ].map((stat) => (
-            <Card key={stat.label} style={{ width: "48.5%", padding: 14 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 9 }}>
-                <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: stat.color + "18", alignItems: "center", justifyContent: "center" }}>
-                  <Feather name={stat.icon} size={14} color={stat.color} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
-                    {stat.label.toUpperCase()}
-                  </Text>
-                  <View style={{ flexDirection: "row", alignItems: "baseline", gap: 3, marginTop: 2 }}>
-                    <Text style={{ color: stat.color, fontSize: 18, fontFamily: "DMSans_700Bold" }}>{stat.value}</Text>
-                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>{stat.sub}</Text>
-                  </View>
-                </View>
-              </View>
-            </Card>
-          ))}
-        </View>
-
-        {/* ── Protein Pace ── */}
-        {proteinRemaining > 0 && (
+        {proteinRemaining > 0 ? (
           <Card elevated>
+            <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
+              <View
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 17,
+                  backgroundColor: M3.colors.secondary + "18",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Feather name="target" size={16} color={M3.colors.secondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, letterSpacing: 0.8, fontFamily: "DMSans_700Bold" }}>
+                  YOUR BIGGEST OPPORTUNITY
+                </Text>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 15, lineHeight: 21, marginTop: 4, fontFamily: "DMSans_500Medium" }}>
+                  {proteinRemaining.toFixed(0)}g of protein left today.
+                </Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18, marginTop: 2, fontFamily: "DMSans_400Regular" }}>
+                  Aim for about {proteinPerMeal.toFixed(0)}g across your remaining meals.
+                </Text>
+                <TouchableOpacity
+                  onPress={() => router.push("/modals/log-food")}
+                  style={{
+                    alignSelf: "flex-start",
+                    marginTop: 12,
+                    paddingHorizontal: 13,
+                    paddingVertical: 8,
+                    borderRadius: 10,
+                    backgroundColor: M3.colors.primaryContainer,
+                  }}
+                >
+                  <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
+                    Log a meal
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Card>
+        ) : (
+          <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <Feather name="target" size={16} color={M3.colors.secondary} />
-              <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>
-                Need{" "}
-                <Text style={{ color: M3.colors.secondary, fontFamily: "DMSans_700Bold" }}>
-                  {proteinRemaining.toFixed(0)}g
-                </Text>{" "}
-                more protein — {proteinPerMeal.toFixed(0)}g per remaining meal
-              </Text>
+              <Feather name="check-circle" size={18} color={M3.colors.success} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
+                  Protein target reached
+                </Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, marginTop: 2, fontFamily: "DMSans_400Regular" }}>
+                  Nice work. Keep the rest of today balanced.
+                </Text>
+              </View>
             </View>
           </Card>
         )}
 
-        {/* ── 7-Day Adherence Strip ── */}
-        <View style={{ paddingHorizontal: 4 }}>
-          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-            7-DAY PROTEIN ADHERENCE
-          </Text>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            {adherenceDots.map((dot, i) => {
-              const dotColor =
-                dot.status === "green"
-                  ? M3.colors.success
-                  : dot.status === "amber"
-                  ? M3.colors.warning
-                  : dot.status === "red"
-                  ? M3.colors.error
-                  : M3.colors.surfaceContainer;
-              const dayLabel = new Date(dot.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1);
-              return (
-                <View key={i} style={{ alignItems: "center", gap: 4 }}>
-                  <View
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: dotColor + "22",
-                      borderWidth: 2,
-                      borderColor: dotColor,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {dot.status !== "empty" && (
-                      <Feather
-                        name={dot.status === "green" ? "check" : dot.status === "amber" ? "minus" : "x"}
-                        size={12}
-                        color={dotColor}
-                      />
-                    )}
-                  </View>
-                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
-                    {dayLabel}
-                  </Text>
-                </View>
-              );
-            })}
+        <Card>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+            <View>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, letterSpacing: 0.8, fontFamily: "DMSans_700Bold" }}>
+                THIS WEEK
+              </Text>
+              <Text style={{ color: M3.colors.onSurface, fontSize: 15, marginTop: 4, fontFamily: "DMSans_700Bold" }}>
+                Protein consistency
+              </Text>
+            </View>
+            <Text style={{ color: M3.colors.secondary, fontSize: 20, fontFamily: "DMSans_700Bold" }}>
+              {weeklyProteinPct}%
+            </Text>
           </View>
-        </View>
+          <View style={{ height: 7, borderRadius: 4, backgroundColor: M3.colors.surfaceContainerHighest, marginTop: 12 }}>
+            <View
+              style={{
+                width: `${weeklyProteinPct}%`,
+                height: "100%",
+                borderRadius: 4,
+                backgroundColor: M3.colors.secondary,
+              }}
+            />
+          </View>
+        </Card>
 
-        {/* ── Coach Insight ── */}
-        {coachInsight && (
-          <Card elevated>
+        {coachInsight ? (
+          <Card>
             <View style={{ flexDirection: "row", gap: 12 }}>
               <View
                 style={{
@@ -364,88 +372,76 @@ export default function DashboardScreen() {
                   backgroundColor: M3.colors.primaryContainer,
                   alignItems: "center",
                   justifyContent: "center",
-                  flexShrink: 0,
                 }}
               >
                 <Feather name="cpu" size={14} color={M3.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold", marginBottom: 4, letterSpacing: 0.5 }}>
+                <Text style={{ color: M3.colors.primary, fontSize: 10, letterSpacing: 0.8, fontFamily: "DMSans_700Bold" }}>
                   NUTRILIFT COACH
                 </Text>
-                <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 19 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 13, lineHeight: 19, marginTop: 4, fontFamily: "DMSans_400Regular" }}>
                   {coachInsight}
                 </Text>
               </View>
             </View>
           </Card>
-        )}
+        ) : null}
 
-        {/* ── Workout Status ── */}
         <Card>
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-            <View style={{ gap: 3 }}>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
-                TODAY'S WORKOUT
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, letterSpacing: 0.8, fontFamily: "DMSans_700Bold" }}>
+                NEXT UP
               </Text>
-              {session ? (
-                <>
-                  <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
-                    {todayDayType} — Completed
-                  </Text>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                    {session.total_volume_kg?.toFixed(0) ?? 0}kg total volume
-                    {session.duration_min ? ` · ${session.duration_min}min` : ""}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
-                    {todayDayType || "Not started"}
-                  </Text>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                    {todayDayType === "Cardio" ? "Recovery day - cardio & stretching" : "Tap to start your session"}
-                  </Text>
-                </>
-              )}
+              <Text style={{ color: M3.colors.onSurface, fontSize: 18, marginTop: 4, fontFamily: "DMSans_700Bold" }}>
+                {session ? `${todayDayType} · Completed` : todayDayType || "Recovery"}
+              </Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18, marginTop: 3, fontFamily: "DMSans_400Regular" }}>
+                {session
+                  ? `${session.total_volume_kg?.toFixed(0) ?? 0}kg total volume${session.duration_min ? ` · ${session.duration_min}min` : ""}`
+                  : todayDayType === "Cardio"
+                    ? "Recovery day · cardio & mobility"
+                    : "Ready when you are."}
+              </Text>
             </View>
             <TouchableOpacity
               onPress={() => router.push("/(tabs)/workout")}
               style={{
+                width: 46,
+                height: 46,
+                borderRadius: 14,
+                alignItems: "center",
+                justifyContent: "center",
                 backgroundColor: session ? M3.colors.surfaceVariant : M3.colors.primary,
-                borderRadius: 8,
-                padding: 10,
               }}
             >
               <Feather
-                name={session ? "check-circle" : todayDayType === "Cardio" ? "activity" : "zap"}
-                size={18}
+                name={session ? "check" : todayDayType === "Cardio" ? "activity" : "arrow-right"}
+                size={20}
                 color={session ? M3.colors.success : M3.colors.background}
               />
             </TouchableOpacity>
           </View>
         </Card>
 
-        {/* ── Quick Log FAB area ── */}
-        <View style={{ flexDirection: "row", gap: 12 }}>
+        <View style={{ flexDirection: "row", gap: 10 }}>
           <TouchableOpacity
             onPress={() => router.push("/modals/log-food")}
             style={{
               flex: 1,
               backgroundColor: M3.colors.primaryContainer,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: M3.colors.primary,
-              padding: 16,
+              borderRadius: 14,
+              paddingVertical: 14,
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
-              gap: 8,
+              gap: 7,
             }}
           >
-            <Feather name="plus-circle" size={18} color={M3.colors.primary} />
-            <Text style={{ color: M3.colors.primary, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-              Log Food
+            <Feather name="plus-circle" size={17} color={M3.colors.primary} />
+            <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+              Log food
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -453,19 +449,17 @@ export default function DashboardScreen() {
             style={{
               flex: 1,
               backgroundColor: M3.colors.tertiaryContainer,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: M3.colors.tertiary,
-              padding: 16,
+              borderRadius: 14,
+              paddingVertical: 14,
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "center",
-              gap: 8,
+              gap: 7,
             }}
           >
-            <Feather name="activity" size={18} color={M3.colors.tertiary} />
-            <Text style={{ color: M3.colors.tertiary, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-              Log Workout
+            <Feather name="activity" size={17} color={M3.colors.tertiary} />
+            <Text style={{ color: M3.colors.tertiary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+              Log workout
             </Text>
           </TouchableOpacity>
         </View>
