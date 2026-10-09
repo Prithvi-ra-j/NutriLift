@@ -106,7 +106,6 @@ export default function DashboardScreen() {
   const proteinRemaining = Math.max(0, proteinTarget - protein);
   const mealsLeft = 3;
   const proteinPerMeal = proteinRemaining / mealsLeft;
-  const proteinPct = Math.min(100, (protein / proteinTarget) * 100);
   const caloriePct = Math.min(100, (calories / caloriesTarget) * 100);
 
   if (isLoading) {
