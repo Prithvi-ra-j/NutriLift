@@ -11,7 +11,6 @@ interface MacroRingProps {
   carbsTarget: number;
   fatTarget: number;
   calories: number;
-  caloriesTarget: number;
 }
 
 export function MacroRing({
@@ -22,7 +21,6 @@ export function MacroRing({
   carbsTarget,
   fatTarget,
   calories,
-  caloriesTarget,
 }: MacroRingProps) {
   const size = 104;
   const center = size / 2;
