@@ -15,7 +15,6 @@ import { getRecoveryLog } from "../../lib/db/queries/recovery";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { Card } from "../../components/ui/Card";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { WorkoutSession } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
 import { getLocalDateKey } from "../../lib/utils/date";
 
@@ -112,7 +111,7 @@ export default function DashboardScreen() {
   const proteinRemaining = Math.max(0, proteinTarget - protein);
   const caloriePct = Math.min(100, (calories / caloriesTarget) * 100);
   const proteinPct = Math.min(100, (protein / proteinTarget) * 100);
-  const mealsLeft = Math.max(1, 4 - Math.min(3, Math.floor((nutrition?.meal_count ?? 0))));
+  const mealsLeft = 3;
   const proteinPerMeal = proteinRemaining / mealsLeft;
 
   if (isLoading) {
