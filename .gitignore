@@ -93,5 +93,25 @@ Thumbs.db
 expo-env.d.ts
 # @end expo-cli
 
-# Documentation
+# Documentation / planning docs (tracked separately or not needed in repo)
 docs/
+NUTRILIFT_BRUTAL_REVIEW_AND_REPAIR_REPORT.md
+NutriLift_10Plus_Execution_Blueprint.md
+NutriLift_Full_Implementation_Master_Plan.md
+
+# One-off fix/utility scripts (not part of app source)
+fix-ts.js
+fix-ts-2.js
+check-tasks.js
+
+# Seed / dummy data scripts (dev only)
+lib/db/seed-dummy-data.ts
+
+# Local images dump folder (personal photos, not app assets)
+iamges/
+
+# Bevel export artifacts
+bevel-545/
+
+# Apex legacy folder
+apex/

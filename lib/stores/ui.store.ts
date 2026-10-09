@@ -3,7 +3,6 @@ import { immer } from "zustand/middleware/immer";
 
 type ModalType =
   | "log-food"
-  | "log-exercise"
   | "inbody-paste"
   | "monthly-report"
   | "voice-input"

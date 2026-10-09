@@ -1,6 +1,6 @@
 import "../global.css";
 import { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, Platform } from "react-native";
+import { View, Text, ActivityIndicator, Platform, AppState } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -18,10 +18,25 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
 import { M3 } from "../design-system/tokens";
 import { syncToSupabase } from "../lib/integrations/life-os/syncClient";
+import { useTodayStore } from "../lib/stores/today.store";
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const { setDate } = useTodayStore();
+
+  // ── Refresh today's date when app comes to foreground ─────────────────────
+  // Prevents the date from being stuck at the day the app was first launched
+  // (e.g. app left open overnight).
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") {
+        const freshDate = new Date().toISOString().split("T")[0];
+        setDate(freshDate);
+      }
+    });
+    return () => subscription.remove();
+  }, [setDate]);
 
   const [fontsLoaded] = useFonts({
     BebasNeue_400Regular,
@@ -76,13 +91,6 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="modals/log-food"
-            options={{
-              presentation: "modal",
-              headerShown: false,
-            }}
-          />
-          <Stack.Screen
-            name="modals/log-exercise"
             options={{
               presentation: "modal",
               headerShown: false,

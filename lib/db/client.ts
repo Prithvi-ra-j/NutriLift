@@ -1,4 +1,8 @@
 import { Platform } from "react-native";
+// NOTE: schema.ts is used for TypeScript types (via drizzle's $inferSelect/$inferInsert)
+// only. The canonical runtime migration source is the raw SQL in runMigrations() below.
+// Do NOT add columns to schema.ts without also adding a corresponding addColumnIfMissing
+// call here, and vice versa.
 import * as schema from "./schema";
 
 // Platform-specific imports and initialization
@@ -326,7 +330,9 @@ export async function runMigrations(): Promise<void> {
   await addColumnIfMissing("personal_records", "updated_at", "TEXT");
   await addColumnIfMissing("body_stats", "updated_at", "TEXT");
   await addColumnIfMissing("recovery_logs", "updated_at", "TEXT");
-  await addColumnIfMissing("sync_tombstones", "external_id", "TEXT");
+  // NOTE: sync_tombstones addColumnIfMissing is intentionally placed AFTER the second
+  // execAsync block below, which is where the CREATE TABLE sync_tombstones lives.
+  // Running ALTER TABLE before CREATE TABLE would silently fail on first install.
 
   const migrationTimestamp = new Date().toISOString();
   await sqlite.execAsync(`
@@ -369,4 +375,7 @@ export async function runMigrations(): Promise<void> {
       updated_at TEXT NOT NULL
     );
   `);
+
+  // ── sync_tombstones additive column — must run AFTER the CREATE TABLE above ──
+  await addColumnIfMissing("sync_tombstones", "external_id", "TEXT");
 }

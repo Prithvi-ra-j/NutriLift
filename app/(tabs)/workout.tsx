@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+﻿import { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -41,12 +40,13 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
+import { AddExerciseModal, CreateCustomExerciseModal } from "../../components/ui/workout/ExerciseModals";
+import { TemplateSelectorModal, SwapExerciseModal, EditExerciseModal } from "../../components/ui/workout/WorkoutModals";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface SetForm {
   exerciseLogId: string;
@@ -64,9 +64,9 @@ interface SetForm {
   durationMin: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-/** Format seconds → "1m 30s" or "45s" */
+/** Format seconds â†’ "1m 30s" or "45s" */
 function formatDuration(sec: number): string {
   if (sec >= 60) {
     const m = Math.floor(sec / 60);
@@ -80,16 +80,16 @@ function formatDuration(sec: number): string {
 function setLabel(set: SetLog, type: ExerciseType): string {
   switch (type) {
     case "reps_only":
-      return `× ${set.reps} reps`;
+      return `Ã— ${set.reps} reps`;
     case "duration":
       return formatDuration(set.duration_sec ?? set.reps ?? 0);
     case "distance_duration": {
       const dist = set.distance_km ?? 0;
       const dur = set.duration_sec != null ? Math.round(set.duration_sec / 60) : set.reps;
-      return `${dist.toFixed(1)}km · ${dur}min`;
+      return `${dist.toFixed(1)}km Â· ${dur}min`;
     }
     default:
-      return `${set.weight_kg}kg × ${set.reps}`;
+      return `${set.weight_kg}kg Ã— ${set.reps}`;
   }
 }
 
@@ -125,7 +125,7 @@ function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, e
   };
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function WorkoutScreen() {
   const todayStr = new Date().toISOString().split("T")[0];
@@ -159,16 +159,16 @@ export default function WorkoutScreen() {
   const [progressionAlerts, setProgressionAlerts] = useState<Record<string, string>>({});
   const [completedDayTypes, setCompletedDayTypes] = useState<Set<string>>(new Set());
 
-  // ── Set form state ──
+  // â”€â”€ Set form state â”€â”€
   const [addSetForm, setAddSetForm] = useState<SetForm | null>(null);
   const [editingSetId, setEditingSetId] = useState<string | null>(null);
   const [editSetForm, setEditSetForm] = useState<SetForm | null>(null);
 
-  // ── Swap exercise state ──
+  // â”€â”€ Swap exercise state â”€â”€
   const [swapExerciseId, setSwapExerciseId] = useState<string | null>(null);
   const [swapSearch, setSwapSearch] = useState("");
 
-  // ── Custom Exercise state ──
+  // â”€â”€ Custom Exercise state â”€â”€
   const [customExercises, setCustomExercises] = useState<CustomExercise[]>([]);
   const [showCreateCustom, setShowCreateCustom] = useState(false);
   const [customExName, setCustomExName] = useState("");
@@ -176,13 +176,13 @@ export default function WorkoutScreen() {
   const [customExMuscle, setCustomExMuscle] = useState("chest");
   const [customExEquip, setCustomExEquip] = useState("dumbbell");
 
-  // ── Edit Logged Exercise state ──
+  // â”€â”€ Edit Logged Exercise state â”€â”€
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const [editExerciseName, setEditExerciseName] = useState("");
   const [editExerciseMuscle, setEditExerciseMuscle] = useState("");
   const [editExerciseEquip, setEditExerciseEquip] = useState("");
 
-  // ─── Load ──────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Load â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const loadWorkout = useCallback(async () => {
     setSession(null);
@@ -230,7 +230,7 @@ export default function WorkoutScreen() {
     loadWorkout();
   }, [loadWorkout]);
 
-  // ─── Session ───────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Session â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const ensureSession = async (): Promise<string> => {
     if (session) return session.id;
@@ -252,7 +252,7 @@ export default function WorkoutScreen() {
     return sessionId;
   };
 
-  // ─── Add Exercise ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ Add Exercise â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const addExercise = async (exerciseName: string, muscleGroup: string, equipment: string, exerciseType: ExerciseType) => {
     const sessionId = await ensureSession();
@@ -302,7 +302,7 @@ export default function WorkoutScreen() {
     addExercise(newEx.exercise_name, newEx.muscle_group || "other", newEx.equipment || "other", newEx.exercise_type as ExerciseType);
   };
 
-  // ─── Add Exercises from Template ───────────────────────────────────────────
+  // â”€â”€â”€ Add Exercises from Template â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const addExercisesFromTemplate = async () => {
     if (selectedTemplateExercises.size === 0) {
@@ -337,7 +337,7 @@ export default function WorkoutScreen() {
     loadWorkout();
   };
 
-  // ─── Delete Exercise ───────────────────────────────────────────────────────
+  // â”€â”€â”€ Delete Exercise â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const confirmDeleteExercise = (exerciseId: string, exerciseName: string) => {
     Alert.alert(
@@ -367,7 +367,7 @@ export default function WorkoutScreen() {
     );
   };
 
-  // ─── Swap Exercise ─────────────────────────────────────────────────────────
+  // â”€â”€â”€ Swap Exercise â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const swapExercise = async (newExerciseName: string) => {
     if (!swapExerciseId) return;
@@ -386,7 +386,7 @@ export default function WorkoutScreen() {
     loadWorkout();
   };
 
-  // ─── Edit Exercise Log ─────────────────────────────────────────────────────
+  // â”€â”€â”€ Edit Exercise Log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const saveEditExercise = async () => {
     if (!editingExerciseId) return;
@@ -403,7 +403,7 @@ export default function WorkoutScreen() {
     loadWorkout();
   };
 
-  // ─── Log Set ───────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Log Set â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const validateSetMetrics = (type: ExerciseType, weightStr: string, repsStr: string, durSecStr: string, distKmStr: string, durMinStr: string) => {
     let weight = 0; let reps = 0; let durationSec: number | null = null; let distanceKm: number | null = null;
@@ -477,7 +477,7 @@ export default function WorkoutScreen() {
     loadWorkout();
   };
 
-  // ─── Edit Set ──────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Edit Set â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const openEditSet = (set: SetLog, exercise: ExerciseLog) => {
     const exType = (exercise.exercise_type as ExerciseType) ?? "weight_reps";
@@ -536,7 +536,7 @@ export default function WorkoutScreen() {
     );
   };
 
-  // ─── Filter Helpers ────────────────────────────────────────────────────────
+  // â”€â”€â”€ Filter Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   const allExercises = [
     ...EXERCISE_LIBRARY,
@@ -570,7 +570,7 @@ export default function WorkoutScreen() {
     );
   });
 
-  // ─── Sub-renders ───────────────────────────────────────────────────────────
+  // â”€â”€â”€ Sub-renders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /** Shared input field style */
   const inputStyle = {
@@ -636,7 +636,7 @@ export default function WorkoutScreen() {
                   value={form.rpe}
                   onChangeText={(v) => onChange({ rpe: v })}
                   keyboardType="number-pad"
-                  placeholder="—"
+                  placeholder="â€”"
                   placeholderTextColor={M3.colors.onSurfaceMuted}
                   style={inputStyle}
                 />
@@ -667,7 +667,7 @@ export default function WorkoutScreen() {
                   value={form.rpe}
                   onChangeText={(v) => onChange({ rpe: v })}
                   keyboardType="number-pad"
-                  placeholder="—"
+                  placeholder="â€”"
                   placeholderTextColor={M3.colors.onSurfaceMuted}
                   style={inputStyle}
                 />
@@ -778,7 +778,7 @@ export default function WorkoutScreen() {
     );
   };
 
-  // ─── Main Render ───────────────────────────────────────────────────────────
+  // â”€â”€â”€ Main Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   if (isLoading) {
     return (
@@ -799,7 +799,7 @@ export default function WorkoutScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Header ── */}
+        {/* â”€â”€ Header â”€â”€ */}
         <ScreenHeader
           title="WORKOUT"
           subtitle={selectedDayType}
@@ -808,10 +808,10 @@ export default function WorkoutScreen() {
           onAction={() => setShowAddExercise(true)}
         />
 
-        {/* ── Date Navigator ── */}
+        {/* â”€â”€ Date Navigator â”€â”€ */}
         <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />
 
-        {/* ── Marathon Day Notice ── */}
+        {/* â”€â”€ Marathon Day Notice â”€â”€ */}
         {new Date(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
@@ -828,7 +828,7 @@ export default function WorkoutScreen() {
           </Card>
         )}
 
-        {/* ── Sunday Cardio Selector ── */}
+        {/* â”€â”€ Sunday Cardio Selector â”€â”€ */}
         {!session && new Date(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -855,7 +855,7 @@ export default function WorkoutScreen() {
           </Card>
         )}
 
-        {/* ── Day Type Selector ── */}
+        {/* â”€â”€ Day Type Selector â”€â”€ */}
         {!session && new Date(selectedDate).getDay() !== 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
@@ -916,7 +916,7 @@ export default function WorkoutScreen() {
           </Card>
         )}
 
-        {/* ── Workout Stats ── */}
+        {/* â”€â”€ Workout Stats â”€â”€ */}
         {session && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -959,7 +959,7 @@ export default function WorkoutScreen() {
           </Card>
         )}
 
-        {/* ── Exercise List ── */}
+        {/* â”€â”€ Exercise List â”€â”€ */}
         {exercises.map((exercise) => {
           const exerciseSets = sets[exercise.id] ?? [];
           const exType = (exercise.exercise_type as ExerciseType) ?? "weight_reps";
@@ -1069,7 +1069,7 @@ export default function WorkoutScreen() {
                   const isEditing = editingSetId === set.id;
                   return (
                     <View key={set.id}>
-                      {/* Set pill — tap to edit */}
+                      {/* Set pill â€” tap to edit */}
                       {!isEditing && (
                         <TouchableOpacity
                           onPress={() => openEditSet(set, exercise)}
@@ -1179,7 +1179,7 @@ export default function WorkoutScreen() {
           </Card>
         )}
 
-        {/* ── Info Cards ── */}
+        {/* â”€â”€ Info Cards â”€â”€ */}
         {session && exercises.length > 0 && (
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Card elevated style={{ flex: 1 }}>
@@ -1201,521 +1201,76 @@ export default function WorkoutScreen() {
                 </Text>
               </View>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular", lineHeight: 14 }}>
-                Weight × reps (weight exercises only). 1t = 1,000kg
+                Weight Ã— reps (weight exercises only). 1t = 1,000kg
               </Text>
             </Card>
           </View>
         )}
       </ScrollView>
 
-      {/* ── Add Exercise Modal ── */}
-      <Modal visible={showAddExercise} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: M3.colors.background }}>
-          <SafeAreaView style={{ flex: 1 }}>
-            <View style={{ padding: 20, gap: 16, flex: 1 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-                  ADD EXERCISE
-                </Text>
-                <TouchableOpacity onPress={() => setShowAddExercise(false)}>
-                  <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
-              </View>
+      {/* â”€â”€ Add Exercise Modal â”€â”€ */}
+      <AddExerciseModal
+        visible={showAddExercise}
+        onClose={() => { setShowAddExercise(false); setExerciseSearch(""); }}
+        exerciseSearch={exerciseSearch}
+        onSearchChange={setExerciseSearch}
+        filteredExercises={filteredExercises}
+        onAddExercise={addExercise}
+        onOpenCreateCustom={() => setShowCreateCustom(true)}
+      />
 
-              <TextInput
-                value={exerciseSearch}
-                onChangeText={setExerciseSearch}
-                placeholder="Search exercises..."
-                placeholderTextColor={M3.colors.onSurfaceMuted}
-                style={{
-                  backgroundColor: M3.colors.surface,
-                  borderRadius: 8,
-                  padding: 12,
-                  color: M3.colors.onSurface,
-                  fontSize: 14,
-                  fontFamily: "DMSans_400Regular",
-                  borderWidth: 1,
-                  borderColor: M3.colors.surfaceContainer,
-                }}
-              />
+      {/* â”€â”€ Create Custom Exercise Modal â”€â”€ */}
+      <CreateCustomExerciseModal
+        visible={showCreateCustom}
+        onClose={() => setShowCreateCustom(false)}
+        name={customExName}
+        onNameChange={setCustomExName}
+        exerciseType={customExType}
+        onTypeChange={setCustomExType}
+        muscleGroup={customExMuscle}
+        onMuscleChange={setCustomExMuscle}
+        onSave={createCustomExercise}
+      />
 
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={{ gap: 8 }}>
-                  {filteredExercises.map((ex) => (
-                    <TouchableOpacity
-                      key={ex.name}
-                      onPress={() => addExercise(ex.name, ex.muscle_group, ex.equipment, ex.exercise_type)}
-                      style={{
-                        backgroundColor: M3.colors.surface,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: M3.colors.surfaceContainer,
-                        padding: 14,
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_500Medium" }}>
-                          {ex.name}
-                        </Text>
-                        <View style={{ flexDirection: "row", gap: 6, marginTop: 3, alignItems: "center" }}>
-                          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", textTransform: "capitalize" }}>
-                            {ex.muscle_group} · {ex.equipment}
-                          </Text>
-                          <View style={{
-                            backgroundColor: ex.exercise_type === "weight_reps" ? M3.colors.primaryContainer :
-                              ex.exercise_type === "reps_only" ? M3.colors.secondaryContainer :
-                              ex.exercise_type === "duration" ? M3.colors.warningContainer : M3.colors.errorContainer,
-                            borderRadius: 3,
-                            paddingHorizontal: 5,
-                            paddingVertical: 1,
-                          }}>
-                            <Text style={{
-                              fontSize: 9,
-                              fontFamily: "DMSans_700Bold",
-                              color: ex.exercise_type === "weight_reps" ? M3.colors.primary :
-                                ex.exercise_type === "reps_only" ? M3.colors.secondary :
-                                ex.exercise_type === "duration" ? M3.colors.warning : M3.colors.error,
-                            }}>
-                              {ex.exercise_type === "weight_reps" ? "WEIGHT" :
-                                ex.exercise_type === "reps_only" ? "REPS" :
-                                ex.exercise_type === "duration" ? "TIME" : "CARDIO"}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                      <Feather name="plus" size={16} color={M3.colors.primary} />
-                    </TouchableOpacity>
-                  ))}
+      {/* â”€â”€ Template Selector Modal â”€â”€ */}
+      <TemplateSelectorModal
+        visible={showTemplateSelector}
+        onClose={() => setShowTemplateSelector(false)}
+        selectedDayType={selectedDayType}
+        templateExercises={WORKOUT_TEMPLATES[selectedDayType] || []}
+        selectedExercises={selectedTemplateExercises}
+        onToggleExercise={(name) =>
+          setSelectedTemplateExercises((prev) => {
+            const next = new Set(prev);
+            if (next.has(name)) next.delete(name); else next.add(name);
+            return next;
+          })
+        }
+        onAdd={addExercisesFromTemplate}
+      />
 
-                  {filteredExercises.length === 0 && (
-                    <View style={{ alignItems: "center", paddingVertical: 20 }}>
-                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                        No exercises found for "{exerciseSearch}"
-                      </Text>
-                    </View>
-                  )}
+      {/* â”€â”€ Swap Exercise Modal â”€â”€ */}
+      <SwapExerciseModal
+        visible={!!swapExerciseId}
+        onClose={() => { setSwapExerciseId(null); setSwapSearch(""); }}
+        swapSearch={swapSearch}
+        onSearchChange={setSwapSearch}
+        exercises={swapFilteredExercises}
+        onSwap={swapExercise}
+      />
 
-                  <TouchableOpacity
-                    onPress={() => setShowCreateCustom(true)}
-                    style={{
-                      backgroundColor: M3.colors.secondaryContainer,
-                      borderRadius: 10,
-                      padding: 16,
-                      alignItems: "center",
-                      marginTop: 10,
-                      flexDirection: "row",
-                      justifyContent: "center",
-                      gap: 8,
-                    }}
-                  >
-                    <Feather name="edit-3" size={16} color={M3.colors.secondary} />
-                    <Text style={{ color: M3.colors.secondary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                      Create Custom Exercise
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
-
-      {/* ── Create Custom Exercise Modal ── */}
-      <Modal visible={showCreateCustom} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: M3.colors.background }}>
-          <SafeAreaView style={{ flex: 1 }}>
-            <View style={{ padding: 20, gap: 16, flex: 1 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-                  CREATE CUSTOM EXERCISE
-                </Text>
-                <TouchableOpacity onPress={() => setShowCreateCustom(false)}>
-                  <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={{ gap: 16 }}>
-                  <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
-                      Exercise Name
-                    </Text>
-                    <TextInput
-                      value={customExName}
-                      onChangeText={setCustomExName}
-                      placeholder="e.g. Bouldering"
-                      placeholderTextColor={M3.colors.onSurfaceMuted}
-                      style={{
-                        backgroundColor: M3.colors.surface,
-                        borderRadius: 8,
-                        padding: 12,
-                        color: M3.colors.onSurface,
-                        fontSize: 14,
-                        fontFamily: "DMSans_400Regular",
-                        borderWidth: 1,
-                        borderColor: M3.colors.surfaceContainer,
-                      }}
-                    />
-                  </View>
-
-                  <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
-                      Exercise Type
-                    </Text>
-                    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-                      {(["weight_reps", "reps_only", "duration", "distance_duration"] as ExerciseType[]).map((type) => (
-                        <TouchableOpacity
-                          key={type}
-                          onPress={() => setCustomExType(type)}
-                          style={{
-                            backgroundColor: customExType === type ? M3.colors.primaryContainer : M3.colors.surfaceVariant,
-                            borderWidth: 1,
-                            borderColor: customExType === type ? M3.colors.primary : M3.colors.surfaceContainer,
-                            borderRadius: 8,
-                            paddingHorizontal: 12,
-                            paddingVertical: 8,
-                          }}
-                        >
-                          <Text style={{ color: customExType === type ? M3.colors.primary : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
-                            {type === "weight_reps" ? "Weight + Reps" : type === "reps_only" ? "Reps Only" : type === "duration" ? "Time Based" : "Cardio"}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                  
-                  <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
-                      Muscle Group (Optional)
-                    </Text>
-                    <TextInput
-                      value={customExMuscle}
-                      onChangeText={setCustomExMuscle}
-                      placeholder="e.g. full body"
-                      placeholderTextColor={M3.colors.onSurfaceMuted}
-                      style={{
-                        backgroundColor: M3.colors.surface,
-                        borderRadius: 8,
-                        padding: 12,
-                        color: M3.colors.onSurface,
-                        fontSize: 14,
-                        fontFamily: "DMSans_400Regular",
-                        borderWidth: 1,
-                        borderColor: M3.colors.surfaceContainer,
-                      }}
-                    />
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={createCustomExercise}
-                    style={{
-                      backgroundColor: M3.colors.primary,
-                      borderRadius: 8,
-                      padding: 16,
-                      alignItems: "center",
-                      marginTop: 20,
-                    }}
-                  >
-                    <Text style={{ color: M3.colors.background, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                      Save & Add to Workout
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
-
-      {/* ── Template Selector Modal ── */}
-      <Modal visible={showTemplateSelector} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: M3.colors.background }}>
-          <SafeAreaView style={{ flex: 1 }}>
-            <View style={{ padding: 20, gap: 16, flex: 1 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-                  {selectedDayType} TEMPLATE
-                </Text>
-                <TouchableOpacity onPress={() => setShowTemplateSelector(false)}>
-                  <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                Select exercises to add to your workout
-              </Text>
-
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={{ gap: 8 }}>
-                  {(WORKOUT_TEMPLATES[selectedDayType] || []).map((ex) => {
-                    const isSelected = selectedTemplateExercises.has(ex.name);
-                    const libEntry = EXERCISE_LIBRARY.find((e) => e.name === ex.name);
-                    return (
-                      <TouchableOpacity
-                        key={ex.name}
-                        onPress={() => {
-                          setSelectedTemplateExercises((prev) => {
-                            const next = new Set(prev);
-                            if (next.has(ex.name)) next.delete(ex.name);
-                            else next.add(ex.name);
-                            return next;
-                          });
-                        }}
-                        style={{
-                          backgroundColor: isSelected ? M3.colors.primaryContainer : M3.colors.surface,
-                          borderRadius: 10,
-                          borderWidth: 1,
-                          borderColor: isSelected ? M3.colors.primary : M3.colors.surfaceContainer,
-                          padding: 14,
-                          flexDirection: "row",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                        }}
-                      >
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_500Medium" }}>
-                            {ex.name}
-                          </Text>
-                          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 2, textTransform: "capitalize" }}>
-                            {ex.muscle_group} · {ex.equipment} · {ex.sets} sets × {ex.reps} reps
-                          </Text>
-                        </View>
-                        <View style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 12,
-                          borderWidth: 2,
-                          borderColor: isSelected ? M3.colors.primary : M3.colors.onSurfaceMuted,
-                          backgroundColor: isSelected ? M3.colors.primary : "transparent",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}>
-                          {isSelected && <Feather name="check" size={14} color={M3.colors.background} />}
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-
-              <TouchableOpacity
-                onPress={addExercisesFromTemplate}
-                disabled={selectedTemplateExercises.size === 0}
-                style={{
-                  backgroundColor: selectedTemplateExercises.size > 0 ? M3.colors.primary : M3.colors.surfaceVariant,
-                  borderRadius: 8,
-                  padding: 16,
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                }}
-              >
-                <Feather name="check" size={18} color={selectedTemplateExercises.size > 0 ? M3.colors.background : M3.colors.onSurfaceMuted} />
-                <Text style={{ color: selectedTemplateExercises.size > 0 ? M3.colors.background : M3.colors.onSurfaceMuted, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
-                  Add {selectedTemplateExercises.size} Exercise{selectedTemplateExercises.size !== 1 && 's'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
-
-      {/* ── Swap Exercise Modal ── */}
-      <Modal visible={!!swapExerciseId} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: M3.colors.background }}>
-          <SafeAreaView style={{ flex: 1 }}>
-            <View style={{ padding: 20, gap: 16, flex: 1 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-                  SWAP EXERCISE
-                </Text>
-                <TouchableOpacity onPress={() => { setSwapExerciseId(null); setSwapSearch(""); }}>
-                  <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
-              </View>
-
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                Choose a replacement — existing sets will be kept
-              </Text>
-
-              <TextInput
-                value={swapSearch}
-                onChangeText={setSwapSearch}
-                placeholder="Search exercises..."
-                placeholderTextColor={M3.colors.onSurfaceMuted}
-                style={{
-                  backgroundColor: M3.colors.surface,
-                  borderRadius: 8,
-                  padding: 12,
-                  color: M3.colors.onSurface,
-                  fontSize: 14,
-                  fontFamily: "DMSans_400Regular",
-                  borderWidth: 1,
-                  borderColor: M3.colors.surfaceContainer,
-                }}
-              />
-
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={{ gap: 8 }}>
-                  {swapFilteredExercises.map((ex) => (
-                    <TouchableOpacity
-                      key={ex.name}
-                      onPress={() => swapExercise(ex.name)}
-                      style={{
-                        backgroundColor: M3.colors.surface,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        borderColor: M3.colors.surfaceContainer,
-                        padding: 14,
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_500Medium" }}>
-                          {ex.name}
-                        </Text>
-                        <View style={{ flexDirection: "row", gap: 6, marginTop: 3, alignItems: "center" }}>
-                          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", textTransform: "capitalize" }}>
-                            {ex.muscle_group} · {ex.equipment}
-                          </Text>
-                          <View style={{
-                            backgroundColor: ex.exercise_type === "weight_reps" ? M3.colors.primaryContainer :
-                              ex.exercise_type === "reps_only" ? M3.colors.secondaryContainer :
-                              ex.exercise_type === "duration" ? M3.colors.warningContainer : M3.colors.errorContainer,
-                            borderRadius: 3,
-                            paddingHorizontal: 5,
-                            paddingVertical: 1,
-                          }}>
-                            <Text style={{
-                              fontSize: 9,
-                              fontFamily: "DMSans_700Bold",
-                              color: ex.exercise_type === "weight_reps" ? M3.colors.primary :
-                                ex.exercise_type === "reps_only" ? M3.colors.secondary :
-                                ex.exercise_type === "duration" ? M3.colors.warning : M3.colors.error,
-                            }}>
-                              {ex.exercise_type === "weight_reps" ? "WEIGHT" :
-                                ex.exercise_type === "reps_only" ? "REPS" :
-                                ex.exercise_type === "duration" ? "TIME" : "CARDIO"}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                      <Feather name="repeat" size={16} color={M3.colors.secondary} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
-
-      {/* ── Edit Logged Exercise Modal ── */}
-      <Modal visible={!!editingExerciseId} animationType="slide" presentationStyle="pageSheet">
-        <View style={{ flex: 1, backgroundColor: M3.colors.background }}>
-          <SafeAreaView style={{ flex: 1 }}>
-            <View style={{ padding: 20, gap: 16, flex: 1 }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-                  EDIT LOGGED EXERCISE
-                </Text>
-                <TouchableOpacity onPress={() => setEditingExerciseId(null)}>
-                  <Feather name="x" size={22} color={M3.colors.onSurfaceVariant} />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView showsVerticalScrollIndicator={false}>
-                <View style={{ gap: 16 }}>
-                  <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
-                      Exercise Name
-                    </Text>
-                    <TextInput
-                      value={editExerciseName}
-                      onChangeText={setEditExerciseName}
-                      style={{
-                        backgroundColor: M3.colors.surface,
-                        borderRadius: 8,
-                        padding: 12,
-                        color: M3.colors.onSurface,
-                        fontSize: 14,
-                        fontFamily: "DMSans_400Regular",
-                        borderWidth: 1,
-                        borderColor: M3.colors.surfaceContainer,
-                      }}
-                    />
-                  </View>
-                  
-                  <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
-                      Muscle Group (Optional)
-                    </Text>
-                    <TextInput
-                      value={editExerciseMuscle}
-                      onChangeText={setEditExerciseMuscle}
-                      placeholder="e.g. chest"
-                      placeholderTextColor={M3.colors.onSurfaceMuted}
-                      style={{
-                        backgroundColor: M3.colors.surface,
-                        borderRadius: 8,
-                        padding: 12,
-                        color: M3.colors.onSurface,
-                        fontSize: 14,
-                        fontFamily: "DMSans_400Regular",
-                        borderWidth: 1,
-                        borderColor: M3.colors.surfaceContainer,
-                      }}
-                    />
-                  </View>
-
-                  <View>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 6 }}>
-                      Equipment (Optional)
-                    </Text>
-                    <TextInput
-                      value={editExerciseEquip}
-                      onChangeText={setEditExerciseEquip}
-                      placeholder="e.g. barbell"
-                      placeholderTextColor={M3.colors.onSurfaceMuted}
-                      style={{
-                        backgroundColor: M3.colors.surface,
-                        borderRadius: 8,
-                        padding: 12,
-                        color: M3.colors.onSurface,
-                        fontSize: 14,
-                        fontFamily: "DMSans_400Regular",
-                        borderWidth: 1,
-                        borderColor: M3.colors.surfaceContainer,
-                      }}
-                    />
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={saveEditExercise}
-                    style={{
-                      backgroundColor: M3.colors.primary,
-                      borderRadius: 8,
-                      padding: 16,
-                      alignItems: "center",
-                      marginTop: 20,
-                    }}
-                  >
-                    <Text style={{ color: M3.colors.background, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                      Save Changes
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
-          </SafeAreaView>
-        </View>
-      </Modal>
+      {/* â”€â”€ Edit Logged Exercise Modal â”€â”€ */}
+      <EditExerciseModal
+        visible={!!editingExerciseId}
+        onClose={() => setEditingExerciseId(null)}
+        name={editExerciseName}
+        onNameChange={setEditExerciseName}
+        muscleGroup={editExerciseMuscle}
+        onMuscleChange={setEditExerciseMuscle}
+        equipment={editExerciseEquip}
+        onEquipChange={setEditExerciseEquip}
+        onSave={saveEditExercise}
+      />
 
     </SafeAreaView>
   );

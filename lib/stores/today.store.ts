@@ -30,9 +30,14 @@ interface TodayState {
 
 const today = new Date().toISOString().split("T")[0];
 
+// Returns today's date string, always freshly computed — not a captured snapshot.
+function getTodayString(): string {
+  return new Date().toISOString().split("T")[0];
+}
+
 export const useTodayStore = create<TodayState>()(
   immer((set) => ({
-    date: today,
+    date: getTodayString(),
     nutrition: null,
     foodLogs: [],
     session: null,
