@@ -107,10 +107,7 @@ export default function DashboardScreen() {
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
   const proteinTarget = USER_PROFILE.targets.protein_g;
-  const caloriesTarget = USER_PROFILE.targets.calories;
   const proteinRemaining = Math.max(0, proteinTarget - protein);
-  const caloriePct = Math.min(100, (calories / caloriesTarget) * 100);
-  const proteinPct = Math.min(100, (protein / proteinTarget) * 100);
   const mealsLeft = 3;
   const proteinPerMeal = proteinRemaining / mealsLeft;
 
