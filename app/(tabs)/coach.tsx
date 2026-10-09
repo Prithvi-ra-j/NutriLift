@@ -130,7 +130,7 @@ export default function CoachScreen() {
       const errMsg: AiConversation = {
         id: uuid.v4() as string,
         role: "assistant",
-        content: `Error: ${errorMsg}. Please check your Groq API configuration.`,
+        content: `Error: ${errorMsg}. Please check the AI gateway configuration and try again.`,
         context_snapshot: null,
         created_at: Math.floor(Date.now() / 1000),
       };
@@ -165,9 +165,9 @@ export default function CoachScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 18, paddingTop: 10, paddingBottom: 8 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: M3.colors.onSurface, fontSize: 17, fontFamily: "DMSans_700Bold" }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 20, fontFamily: "DMSans_700Bold", letterSpacing: -0.3 }}>
               NutriLift Coach
             </Text>
             {groqConfigured === true && (
@@ -184,9 +184,9 @@ export default function CoachScreen() {
             activeOpacity={0.7}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
+              width: 42,
+              height: 42,
+              borderRadius: 21,
               backgroundColor: M3.colors.surface,
               borderWidth: 1,
               borderColor: M3.colors.outline,
@@ -200,10 +200,10 @@ export default function CoachScreen() {
 
         {/* ── Groq API warning ── */}
         {groqConfigured === false && (
-          <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: 8, padding: 12, flexDirection: "row", gap: 8 }}>
+          <View style={{ marginHorizontal: 18, marginBottom: 10, backgroundColor: M3.colors.surface, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: M3.colors.outline, flexDirection: "row", gap: 8 }}>
             <Feather name="alert-circle" size={14} color={M3.colors.error} />
             <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
-              Groq API key is not configured. Please add GROQ_API_KEY to your .env file or Settings.
+              AI Coach is unavailable because the Supabase AI gateway is not configured. Set up the gateway to enable coaching.
             </Text>
           </View>
         )}
@@ -212,23 +212,23 @@ export default function CoachScreen() {
         <ScrollView
           ref={scrollRef}
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, paddingTop: messages.length === 0 ? 24 : 0, gap: 20, paddingBottom: 16, flexGrow: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 18, paddingTop: messages.length === 0 ? 18 : 4, gap: 18, paddingBottom: 12, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
         >
           {messages.length === 0 && (
-            <View style={{ flex: 1, justifyContent: "center", gap: 28 }}>
+            <View style={{ flex: 1, justifyContent: "center", gap: 24, paddingBottom: 18 }}>
               <View style={{ alignItems: "center", gap: 14 }}>
                 <View style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: 28,
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
                   backgroundColor: M3.colors.primaryContainer,
                   alignItems: "center",
                   justifyContent: "center",
                 }}>
                   <Feather name="cpu" size={26} color={M3.colors.primary} />
                 </View>
-                <Text style={{ color: M3.colors.onSurface, fontSize: 19, fontFamily: "DMSans_700Bold", textAlign: "center" }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 24, lineHeight: 28, fontFamily: "DMSans_700Bold", textAlign: "center" }}>
                   How can I help your training today?
                 </Text>
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", lineHeight: 20 }}>
@@ -245,12 +245,12 @@ export default function CoachScreen() {
                     style={{
                       width: "48%",
                       backgroundColor: M3.colors.surface,
-                      borderRadius: M3.shape.large,
+                      borderRadius: 18,
                       borderWidth: 1,
                       borderColor: M3.colors.outline,
-                      padding: 14,
-                      gap: 10,
-                      minHeight: 88,
+                      padding: 15,
+                      gap: 12,
+                      minHeight: 96,
                       justifyContent: "space-between",
                     }}
                   >
@@ -320,24 +320,20 @@ export default function CoachScreen() {
         </ScrollView>
 
         {/* ── Composer ── */}
-        <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Platform.OS === "ios" ? 8 : 16 }}>
+        <View style={{ paddingHorizontal: 14, paddingTop: 6, paddingBottom: Platform.OS === "ios" ? 8 : 12 }}>
           <View
             style={{
               flexDirection: "row",
               alignItems: "flex-end",
               backgroundColor: M3.colors.surface,
-              borderRadius: 24,
+              borderRadius: 22,
               borderWidth: 1,
               borderColor: M3.colors.outline,
               paddingLeft: 16,
               paddingRight: 6,
               paddingVertical: 6,
               gap: 8,
-              shadowColor: "#000",
-              shadowOffset: { width: 0, height: 4 },
-              shadowOpacity: 0.3,
-              shadowRadius: 10,
-              elevation: 6,
+              
             }}
           >
             <Input
@@ -361,9 +357,9 @@ export default function CoachScreen() {
               disabled={!input.trim() || isGenerating}
               activeOpacity={0.75}
               style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
+                width: 42,
+                height: 42,
+                borderRadius: 21,
                 marginBottom: 2,
                 backgroundColor: input.trim() && !isGenerating ? M3.colors.primary : M3.colors.surfaceVariant,
                 alignItems: "center",

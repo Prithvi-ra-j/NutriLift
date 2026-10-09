@@ -10,55 +10,41 @@ interface ScreenHeaderProps {
   onAction?: () => void;
 }
 
-/** Consistent large-title header used across every tab for a unified visual rhythm. */
 export function ScreenHeader({ title, subtitle, actionIcon, actionLabel, onAction }: ScreenHeaderProps) {
   return (
-    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 4 }}>
-      <View style={{ flex: 1 }}>
-        <Text
-          style={{
-            color: M3.colors.onSurface,
-            fontSize: 30,
-            fontFamily: "BebasNeue_400Regular",
-            letterSpacing: 1,
-          }}
-        >
+    <View style={{ minHeight: 54, flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 }}>
+      <View style={{ flex: 1, paddingRight: 16 }}>
+        <Text style={{ color: M3.colors.onSurface, fontSize: 34, lineHeight: 38, fontFamily: "BebasNeue_400Regular", letterSpacing: 0.5 }}>
           {title}
         </Text>
         {subtitle ? (
-          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, lineHeight: 18, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
             {subtitle}
           </Text>
         ) : null}
       </View>
-
-      {onAction && (
+      {onAction ? (
         <TouchableOpacity
           onPress={onAction}
-          activeOpacity={0.75}
+          activeOpacity={0.8}
           style={{
-            backgroundColor: M3.colors.primary,
-            borderRadius: M3.shape.medium,
-            paddingHorizontal: 14,
-            paddingVertical: 10,
+            minWidth: 40,
+            height: 40,
+            paddingHorizontal: actionLabel ? 12 : 0,
+            borderRadius: 20,
+            backgroundColor: actionLabel ? M3.colors.primary : M3.colors.surface,
+            borderWidth: 1,
+            borderColor: actionLabel ? M3.colors.primary : M3.colors.outline,
             flexDirection: "row",
             alignItems: "center",
+            justifyContent: "center",
             gap: 6,
-            shadowColor: M3.colors.primary,
-            shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.35,
-            shadowRadius: 6,
-            elevation: 4,
           }}
         >
-          {actionIcon && <Feather name={actionIcon} size={15} color={M3.colors.onPrimary} />}
-          {actionLabel && (
-            <Text style={{ color: M3.colors.onPrimary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-              {actionLabel}
-            </Text>
-          )}
+          {actionIcon && <Feather name={actionIcon} size={15} color={actionLabel ? M3.colors.onPrimary : M3.colors.onSurface} />}
+          {actionLabel ? <Text style={{ color: M3.colors.onPrimary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>{actionLabel}</Text> : null}
         </TouchableOpacity>
-      )}
+      ) : null}
     </View>
   );
 }

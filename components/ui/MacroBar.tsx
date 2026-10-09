@@ -15,12 +15,12 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
   const overPct = over ? ((current - target) / target) * 100 : 0;
 
   return (
-    <View style={{ marginBottom: 10 }}>
+    <View style={{ marginBottom: 12 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
           {label}
         </Text>
-        <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+        <Text style={{ color: M3.colors.onSurface, fontSize: 11, fontFamily: "DMSans_700Bold" }}>
           <Text style={{ color: over ? M3.colors.warning : color }}>
             {current.toFixed(0)}{unit}
           </Text>
@@ -29,9 +29,9 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
       </View>
       <View
         style={{
-          height: 6,
+          height: 7,
           backgroundColor: M3.colors.surfaceVariant,
-          borderRadius: 3,
+          borderRadius: 4,
           overflow: "hidden",
         }}
       >

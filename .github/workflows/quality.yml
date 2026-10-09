@@ -1,0 +1,94 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - design/pinterest-polish
+  workflow_dispatch:
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck, tests and Expo diagnostics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Typecheck
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > typecheck.log 2>&1
+          status=$?
+          cat typecheck.log
+          echo $status > typecheck.exit
+          exit $status
+        continue-on-error: true
+
+      - name: Upload typecheck log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: typecheck-log
+          path: |
+            typecheck.log
+            typecheck.exit
+          if-no-files-found: error
+
+      - name: Unit tests
+        run: |
+          set +e
+          npm test -- --runInBand --passWithNoTests > test.log 2>&1
+          status=$?
+          cat test.log
+          echo $status > test.exit
+          exit $status
+        continue-on-error: true
+
+      - name: Upload test log
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-log
+          path: |
+            test.log
+            test.exit
+          if-no-files-found: error
+
+      - name: Expo diagnostics
+        if: always()
+        run: |
+          set +e
+          npx expo-doctor > expo-doctor.log 2>&1
+          status=$?
+          cat expo-doctor.log
+          echo $status > expo-doctor.exit
+          exit $status
+        continue-on-error: true
+
+      - name: Upload Expo diagnostics
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: expo-doctor-log
+          path: |
+            expo-doctor.log
+            expo-doctor.exit
+          if-no-files-found: error
