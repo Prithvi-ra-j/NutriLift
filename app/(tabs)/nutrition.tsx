@@ -374,7 +374,7 @@ export default function NutritionScreen() {
               Nothing logged yet
             </Text>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" }}>
-              Tap 'Log Food' above to start tracking your nutrition
+              Use the + button above to log your first meal
             </Text>
           </View>
         )}
