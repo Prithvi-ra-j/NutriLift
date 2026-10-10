@@ -20,6 +20,7 @@ import {
 import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
+import { QuickAddSheet } from "../../components/ui/QuickAddSheet";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
@@ -62,6 +63,7 @@ export default function NutritionScreen() {
   const { nutrition, foodLogs, setNutrition, setFoodLogs } = useTodayStore();
 
   const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(new Set());
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
@@ -144,7 +146,7 @@ export default function NutritionScreen() {
           subtitle={new Date(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
           actionIcon="plus"
           actionLabel="Log Food"
-          onAction={() => router.push("/modals/log-food")}
+          onAction={() => setQuickAddVisible(true)}
         />
 
         {/* ── Date Navigator ── */}
@@ -377,6 +379,7 @@ export default function NutritionScreen() {
           </View>
         )}
       </ScrollView>
+      <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
     </SafeAreaView>
   );
 }
