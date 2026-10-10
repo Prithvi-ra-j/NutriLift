@@ -26,6 +26,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { toLocalDateString } from "../../lib/utils/local-date";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -56,7 +57,7 @@ function groupByMeal(logs: FoodLog[]): MealGroup[] {
 }
 
 export default function NutritionScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = toLocalDateString();
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const { nutrition, foodLogs, setNutrition, setFoodLogs } = useTodayStore();
 
@@ -182,7 +183,7 @@ export default function NutritionScreen() {
                 </Text>
               </View>
               <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
-                {Math.max(0, USER_PROFILE.targets.calories - calories).toFixed(0)} kcal remaining
+                {calories > USER_PROFILE.targets.calories ? `${(calories - USER_PROFILE.targets.calories).toFixed(0)} kcal over goal` : `${(USER_PROFILE.targets.calories - calories).toFixed(0)} kcal remaining` }
               </Text>
             </View>
             <View style={{ backgroundColor: M3.colors.primaryContainer, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, marginBottom: 3 }}>
