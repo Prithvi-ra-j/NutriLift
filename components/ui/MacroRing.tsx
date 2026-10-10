@@ -26,9 +26,9 @@ export function MacroRing({
   const caloriePct = Math.min(100, caloriesTarget > 0 ? (calories / caloriesTarget) * 100 : 0);
 
   // Calculate percentages
-  const proteinPct = Math.min(100, (protein / proteinTarget) * 100);
-  const carbsPct = Math.min(100, (carbs / carbsTarget) * 100);
-  const fatPct = Math.min(100, (fat / fatTarget) * 100);
+  const proteinPct = Math.min(100, proteinTarget > 0 ? (protein / proteinTarget) * 100 : 0);
+  const carbsPct = Math.min(100, carbsTarget > 0 ? (carbs / carbsTarget) * 100 : 0);
+  const fatPct = Math.min(100, fatTarget > 0 ? (fat / fatTarget) * 100 : 0);
 
   return (
     <View style={{ alignItems: "center", justifyContent: "center" }}>
