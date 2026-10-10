@@ -280,10 +280,10 @@ export default function DashboardScreen() {
               color: M3.macroColors.protein,
             },
             {
-              label: "CALORIES",
-              value: calories > USER_PROFILE.targets.calories ? `${(calories - USER_PROFILE.targets.calories).toFixed(0)}` : `${(USER_PROFILE.targets.calories - calories).toFixed(0)}`,
-              detail: calories > USER_PROFILE.targets.calories ? "kcal over goal" : "kcal remaining",
-              color: M3.macroColors.calories,
+              label: "MEALS LOGGED",
+              value: `${mealsLogged}`,
+              detail: "meal sections today",
+              color: M3.colors.primary,
             },
             {
               label: "WORKOUT",
