@@ -53,13 +53,13 @@ interface AdherenceDot {
 
 export default function DashboardScreen() {
   const today = new Date().toISOString().split("T")[0];
-  const { nutrition, session, setNutrition, setSession, setFoodLogs } = useTodayStore();
+  const { nutrition, session, foodLogs, setNutrition, setSession, setFoodLogs } = useTodayStore();
   const { coachInsight } = useUIStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [adherenceDots, setAdherenceDots] = useState<AdherenceDot[]>([]);
-  const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
+  const [hasRecoveryCheckin, setHasRecoveryCheckin] = useState(false);
 
   // Determine today's day type based on day of week
   const getTodayDayType = (): string => {
@@ -130,15 +130,8 @@ export default function DashboardScreen() {
       }
       setAdherenceDots(dots);
 
-      // Recovery score
-      if (recoveryData) {
-        const score =
-          ((recoveryData.sleep_quality ?? 3) +
-            (recoveryData.energy_level ?? 3) +
-            (6 - (recoveryData.muscle_soreness ?? 3))) /
-          3;
-        setRecoveryScore(Math.round((score / 5) * 100));
-      }
+      // Recovery entries are subjective check-ins, not a sensor-derived recovery score.
+      setHasRecoveryCheckin(Boolean(recoveryData));
     } catch (err) {
       console.error("Dashboard load error:", err);
     } finally {
@@ -164,7 +157,7 @@ export default function DashboardScreen() {
   const caloriePct = Math.min(100, (calories / USER_PROFILE.targets.calories) * 100);
 
   // Protein pace
-  const mealsLogged = 2; // simplified — would count distinct meals
+  const mealsLogged = new Set((foodLogs ?? []).map((log) => log.meal)).size;
   const proteinRemaining = Math.max(0, USER_PROFILE.targets.protein_g - protein);
   const mealsLeft = Math.max(1, 4 - mealsLogged);
   const proteinPerMeal = proteinRemaining / mealsLeft;
@@ -200,7 +193,7 @@ export default function DashboardScreen() {
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
               {formatDate(new Date())}
             </Text>
-            <Text style={{ color: M3.colors.onSurface, fontSize: 26, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 24, fontFamily: "DMSans_700Bold", letterSpacing: -0.6 }}>
               {getGreeting()}, {USER_PROFILE.name}
             </Text>
           </View>
@@ -224,6 +217,21 @@ export default function DashboardScreen() {
 
         {/* ── Calorie Ring + Macro Summary ── */}
         <Card>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+            <View style={{ gap: 3 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_700Bold", letterSpacing: 1 }}>
+                TODAY'S INTAKE
+              </Text>
+              <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
+                {Math.max(0, USER_PROFILE.targets.calories - calories).toFixed(0)} kcal left
+              </Text>
+            </View>
+            <View style={{ backgroundColor: M3.colors.primaryContainer, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 }}>
+              <Text style={{ color: M3.colors.onPrimaryContainer, fontSize: 11, fontFamily: "DMSans_700Bold" }}>
+                {caloriePct.toFixed(0)}% of goal
+              </Text>
+            </View>
+          </View>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
             {/* Macro ring */}
             <MacroRing
@@ -261,55 +269,83 @@ export default function DashboardScreen() {
           </View>
         </Card>
 
-        {/* ── Stats Row ── */}
-        <View style={{ flexDirection: "row", gap: 12 }}>
+        {/* ── At-a-glance metrics ── */}
+        <View style={{ flexDirection: "row", gap: 10 }}>
           {[
-            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${USER_PROFILE.targets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
-            { label: "Calories", value: calories.toFixed(0), sub: `/ ${USER_PROFILE.targets.calories}`, color: M3.colors.primary, icon: "zap" as const },
-            { label: "Volume", value: session?.total_volume_kg ? `${(session.total_volume_kg / 1000).toFixed(1)}t` : "—", sub: "today", color: M3.colors.tertiary, icon: "trending-up" as const },
-            { label: "Recovery", value: recoveryScore ? `${recoveryScore}` : "—", sub: "/ 100", color: M3.colors.success, icon: "heart" as const },
+            {
+              label: "PROTEIN LEFT",
+              value: `${proteinRemaining.toFixed(0)}g`,
+              detail: `of ${USER_PROFILE.targets.protein_g}g goal`,
+              color: M3.macroColors.protein,
+            },
+            {
+              label: "CALORIES",
+              value: `${Math.max(0, USER_PROFILE.targets.calories - calories).toFixed(0)}`,
+              detail: "kcal remaining",
+              color: M3.macroColors.calories,
+            },
+            {
+              label: "WORKOUT",
+              value: session ? "Done" : "Planned",
+              detail: todayDayType || "Rest day",
+              color: M3.colors.tertiary,
+            },
           ].map((stat) => (
-            <Card key={stat.label} style={{ flex: 1, padding: 12, alignItems: "center", gap: 6 }}>
-              <View
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 14,
-                  backgroundColor: stat.color + "22",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Feather name={stat.icon} size={13} color={stat.color} />
-              </View>
-              <Text style={{ color: stat.color, fontSize: 17, fontFamily: "DMSans_700Bold" }}>
+            <Card key={stat.label} style={{ flex: 1, padding: 12, gap: 7 }} variant="filled">
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_700Bold", letterSpacing: 0.7 }} numberOfLines={1}>
+                {stat.label}
+              </Text>
+              <Text style={{ color: stat.color, fontSize: 20, fontFamily: "DMSans_700Bold", letterSpacing: -0.5 }} numberOfLines={1} adjustsFontSizeToFit>
                 {stat.value}
               </Text>
-              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
-                {stat.sub}
-              </Text>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 9, fontFamily: "DMSans_500Medium", letterSpacing: 0.3 }}>
-                {stat.label.toUpperCase()}
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }} numberOfLines={1}>
+                {stat.detail}
               </Text>
             </Card>
           ))}
         </View>
 
-        {/* ── Protein Pace ── */}
+        {/* ── Protein pace ── */}
         {proteinRemaining > 0 && (
-          <Card elevated>
+          <Card variant="outlined">
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-              <Feather name="target" size={16} color={M3.colors.secondary} />
-              <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>
-                Need{" "}
-                <Text style={{ color: M3.colors.secondary, fontFamily: "DMSans_700Bold" }}>
-                  {proteinRemaining.toFixed(0)}g
-                </Text>{" "}
-                more protein — {proteinPerMeal.toFixed(0)}g per remaining meal
-              </Text>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: M3.colors.secondaryContainer, alignItems: "center", justifyContent: "center" }}>
+                <Feather name="target" size={16} color={M3.colors.secondary} />
+              </View>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                  Protein pace
+                </Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 18 }}>
+                  {proteinRemaining.toFixed(0)}g left today. Aim for about {proteinPerMeal.toFixed(0)}g across each of your {mealsLeft} remaining meal{mealsLeft === 1 ? "" : "s"}.
+                </Text>
+              </View>
             </View>
           </Card>
         )}
+
+        {/* ── Recovery check-in ── */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => router.push({ pathname: "/(tabs)/more", params: { section: "recovery" } })}
+        >
+          <Card variant="outlined">
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: M3.colors.surfaceContainer, alignItems: "center", justifyContent: "center" }}>
+                <Feather name="moon" size={16} color={M3.colors.secondary} />
+              </View>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                  Recovery check-in
+                </Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+                  {hasRecoveryCheckin ? "Today's manual check-in is saved" : "Log sleep, energy, soreness and stress"}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color={M3.colors.onSurfaceVariant} />
+            </View>
+          </Card>
+        </TouchableOpacity>
 
         {/* ── 7-Day Adherence Strip ── */}
         <View style={{ paddingHorizontal: 4 }}>
