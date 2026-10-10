@@ -22,6 +22,7 @@ import { MacroRing } from "../../components/ui/MacroRing";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { toLocalDateString } from "../../lib/utils/local-date";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -52,7 +53,7 @@ interface AdherenceDot {
 }
 
 export default function DashboardScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateString();
   const { nutrition, session, foodLogs, setNutrition, setSession, setFoodLogs } = useTodayStore();
   const { coachInsight } = useUIStore();
 
@@ -117,7 +118,7 @@ export default function DashboardScreen() {
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split("T")[0];
+        const dateStr = toLocalDateString(d);
         const dayData = last7Days.find((n) => n.date === dateStr);
 
         let status: AdherenceDot["status"] = "empty";
@@ -177,7 +178,7 @@ export default function DashboardScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 112, gap: 16 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -223,7 +224,7 @@ export default function DashboardScreen() {
                 TODAY'S INTAKE
               </Text>
               <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
-                {Math.max(0, USER_PROFILE.targets.calories - calories).toFixed(0)} kcal left
+                {calories > USER_PROFILE.targets.calories ? `${(calories - USER_PROFILE.targets.calories).toFixed(0)} kcal over goal` : `${(USER_PROFILE.targets.calories - calories).toFixed(0)} kcal left` }
               </Text>
             </View>
             <View style={{ backgroundColor: M3.colors.primaryContainer, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 }}>
@@ -280,8 +281,8 @@ export default function DashboardScreen() {
             },
             {
               label: "CALORIES",
-              value: `${Math.max(0, USER_PROFILE.targets.calories - calories).toFixed(0)}`,
-              detail: "kcal remaining",
+              value: calories > USER_PROFILE.targets.calories ? `${(calories - USER_PROFILE.targets.calories).toFixed(0)}` : `${(USER_PROFILE.targets.calories - calories).toFixed(0)}`,
+              detail: calories > USER_PROFILE.targets.calories ? "kcal over goal" : "kcal remaining",
               color: M3.macroColors.calories,
             },
             {
