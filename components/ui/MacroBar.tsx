@@ -12,12 +12,12 @@ interface MacroBarProps {
 export function MacroBar({ label, current, target, color, unit = "g" }: MacroBarProps) {
   const pct = Math.min(100, target > 0 ? (current / target) * 100 : 0);
   const over = current > target;
-  const overPct = over ? ((current - target) / target) * 100 : 0;
+  const overPct = over && target > 0 ? ((current - target) / target) * 100 : 0;
 
   return (
     <View style={{ marginBottom: 10 }}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
-        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
           {label}
         </Text>
         <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
@@ -29,9 +29,9 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
       </View>
       <View
         style={{
-          height: 6,
-          backgroundColor: M3.colors.surfaceVariant,
-          borderRadius: 3,
+          height: 5,
+          backgroundColor: M3.colors.surfaceContainerHigh,
+          borderRadius: 999,
           overflow: "hidden",
         }}
       >
@@ -42,7 +42,7 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
             height: "100%",
             width: `${Math.min(100, pct)}%`,
             backgroundColor: color,
-            borderRadius: 3,
+            borderRadius: 999,
           }}
         />
         {/* Red portion for amount over target */}
@@ -50,9 +50,9 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
           <View
             style={{
               position: "absolute",
-              left: "100%",
+              right: 0,
               height: "100%",
-              width: `${overPct}%`,
+              width: `${Math.min(100, overPct)}%`,
               backgroundColor: M3.colors.error,
               borderRadius: 3,
             }}
