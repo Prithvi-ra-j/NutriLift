@@ -25,9 +25,10 @@ export function PressableScale({ onPressIn, onPressOut, disabled, style, ...prop
   };
 
   return (
-    <Animated.View style={[style, { transform: [{ scale }] }]}>
+    <Animated.View style={{ transform: [{ scale }] }}>
       <Pressable
         {...props}
+        style={style}
         disabled={disabled}
         onPressIn={(event) => {
           if (!disabled) animateTo(0.97);
