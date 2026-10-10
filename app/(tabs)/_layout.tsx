@@ -51,7 +51,7 @@ function TabIcon({ name, focused, label }: TabIconProps) {
       {/* Label — always visible per M3 nav bar spec */}
       <Text
         style={{
-          fontSize: 9,
+          fontSize: 10,
           color: focused ? M3.colors.primary : M3.colors.onSurfaceVariant,
           fontFamily: focused ? "DMSans_700Bold" : "DMSans_500Medium",
           textAlign: "center",
@@ -94,17 +94,17 @@ export default function TabsLayout() {
           borderWidth: 1,
           borderColor: M3.colors.outline,
           // Floating pill nav bar
-          height: 68,
+          height: 70,
           paddingBottom: 0,
           paddingTop: 0,
           shadowColor: "#000",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.35,
-          shadowRadius: 16,
-          elevation: 12,
+          shadowOffset: { width: 0, height: 5 },
+          shadowOpacity: 0.22,
+          shadowRadius: 12,
+          elevation: 8,
         },
         tabBarItemStyle: {
-          height: 68,
+          height: 70,
           paddingVertical: 6,
         },
         tabBarShowLabel: false,
