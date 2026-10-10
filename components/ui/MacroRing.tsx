@@ -20,8 +20,10 @@ export function MacroRing({
   carbsTarget,
   fatTarget,
   calories,
+  caloriesTarget,
 }: MacroRingProps) {
-  const size = 90;
+  const size = 94;
+  const caloriePct = Math.min(100, caloriesTarget > 0 ? (calories / caloriesTarget) * 100 : 0);
 
   // Calculate percentages
   const proteinPct = Math.min(100, (protein / proteinTarget) * 100);
@@ -30,7 +32,7 @@ export function MacroRing({
 
   return (
     <View style={{ alignItems: "center", justifyContent: "center" }}>
-      {/* Main circle with stacked colored bars */}
+      {/* Compact calorie ring — macros are shown as readable bars alongside it. */}
       <View
         style={{
           width: size,
@@ -39,65 +41,22 @@ export function MacroRing({
           backgroundColor: M3.colors.surfaceVariant,
           alignItems: "center",
           justifyContent: "center",
-          borderWidth: 2,
-          borderColor: M3.colors.surfaceContainer,
-          overflow: "hidden",
+          borderWidth: 5,
+          borderColor: M3.colors.primary,
         }}
+        accessibilityRole="progressbar"
+        accessibilityLabel={`${calories.toFixed(0)} of ${caloriesTarget} calories consumed`}
+        accessibilityValue={{ min: 0, max: caloriesTarget, now: Math.min(caloriesTarget, calories) }}
       >
-        {/* Colored segments as horizontal bars */}
-        <View
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            height: "33.33%",
-            backgroundColor: M3.colors.secondary,
-            opacity: proteinPct / 100,
-          }}
-        />
-        <View
-          style={{
-            position: "absolute",
-            top: "33.33%",
-            left: 0,
-            right: 0,
-            height: "33.33%",
-            backgroundColor: M3.colors.success,
-            opacity: carbsPct / 100,
-          }}
-        />
-        <View
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            height: "33.34%",
-            backgroundColor: M3.macroColors.fat,
-            opacity: fatPct / 100,
-          }}
-        />
-
-        {/* Center content overlay */}
-        <View
-          style={{
-            width: size - 20,
-            height: size - 20,
-            borderRadius: (size - 20) / 2,
-            backgroundColor: M3.colors.surfaceVariant,
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 10,
-          }}
-        >
-          <Text style={{ color: M3.colors.onSurface, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
-            {calories.toFixed(0)}
-          </Text>
-          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }}>
-            kcal
-          </Text>
-        </View>
+        <Text style={{ color: M3.colors.onSurface, fontSize: 21, fontFamily: "DMSans_700Bold", letterSpacing: -0.8 }}>
+          {calories.toFixed(0)}
+        </Text>
+        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium" }}>
+          kcal
+        </Text>
+        <Text style={{ color: M3.colors.primary, fontSize: 9, fontFamily: "DMSans_700Bold", marginTop: 1 }}>
+          {caloriePct.toFixed(0)}%
+        </Text>
       </View>
 
       {/* Macro indicators below */}
