@@ -297,13 +297,13 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 112, gap: 16 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Header ── */}
         {activeSection === "menu" ? (
-          <ScreenHeader title="MORE" subtitle="Settings, reports, and more" />
+          <ScreenHeader title="More" subtitle="Your data, tools and preferences" />
         ) : (
           <View style={{ marginBottom: 16 }}>
             <TouchableOpacity 
@@ -315,7 +315,7 @@ export default function MoreScreen() {
                 Menu
               </Text>
             </TouchableOpacity>
-            <ScreenHeader title={sections.find(s => s.key === activeSection)?.label.toUpperCase() || "MORE"} subtitle="" />
+            <ScreenHeader title={sections.find(s => s.key === activeSection)?.label || "More"} subtitle="" />
           </View>
         )}
 
@@ -349,7 +349,7 @@ export default function MoreScreen() {
         {/* ── Supplements ── */}
         {activeSection === "supplements" && (
           <Card>
-            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_700Bold", marginBottom: 14, letterSpacing: 0.9 }}>
               TODAY'S SUPPLEMENTS
             </Text>
             {USER_PROFILE.supplements.map((supp) => {
