@@ -131,7 +131,7 @@ export default function NutritionScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 112, gap: 16 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={M3.colors.primary} />
         }
@@ -168,13 +168,28 @@ export default function NutritionScreen() {
 
         {/* ── Daily Macro Summary ── */}
         <Card>
-          <View style={{ alignItems: "center", marginBottom: 16 }}>
-            <Text style={{ color: M3.colors.onSurface, fontSize: 48, fontFamily: "BebasNeue_400Regular" }}>
-              {calories.toFixed(0)}
-            </Text>
-            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
-              of {USER_PROFILE.targets.calories} kcal
-            </Text>
+          <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 20, gap: 12 }}>
+            <View style={{ gap: 4, flex: 1 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_700Bold", letterSpacing: 0.9 }}>
+                CALORIES CONSUMED
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "baseline", gap: 6 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 36, fontFamily: "DMSans_700Bold", letterSpacing: -1.2 }}>
+                  {calories.toFixed(0)}
+                </Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
+                  / {USER_PROFILE.targets.calories} kcal
+                </Text>
+              </View>
+              <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
+                {Math.max(0, USER_PROFILE.targets.calories - calories).toFixed(0)} kcal remaining
+              </Text>
+            </View>
+            <View style={{ backgroundColor: M3.colors.primaryContainer, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 999, marginBottom: 3 }}>
+              <Text style={{ color: M3.colors.onPrimaryContainer, fontSize: 11, fontFamily: "DMSans_700Bold" }}>
+                {Math.round((calories / Math.max(1, USER_PROFILE.targets.calories)) * 100)}%
+              </Text>
+            </View>
           </View>
           <MacroBar label="Protein" current={protein} target={USER_PROFILE.targets.protein_g} color={M3.colors.secondary} />
           <MacroBar label="Carbs" current={carbs} target={USER_PROFILE.targets.carbs_g} color={M3.colors.success} />
@@ -183,7 +198,7 @@ export default function NutritionScreen() {
 
         {/* ── Log Mode Buttons ── */}
         <View style={{ flexDirection: "row", gap: 8 }}>
-          {(["type", "voice", "paste", "scan"] as const).map((mode) => (
+          {(["type", "voice", "scan"] as const).map((mode) => (
             <TouchableOpacity
               key={mode}
               onPress={() => {
@@ -191,8 +206,6 @@ export default function NutritionScreen() {
                   router.push("/modals/barcode-scanner");
                 } else if (mode === "voice") {
                   router.push("/modals/voice-input");
-                } else if (mode === "paste") {
-                  router.push("/modals/inbody-paste");
                 } else {
                   router.push("/modals/log-food");
                 }
@@ -230,15 +243,13 @@ export default function NutritionScreen() {
                       ? "edit-3"
                       : mode === "voice"
                       ? "mic"
-                      : mode === "paste"
-                      ? "clipboard"
                       : "camera"
                   }
                   size={15}
                   color={M3.colors.primary}
                 />
               </View>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>
                 {mode}
               </Text>
             </TouchableOpacity>
