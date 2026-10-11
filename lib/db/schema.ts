@@ -16,6 +16,7 @@ export const foodLogs = sqliteTable("food_logs", {
   sodium_mg: real("sodium_mg"),
   source: text("source").notNull(), // 'manual' | 'voice' | 'paste'
   raw_input: text("raw_input"), // original text that was parsed
+  confidence: text("confidence"), // high | medium | low; null for legacy/manual entries
   created_at: integer("created_at").notNull(), // unix timestamp
 });
 
