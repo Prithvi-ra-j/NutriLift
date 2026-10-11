@@ -332,19 +332,7 @@ export async function runMigrations(): Promise<void> {
   await addColumnIfMissing("sync_tombstones", "external_id", "TEXT");
 
   const migrationTimestamp = new Date().toISOString();
-  await sqlite.execAsync(`
-    INSERT OR IGNORE INTO nutrition_profile
-      (id, calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g, goal, target_mode, updated_at)
-    VALUES (1, 2500, 155, 240, 65, 'lose', 'manual', '${migrationTimestamp}');
-
-    INSERT OR IGNORE INTO nutrition_target_history
-      (id, effective_date, calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g, source, explanation, created_at)
-    VALUES ('legacy-defaults-v1', '1900-01-01', 2500, 155, 240, 65, 'manual',
-      'Legacy application defaults migrated; historical targets before this migration were not separately recorded.', '${migrationTimestamp}');
-
-    UPDATE daily_nutrition SET target_calories_kcal = 2500 WHERE target_calories_kcal IS NULL;
-    UPDATE daily_nutrition SET target_protein_g = 155 WHERE target_protein_g IS NULL;
-  `);
+  
 
   await sqlite.execAsync(`
     UPDATE daily_nutrition SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
@@ -418,5 +406,17 @@ export async function runMigrations(): Promise<void> {
       confirmed_at TEXT,
       updated_at TEXT NOT NULL
     );
+
+    INSERT OR IGNORE INTO nutrition_profile
+      (id, calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g, goal, target_mode, updated_at)
+    VALUES (1, 2500, 155, 240, 65, 'lose', 'manual', '\${migrationTimestamp}');
+
+    INSERT OR IGNORE INTO nutrition_target_history
+      (id, effective_date, calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g, source, explanation, created_at)
+    VALUES ('legacy-defaults-v1', '1900-01-01', 2500, 155, 240, 65, 'manual',
+      'Legacy application defaults migrated; historical targets before this migration were not separately recorded.', '\${migrationTimestamp}');
+
+    UPDATE daily_nutrition SET target_calories_kcal = 2500 WHERE target_calories_kcal IS NULL;
+    UPDATE daily_nutrition SET target_protein_g = 155 WHERE target_protein_g IS NULL;
   `);
 }
