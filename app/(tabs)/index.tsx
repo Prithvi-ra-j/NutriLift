@@ -15,6 +15,8 @@ import { getDailyNutrition, getFoodLogsForDate, getLast7DaysNutrition } from "..
 import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { getRecoveryLog } from "../../lib/db/queries/recovery";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getNutritionTargets } from "../../lib/db/queries/nutrition-targets";
+import { toLocalDateKey, addCalendarDays } from "../../lib/utils/local-date";
 import { DAY_TYPES, type DayType } from "../../lib/constants/exercises";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
@@ -52,7 +54,7 @@ interface AdherenceDot {
 }
 
 export default function DashboardScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
   const { nutrition, session, setNutrition, setSession, setFoodLogs } = useTodayStore();
   const { coachInsight } = useUIStore();
 
@@ -60,6 +62,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [adherenceDots, setAdherenceDots] = useState<AdherenceDot[]>([]);
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
+  const [activeTargets, setActiveTargets] = useState({ calories: USER_PROFILE.targets.calories, protein_g: USER_PROFILE.targets.protein_g, carbs_g: USER_PROFILE.targets.carbs_g, fat_g: USER_PROFILE.targets.fat_g });
 
   // Determine today's day type based on day of week
   const getTodayDayType = (): string => {
@@ -86,15 +89,17 @@ export default function DashboardScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [nutritionData, foodLogsData, sessionsData, last7Days, recoveryData] =
+      const [nutritionData, foodLogsData, sessionsData, last7Days, recoveryData, targets] =
         await Promise.all([
           getDailyNutrition(today),
           getFoodLogsForDate(today),
           getSessionsForDate(today),
           getLast7DaysNutrition(),
           getRecoveryLog(today),
+          getNutritionTargets(),
         ]);
 
+      setActiveTargets(targets);
       setNutrition(nutritionData);
       setFoodLogs(foodLogsData);
       
@@ -115,9 +120,7 @@ export default function DashboardScreen() {
       // Build 7-day adherence dots
       const dots: AdherenceDot[] = [];
       for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split("T")[0];
+        const dateStr = addCalendarDays(today, -i);
         const dayData = last7Days.find((n) => n.date === dateStr);
 
         let status: AdherenceDot["status"] = "empty";
