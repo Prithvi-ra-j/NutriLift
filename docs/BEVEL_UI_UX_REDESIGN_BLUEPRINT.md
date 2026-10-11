@@ -8,7 +8,7 @@ A detailed, screen-by-screen plan for adapting the visual language and interacti
 
 ## Goal and constraints
 
-Match Bevel’s visual quality and UI grammar—dark layered surfaces, precise typography, restrained accents, data-rich cards, crisp charts, consistent spacing, well-designed bottom sheets, clear empty states and purposeful motion—while adapting the details to NutriLift. Do not copy screens that have no NutriLift equivalent.
+Match Bevel’s visual quality and UI grammar—light neutral surfaces as the primary reference, dark-mode variants, precise typography, restrained accents, data-rich cards, crisp charts, consistent spacing, well-designed bottom sheets, clear empty states and purposeful motion—while adapting the details to NutriLift. Do not copy screens that have no NutriLift equivalent.
 
 NutriLift is Expo SDK 54 / React Native / TypeScript / Expo Router, with local-first SQLite/Drizzle, Zustand, food logging, workout sessions, body-composition records, recovery logs, AI coaching, and reports. Preserve routes, data contracts, offline behavior, and real calculations. No hardcoded demo data. Do not display unknown values as zero or present manual recovery check-ins as wearable sensor readings.
 
@@ -541,3 +541,15 @@ For each screen, identify exact Bevel PNG and state in the catalog; capture Nutr
 - Bevel teardown: https://github.com/ChakshuGautam/bevel-teardown
 - Screen catalog: https://github.com/ChakshuGautam/bevel-teardown/blob/main/docs/screen-catalog.md
 - User stories: https://github.com/ChakshuGautam/bevel-teardown/blob/main/docs/user-stories.md
+
+
+## Full screenshot-set review requirement
+
+Before choosing final reference screens or implementing the visual system, review the **actual image files**, not just this document or the catalog summaries.
+
+- The source catalog IDs refer to `screens/bevel-000.png` through `screens/bevel-544.png` in the Bevel teardown repository.
+- A separate local archive used during the initial visual audit is numbered `screen_001.png` through `screen_545.png`; that archive is shuffled and **its numeric order does not map to the catalog IDs**. Never infer a catalog ID from a local archive number.
+- Use `docs/BEVEL_545_SCREEN_REFERENCE_MAP.csv` to locate all source catalog images and their flow tags.
+- Review every source image at readable resolution, compare neighboring images within each flow, and record purpose, UI state, layout hierarchy, controls, color/typography/spacing, navigation transition, and NutriLift applicability.
+- The light theme is the visual baseline evidenced by the screenshots. Do not implement a dark-first theme merely because a previous draft said so.
+- OCR and contact sheets are navigation aids only. Confirm details in the actual image.
