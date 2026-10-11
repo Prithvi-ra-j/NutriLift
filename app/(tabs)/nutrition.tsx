@@ -66,7 +66,7 @@ export default function NutritionScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
-  const [activeTargets, setActiveTargets] = useState<NutritionTargets>({ calories: activeTargets.calories, protein_g: activeTargets.protein_g, carbs_g: activeTargets.carbs_g, fat_g: activeTargets.fat_g, goal: "lose", mode: "manual" });
+  const [activeTargets, setActiveTargets] = useState<NutritionTargets>({ calories: USER_PROFILE.targets.calories, protein_g: USER_PROFILE.targets.protein_g, carbs_g: USER_PROFILE.targets.carbs_g, fat_g: USER_PROFILE.targets.fat_g, goal: "lose", mode: "manual" });
   const [dayComplete, setDayComplete] = useState(false);
 
   const loadData = useCallback(async () => {
