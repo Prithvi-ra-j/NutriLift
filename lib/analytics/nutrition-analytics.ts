@@ -15,7 +15,7 @@ export interface NutritionSummary {
   proteinGapAnalysis: string;
 }
 
-export function computeNutritionSummary(days: DailyNutrition[], targets = USER_PROFILE.targets): NutritionSummary {
+export function computeNutritionSummary(days: DailyNutrition[], targets: { calories: number; protein_g: number } = USER_PROFILE.targets): NutritionSummary {
   if (days.length === 0) {
     return {
       avgDailyCalories: 0,
