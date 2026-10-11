@@ -16,6 +16,8 @@ import { getRecentRecoveryLogs } from "../../lib/db/queries/recovery";
 import { computeNutritionSummary } from "../../lib/analytics/nutrition-analytics";
 import { computeBodySummary } from "../../lib/analytics/body-analytics";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getNutritionTargets } from "../../lib/db/queries/nutrition-targets";
+import { toLocalDateKey, addCalendarDays } from "../../lib/utils/local-date";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
@@ -32,7 +34,7 @@ export default function ProgressScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   // Week navigation state
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = toLocalDateKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
@@ -40,6 +42,7 @@ export default function ProgressScreen() {
   const [inBodyRecords, setInBodyRecords] = useState<BodyStat[]>([]);
   const [nutritionHistory, setNutritionHistory] = useState<DailyNutrition[]>([]);
   const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>([]);
+  const [activeTargets, setActiveTargets] = useState({ calories: USER_PROFILE.targets.calories, protein_g: USER_PROFILE.targets.protein_g, carbs_g: USER_PROFILE.targets.carbs_g, fat_g: USER_PROFILE.targets.fat_g });
 
   // Get week range for selected date
   const getWeekRange = (dateStr: string) => {
@@ -53,8 +56,8 @@ export default function ProgressScreen() {
     sunday.setDate(monday.getDate() + 6);
     
     return {
-      start: monday.toISOString().split("T")[0],
-      end: sunday.toISOString().split("T")[0],
+      start: toLocalDateKey(monday),
+      end: toLocalDateKey(sunday),
       monday,
       sunday,
     };
@@ -65,13 +68,15 @@ export default function ProgressScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [prsData, weightData, inBodyData, nutritionData, recoveryData] = await Promise.all([
+      const [prsData, weightData, inBodyData, nutritionData, recoveryData, targets] = await Promise.all([
         getAllPRs(),
         getWeightHistory(90), // Get 90 days to cover multiple weeks
         getAllInBodyRecords(),
         getLast30DaysNutrition(),
         getRecentRecoveryLogs(30), // Get 30 days to cover multiple weeks
+        getNutritionTargets(),
       ]);
+      setActiveTargets(targets);
       setPRs(prsData);
       setWeightHistory(weightData);
       setInBodyRecords(inBodyData);
@@ -106,7 +111,7 @@ export default function ProgressScreen() {
     (pr) => pr.achieved_date >= weekRange.start && pr.achieved_date <= weekRange.end
   );
 
-  const nutritionSummary = computeNutritionSummary(weekNutritionHistory);
+  const nutritionSummary = computeNutritionSummary(weekNutritionHistory, activeTargets);
   const latestInBody = inBodyRecords[inBodyRecords.length - 1] ?? null;
   const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
 
@@ -452,8 +457,8 @@ export default function ProgressScreen() {
                 {isCurrentWeek ? "THIS WEEK" : "WEEK"} NUTRITION SUMMARY
               </Text>
               {[
-                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: `${USER_PROFILE.targets.calories}` },
-                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: `${USER_PROFILE.targets.protein_g}g` },
+                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: `${activeTargets.calories}` },
+                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: `${activeTargets.protein_g}g` },
                 { label: "Protein Hit Rate", value: `${nutritionSummary.proteinHitRate.toFixed(0)}%`, target: "100%" },
                 { label: "Best Streak", value: `${nutritionSummary.bestStreak} days`, target: "" },
                 { label: "Current Streak", value: `${nutritionSummary.currentStreak} days`, target: "" },
