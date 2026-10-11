@@ -30,7 +30,7 @@ Do not select references from the screen catalog alone. Review all 545 source im
 ## Required workflow
 1. Work on a separate branch named `redesign/bevel-inspired-ui`; don't commit a sweeping rewrite to the default branch.
 2. Inspect root layout, navigation, fonts, theme tokens, shared production components and the exact route before implementing anything.
-3. Capture baseline screenshots for Home, Nutrition, Workout, Coach, Progress and More using a representative Android viewport. Also capture food-log and barcode confirmation modals.
+3. Capture baseline screenshots for Home, Nutrition, Workout, Coach, Progress and More using a representative Android viewport. Use the reference collection’s light theme as the first visual target. Also capture food-log and barcode confirmation modals.
 4. Inspect the Bevel PNGs identified by the blueprint; use the screen catalog to map exact state/flow. Record measured design tokens (color, type, insets, spacing, radii, icon styling). Separate observation from estimates.
 5. Write an implementation checklist with touched paths, component changes, risks, tests and screenshot checks.
 6. Implement the token/component layer first, then Home as the golden screen. Compare and correct it before moving to other screens.
