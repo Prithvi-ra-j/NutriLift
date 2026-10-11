@@ -324,6 +324,7 @@ export async function runMigrations(): Promise<void> {
   await addColumnIfMissing("daily_nutrition", "updated_at", "TEXT");
   await addColumnIfMissing("daily_nutrition", "target_calories_kcal", "INTEGER");
   await addColumnIfMissing("daily_nutrition", "target_protein_g", "REAL");
+  await addColumnIfMissing("food_logs", "confidence", "TEXT");
   await addColumnIfMissing("workout_sessions", "updated_at", "TEXT");
   await addColumnIfMissing("personal_records", "updated_at", "TEXT");
   await addColumnIfMissing("body_stats", "updated_at", "TEXT");
