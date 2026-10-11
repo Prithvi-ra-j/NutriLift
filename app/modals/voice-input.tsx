@@ -92,7 +92,7 @@ export default function VoiceInputModal() {
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = toLocalDateKey();
       const meal = parsedFood.meal_suggestion || "snack";
 
       // Save each food item
