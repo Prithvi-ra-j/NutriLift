@@ -1,5 +1,15 @@
 # Bevel UI/UX — Full 545-Screen Visual Audit
 
+## Current review status — 2026-10-11
+
+- Full-frame visual sweep: **545/545 local archive images viewed** across 61 labeled contact sheets.
+- OCR inventory: **545/545**.
+- Native-resolution review: representative samples inspected across major families; **not all 545 canonical images have been opened individually at native resolution yet**.
+- Canonical mapping: the local archive is shuffled, so its `screen_NNN` filenames have not been mapped one-to-one to `bevel-NNN.png` source IDs.
+- **Implementation remains blocked** until the exact 545 canonical PNGs are individually reviewed, mapped, and recorded in `docs/BEVEL_545_SCREEN_REVIEW_LEDGER.csv`.
+
+Read [`BEVEL_545_VISUAL_REVIEW_COMPLETION_REPORT.md`](./BEVEL_545_VISUAL_REVIEW_COMPLETION_REPORT.md) for the detailed visual findings, per-family design observations and adaptation decisions. The ledger distinguishes full-frame archive coverage from native-resolution verification; do not mark a canonical row complete based on OCR or contact-sheet presence alone.
+
 ## Why this file exists
 
 The redesign must be grounded in the actual screenshot images, not only a summary or selected screenshots. The source collection contains 545 images, `screens/bevel-000.png` through `screens/bevel-544.png`. `docs/BEVEL_545_SCREEN_REFERENCE_MAP.csv` maps every source image to its catalog flow tag(s) and a conservative NutriLift-fit decision.
