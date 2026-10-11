@@ -118,13 +118,13 @@ export default function ProgressScreen() {
   const goToPreviousWeek = () => {
     const prev = new Date(selectedDate);
     prev.setDate(prev.getDate() - 7);
-    setSelectedDate(prev.toISOString().split("T")[0]);
+    setSelectedDate(toLocalDateKey(prev));
   };
 
   const goToNextWeek = () => {
     const next = new Date(selectedDate);
     next.setDate(next.getDate() + 7);
-    setSelectedDate(next.toISOString().split("T")[0]);
+    setSelectedDate(toLocalDateKey(next));
   };
 
   const goToToday = () => {
