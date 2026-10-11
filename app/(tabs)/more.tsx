@@ -28,6 +28,7 @@ import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/
 import { M3 } from "../../design-system/tokens";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getNutritionTargets, saveNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
+import { recomputeDailyNutrition } from "../../lib/db/queries/nutrition";
 import { toLocalDateKey } from "../../lib/utils/local-date";
 import { getAdaptiveTargetRecommendation } from "../../lib/db/queries/adaptive-targets";
 import type { AdaptiveTargetResult } from "../../lib/nutrition/adaptive-targets";
@@ -714,6 +715,7 @@ export default function MoreScreen() {
                   setTargetsSaving(true);
                   try {
                     await saveNutritionTargets(targets, { source: "manual", explanation: "Manually updated in Settings." });
+                    await recomputeDailyNutrition(toLocalDateKey());
                     setNutritionTargets(targets);
                     Alert.alert("Saved", "Nutrition targets saved. New or recomputed daily summaries use the effective target for that date.");
                   } catch (error) {
@@ -776,6 +778,7 @@ export default function MoreScreen() {
                             algorithmVersion: adaptiveResult.algorithmVersion,
                             explanation: adaptiveResult.reason,
                           });
+                          await recomputeDailyNutrition(toLocalDateKey());
                           setNutritionTargets(next);
                           setTargetInputs((current) => ({ ...current, calories: String(next.calories) }));
                           Alert.alert("Target updated", "The reviewed recommendation is now active. Historical target records were retained.");
