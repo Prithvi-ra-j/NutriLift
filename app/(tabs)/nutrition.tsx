@@ -18,6 +18,8 @@ import {
   getLast7DaysNutrition,
 } from "../../lib/db/queries/nutrition";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getNutritionTargetsForDate, isNutritionDayComplete, setNutritionDayComplete, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -56,7 +58,7 @@ function groupByMeal(logs: FoodLog[]): MealGroup[] {
 }
 
 export default function NutritionScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = toLocalDateKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const { nutrition, foodLogs, setNutrition, setFoodLogs } = useTodayStore();
 
@@ -64,17 +66,23 @@ export default function NutritionScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
+  const [activeTargets, setActiveTargets] = useState<NutritionTargets>({ calories: activeTargets.calories, protein_g: activeTargets.protein_g, carbs_g: activeTargets.carbs_g, fat_g: activeTargets.fat_g, goal: "lose", mode: "manual" });
+  const [dayComplete, setDayComplete] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
-      const [nutritionData, logsData, weekData] = await Promise.all([
+      const [nutritionData, logsData, weekData, targets, complete] = await Promise.all([
         getDailyNutrition(selectedDate),
         getFoodLogsForDate(selectedDate),
         getLast7DaysNutrition(),
+        getNutritionTargetsForDate(selectedDate),
+        isNutritionDayComplete(selectedDate),
       ]);
       setNutrition(nutritionData);
       setFoodLogs(logsData);
       setLast7Days(weekData);
+      setActiveTargets(targets);
+      setDayComplete(complete);
     } catch (err) {
       console.error("Nutrition load error:", err);
     } finally {
@@ -148,6 +156,37 @@ export default function NutritionScreen() {
 
         {/* ── Date Navigator ── */}
         <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />
+
+        <Card>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
+                {dayComplete ? "Day marked complete" : "Confirm your food diary"}
+              </Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, lineHeight: 16, marginTop: 3 }}>
+                Adaptive estimates only use days you confirm complete and entries with reviewed nutrition values.
+              </Text>
+            </View>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={dayComplete ? "Mark food diary incomplete" : "Mark food diary complete"}
+              onPress={async () => {
+                try {
+                  await setNutritionDayComplete(selectedDate, !dayComplete);
+                  setDayComplete(!dayComplete);
+                  Alert.alert(!dayComplete ? "Day confirmed" : "Confirmation removed", !dayComplete ? "This day can qualify for adaptive estimates if its food entries have usable nutrition values." : "This day will no longer qualify for adaptive estimates.");
+                } catch {
+                  Alert.alert("Could not save", "The day-completion status could not be saved.");
+                }
+              }}
+              style={{ backgroundColor: dayComplete ? M3.colors.successContainer : M3.colors.primary, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10 }}
+            >
+              <Text style={{ color: dayComplete ? M3.colors.onSuccessContainer : M3.colors.onPrimary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
+                {dayComplete ? "Confirmed" : "Mark complete"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </Card>
 
         {/* ── Marathon Day Notice ── */}
         {new Date(selectedDate).getDay() === 0 && (
