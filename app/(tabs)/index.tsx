@@ -164,11 +164,11 @@ export default function DashboardScreen() {
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
 
-  const caloriePct = Math.min(100, (calories / USER_PROFILE.targets.calories) * 100);
+  const caloriePct = Math.min(100, (calories / activeTargets.calories) * 100);
 
   // Protein pace
   const mealsLogged = 2; // simplified — would count distinct meals
-  const proteinRemaining = Math.max(0, USER_PROFILE.targets.protein_g - protein);
+  const proteinRemaining = Math.max(0, activeTargets.protein_g - protein);
   const mealsLeft = Math.max(1, 4 - mealsLogged);
   const proteinPerMeal = proteinRemaining / mealsLeft;
 
@@ -233,11 +233,11 @@ export default function DashboardScreen() {
               protein={protein}
               carbs={carbs}
               fat={fat}
-              proteinTarget={USER_PROFILE.targets.protein_g}
-              carbsTarget={USER_PROFILE.targets.carbs_g}
-              fatTarget={USER_PROFILE.targets.fat_g}
+              proteinTarget={activeTargets.protein_g}
+              carbsTarget={activeTargets.carbs_g}
+              fatTarget={activeTargets.fat_g}
               calories={calories}
-              caloriesTarget={USER_PROFILE.targets.calories}
+              caloriesTarget={activeTargets.calories}
             />
 
             {/* Macro bars */}
@@ -245,19 +245,19 @@ export default function DashboardScreen() {
               <MacroBar
                 label="Protein"
                 current={protein}
-                target={USER_PROFILE.targets.protein_g}
+                target={activeTargets.protein_g}
                 color={M3.colors.secondary}
               />
               <MacroBar
                 label="Carbs"
                 current={carbs}
-                target={USER_PROFILE.targets.carbs_g}
+                target={activeTargets.carbs_g}
                 color={M3.colors.success}
               />
               <MacroBar
                 label="Fat"
                 current={fat}
-                target={USER_PROFILE.targets.fat_g}
+                target={activeTargets.fat_g}
                 color={M3.macroColors.fat}
               />
             </View>
@@ -267,8 +267,8 @@ export default function DashboardScreen() {
         {/* ── Stats Row ── */}
         <View style={{ flexDirection: "row", gap: 12 }}>
           {[
-            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${USER_PROFILE.targets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
-            { label: "Calories", value: calories.toFixed(0), sub: `/ ${USER_PROFILE.targets.calories}`, color: M3.colors.primary, icon: "zap" as const },
+            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${activeTargets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
+            { label: "Calories", value: calories.toFixed(0), sub: `/ ${activeTargets.calories}`, color: M3.colors.primary, icon: "zap" as const },
             { label: "Volume", value: session?.total_volume_kg ? `${(session.total_volume_kg / 1000).toFixed(1)}t` : "—", sub: "today", color: M3.colors.tertiary, icon: "trending-up" as const },
             { label: "Recovery", value: recoveryScore ? `${recoveryScore}` : "—", sub: "/ 100", color: M3.colors.success, icon: "heart" as const },
           ].map((stat) => (
