@@ -212,12 +212,12 @@ export default function NutritionScreen() {
               {calories.toFixed(0)}
             </Text>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
-              of {USER_PROFILE.targets.calories} kcal
+              of {activeTargets.calories} kcal
             </Text>
           </View>
-          <MacroBar label="Protein" current={protein} target={USER_PROFILE.targets.protein_g} color={M3.colors.secondary} />
-          <MacroBar label="Carbs" current={carbs} target={USER_PROFILE.targets.carbs_g} color={M3.colors.success} />
-          <MacroBar label="Fat" current={fat} target={USER_PROFILE.targets.fat_g} color={M3.macroColors.fat} />
+          <MacroBar label="Protein" current={protein} target={activeTargets.protein_g} color={M3.colors.secondary} />
+          <MacroBar label="Carbs" current={carbs} target={activeTargets.carbs_g} color={M3.colors.success} />
+          <MacroBar label="Fat" current={fat} target={activeTargets.fat_g} color={M3.macroColors.fat} />
         </Card>
 
         {/* ── Log Mode Buttons ── */}
@@ -370,7 +370,7 @@ export default function NutritionScreen() {
             </Text>
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: 60 }}>
               {last7Days.map((day, i) => {
-                const pct = Math.min(1, day.total_protein_g / USER_PROFILE.targets.protein_g);
+                const pct = Math.min(1, day.total_protein_g / activeTargets.protein_g);
                 const hit = day.protein_target_met === 1;
                 return (
                   <View key={i} style={{ flex: 1, alignItems: "center", gap: 4 }}>
