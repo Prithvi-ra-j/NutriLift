@@ -139,7 +139,8 @@ export function estimateAdaptiveTarget(input: AdaptiveTargetInput): AdaptiveTarg
   const desiredOffset = goal === "lose" ? -300 : goal === "gain" ? 200 : 0;
   const unboundedTarget = rawMaintenance + desiredOffset;
   const boundedDelta = Math.max(-MAX_CHANGE_KCAL, Math.min(MAX_CHANGE_KCAL, unboundedTarget - currentTargetKcal));
-  const suggestedTargetKcal = Math.round(Math.max(MIN_TARGET_KCAL, Math.min(6000, currentTargetKcal + boundedDelta)) / 50) * 50;
+  const roundedDelta = Math.max(-MAX_CHANGE_KCAL, Math.min(MAX_CHANGE_KCAL, Math.round(boundedDelta / 10) * 10));
+  const suggestedTargetKcal = Math.max(MIN_TARGET_KCAL, Math.min(6000, currentTargetKcal + roundedDelta));
 
   return {
     ...base,
