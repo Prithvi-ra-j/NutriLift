@@ -117,6 +117,7 @@ export default function LogFoodModal() {
           sodium_mg: null,
           source: mode,
           raw_input: input,
+          confidence: item.confidence === "high" ? "high" : item.confidence === "medium" ? "medium" : "low",
           created_at: now,
         });
       }
