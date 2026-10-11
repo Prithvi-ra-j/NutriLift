@@ -21,6 +21,8 @@ import {
 } from "../db/schema";
 import { desc, gte, sql } from "drizzle-orm";
 import { USER_PROFILE } from "../constants/user-profile";
+import { getNutritionTargets } from "../db/queries/nutrition-targets";
+import { toLocalDateKey } from "../utils/local-date";
 
 interface ExportOptions {
   startDate?: string; // YYYY-MM-DD
@@ -46,17 +48,18 @@ async function generateHTML(options: ExportOptions): Promise<string> {
     includePRs = true,
   } = options;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
   const start = startDate || getDateDaysAgo(30); // Default 30 days
   const end = endDate || today;
 
   // Fetch all data
-  const [nutritionData, workoutData, bodyData, recoveryData, prData] = await Promise.all([
+  const [nutritionData, workoutData, bodyData, recoveryData, prData, activeTargets] = await Promise.all([
     includeNutrition ? fetchNutritionData(start, end) : null,
     includeWorkouts ? fetchWorkoutData(start, end) : null,
     includeBody ? fetchBodyData(start, end) : null,
     includeRecovery ? fetchRecoveryData(start, end) : null,
     includePRs ? fetchPRData() : null,
+    getNutritionTargets(),
   ]);
 
   // Build HTML
@@ -222,12 +225,12 @@ async function generateHTML(options: ExportOptions): Promise<string> {
         <div class="summary-card">
           <div class="label">Avg Daily Protein</div>
           <div class="value">${avgProtein.toFixed(0)}g</div>
-          <div class="subvalue">Target: ${USER_PROFILE.targets.protein_g}g</div>
+          <div class="subvalue">Target: ${activeTargets.protein_g}g</div>
         </div>
         <div class="summary-card">
           <div class="label">Avg Daily Calories</div>
           <div class="value">${avgCalories.toFixed(0)}</div>
-          <div class="subvalue">Target: ${USER_PROFILE.targets.calories}</div>
+          <div class="subvalue">Target: ${activeTargets.calories}</div>
         </div>
         <div class="summary-card">
           <div class="label">Protein Target Hit</div>
