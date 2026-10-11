@@ -42,6 +42,14 @@ Do not select references from the screen catalog alone. Review all 545 source im
 12. After each phase run TypeScript, relevant Jest tests and Expo/device diagnostics. Capture updated screenshots and compare side by side.
 13. Report changed files, behavior preserved, tests run, visual comparisons actually performed and known gaps. Do not claim “pixel perfect” unless verified against screenshots.
 
+## Current review checkpoint — 2026-10-11
+
+The broad visual sweep has covered all 545 extracted archive images via 61 labeled contact sheets, and OCR is available for all 545. Representative native-resolution samples have also been inspected. This is **not yet the required 545/545 canonical native-resolution review**: the local archive is shuffled and its filenames are not confirmed matches for canonical source IDs.
+
+**Do not implement UI changes yet.** First complete every row in `docs/BEVEL_545_SCREEN_REVIEW_LEDGER.csv` by opening the exact `screens/bevel-NNN.png` source image at readable/native resolution, recording screen purpose/state/visual anatomy/controls/transition/NutriLift mapping/confidence, and comparing adjacent states. A row is not complete because its flow tag or OCR text exists.
+
+Use `docs/BEVEL_545_VISUAL_REVIEW_COMPLETION_REPORT.md` for findings from the full-frame sweep. Treat those as design-system hypotheses and cross-family observations, not a substitute for the remaining per-image review. Keep the implementation gate closed until all canonical rows are complete.
+
 ## Non-negotiable
 - Do not use Bevel screenshots as app backgrounds or ship them as assets.
 - Do not add Apple Health/Watch, CGM, glucose, paywall, physiological scores, sleep alarms or source-priority features absent from NutriLift.
