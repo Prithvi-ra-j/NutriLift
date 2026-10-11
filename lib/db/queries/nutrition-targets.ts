@@ -101,7 +101,7 @@ export async function getNutritionTargetsForDate(date: string): Promise<Nutritio
   try {
     const rows = await db.select().from(nutritionTargetHistory)
       .where(lte(nutritionTargetHistory.effective_date, date))
-      .orderBy(desc(nutritionTargetHistory.effective_date))
+      .orderBy(desc(nutritionTargetHistory.effective_date), desc(nutritionTargetHistory.created_at))
       .limit(1);
     const row = rows[0];
     if (row) {
