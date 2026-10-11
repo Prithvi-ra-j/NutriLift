@@ -2,7 +2,7 @@ import { eq, and, desc, lte, gte } from "drizzle-orm";
 import { db } from "../client";
 import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
 import { recordTombstone } from "../../integrations/life-os/syncRepository";
-import { addCalendarDays, toLocalDateKey, calendarDaysBetween } from "../../utils/local-date";
+import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 
 export async function insertBodyStat(stat: NewBodyStat): Promise<void> {
   await db.insert(bodyStats).values({ ...stat, updated_at: new Date().toISOString() });
@@ -79,7 +79,7 @@ export async function deleteBodyStat(id: string): Promise<void> {
 export function computeRollingAverage(
   weights: { date: string; weight_kg: number | null }[],
   windowDays: number = 7
-): { date: string; avg: number }[] {
+): { date: string; avg: number | null }[] {
   if (!Number.isInteger(windowDays) || windowDays < 1) return [];
   const valid = weights
     .filter((entry) => entry.weight_kg !== null && Number.isFinite(entry.weight_kg) && entry.weight_kg > 0)
@@ -87,11 +87,11 @@ export function computeRollingAverage(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Use actual calendar-day windows, not the last N observations. Return null-like
-  // absence by omitting dates with no measurements in the window; never fake zero.
+  // absence explicitly as null; never fake zero.
   return weights.slice().sort((a, b) => a.date.localeCompare(b.date)).map((entry) => {
     const cutoff = addCalendarDays(entry.date, -(windowDays - 1));
     const window = valid.filter((measurement) => measurement.date >= cutoff && measurement.date <= entry.date);
-    if (window.length === 0) return { date: entry.date, avg: Number.NaN };
+    if (window.length === 0) return { date: entry.date, avg: null };
     const avg = window.reduce((sum, item) => sum + (item.weight_kg as number), 0) / window.length;
     return { date: entry.date, avg: Math.round(avg * 100) / 100 };
   });
