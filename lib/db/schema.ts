@@ -29,8 +29,43 @@ export const dailyNutrition = sqliteTable("daily_nutrition", {
   protein_target_met: integer("protein_target_met"), // boolean
   calorie_target_met: integer("calorie_target_met"),
   adherence_score: real("adherence_score"), // 0-100
+  target_calories_kcal: integer("target_calories_kcal"),
+  target_protein_g: real("target_protein_g"),
   notes: text("notes"),
   updated_at: text("updated_at"),
+});
+
+// ─── Persisted profile and nutrition targets ──────────────────────────────────
+export const nutritionProfile = sqliteTable("nutrition_profile", {
+  id: integer("id").primaryKey(),
+  calorie_target_kcal: integer("calorie_target_kcal").notNull(),
+  protein_target_g: real("protein_target_g").notNull(),
+  carbs_target_g: real("carbs_target_g").notNull(),
+  fat_target_g: real("fat_target_g").notNull(),
+  goal: text("goal").notNull().default("lose"),
+  target_mode: text("target_mode").notNull().default("manual"),
+  updated_at: text("updated_at").notNull(),
+});
+
+export const nutritionTargetHistory = sqliteTable("nutrition_target_history", {
+  id: text("id").primaryKey(),
+  effective_date: text("effective_date").notNull(),
+  calorie_target_kcal: integer("calorie_target_kcal").notNull(),
+  protein_target_g: real("protein_target_g").notNull(),
+  carbs_target_g: real("carbs_target_g").notNull(),
+  fat_target_g: real("fat_target_g").notNull(),
+  source: text("source").notNull(), // manual | adaptive
+  maintenance_estimate_kcal: integer("maintenance_estimate_kcal"),
+  algorithm_version: integer("algorithm_version"),
+  explanation: text("explanation"),
+  created_at: text("created_at").notNull(),
+});
+
+export const nutritionDayStatus = sqliteTable("nutrition_day_status", {
+  date: text("date").primaryKey(),
+  is_complete: integer("is_complete").notNull().default(0),
+  confirmed_at: text("confirmed_at"),
+  updated_at: text("updated_at").notNull(),
 });
 
 // ─── Workout Sessions ─────────────────────────────────────────────────────────
