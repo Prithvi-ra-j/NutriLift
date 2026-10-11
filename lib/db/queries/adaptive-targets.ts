@@ -28,7 +28,8 @@ export async function getAdaptiveTargetRecommendation(): Promise<AdaptiveTargetR
   const intakeDays = nutritionRows.map((row) => {
     const dayLogs = logsByDate.get(row.date) ?? [];
     const unresolved = dayLogs.some((log) => log.confidence === "low" || (log.calories === 0 && log.protein_g === 0 && log.carbs_g === 0 && log.fat_g === 0));
-    const knownQuality = dayLogs.length > 0 && dayLogs.every((log) => log.confidence === "high" || log.confidence === "medium");
+    // A user-confirmed complete day is a manual review of legacy entries with no confidence metadata.
+    const knownQuality = dayLogs.length > 0 && dayLogs.every((log) => log.confidence !== "low");
     return {
       date: row.date,
       calories: row.total_calories,
