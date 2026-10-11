@@ -11,6 +11,7 @@ import { insertFoodLog } from "../../lib/db/queries/nutrition";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 import uuid from "react-native-uuid";
 
 export default function VoiceInputModal() {
