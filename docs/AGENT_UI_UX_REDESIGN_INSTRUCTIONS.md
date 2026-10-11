@@ -10,7 +10,22 @@ Read `docs/BEVEL_UI_UX_REDESIGN_BLUEPRINT.md` in full before changing any code. 
 - NutriLift screen routes and core services are under `app/`, `components/`, `lib/`, `design-system/`, and `app/modals/`.
 
 ## Mission
-Make NutriLift feel meticulously designed in the same broad visual language as Bevel: measured spacing, precise type hierarchy, quiet dark surfaces, clear data visualization, polished sheets and meaningful feedback. The NutriLift use case is nutrition + workout logging, body progress and AI coaching, so don't reproduce unrelated Bevel-only health capabilities.
+Make NutriLift feel meticulously designed in the same broad visual language as Bevel: measured spacing, precise type hierarchy, light neutral surfaces as the baseline (with coherent dark-mode variants), clear data visualization, polished sheets and meaningful feedback. The NutriLift use case is nutrition + workout logging, body progress and AI coaching, so don't reproduce unrelated Bevel-only health capabilities.
+
+
+## Mandatory all-image visual audit (before coding)
+
+Do not select references from the screen catalog alone. Review all 545 source images in `ChakshuGautam/bevel-teardown/screens/bevel-000.png` through `bevel-544.png`.
+
+- Use `docs/BEVEL_545_SCREEN_REFERENCE_MAP.csv` as the catalog-ID-to-flow index.
+- Open every relevant image at full readable resolution; for this task, “relevant” means the full 545-image set before finalizing the design system and screen selection.
+- Compare adjacent screenshots to infer the transition/state sequence: default, selected, loading, empty, error, editing, confirmation, completion, settings and alternate theme.
+- Record actual image evidence for typography, spacing, surfaces, radii, controls, charts, sheet geometry, CTA hierarchy, navigation and state changes.
+- Do not assume the separate `screen_001.png`–`screen_545.png` archive order maps to `bevel-000.png`–`bevel-544.png`; the archive is shuffled. Match by content, never by number.
+- The screenshot collection is predominantly light theme. Validate colors from the actual images before choosing tokens.
+- Create a per-screen review ledger with: source image ID, purpose, state, visual anatomy, interaction inference, NutriLift destination, reuse/adapt/exclude decision, and confidence.
+- OCR/contact sheets are indexing aids, not final evidence. Do not mark a screen visually reviewed until the full-resolution image has been inspected.
+- Do not start implementation until the shared design-system conclusions and first screen reference are evidence-backed.
 
 ## Required workflow
 1. Work on a separate branch named `redesign/bevel-inspired-ui`; don't commit a sweeping rewrite to the default branch.
