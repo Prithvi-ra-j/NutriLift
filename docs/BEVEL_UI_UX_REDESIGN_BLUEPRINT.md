@@ -66,7 +66,7 @@ Implement production components under `components/ui/` and centralize the tokens
 - `accentPrimary`, `accentCalories`, `accentProtein`, `accentCarbs`, `accentFat`
 - `success`, `warning`, `danger`, `info`
 
-Create a dark-first theme. Implement light theme deliberately only if the app supports it. Macro colors must be consistent across all routes. Do not use color alone to convey state.
+Create the light-theme tokens first because light surfaces dominate the reference images. Implement dark mode as a separate coherent theme only if the app supports it end-to-end. Macro colors must be consistent across all routes. Do not use color alone to convey state.
 
 ### Typography
 - Verify DM Sans and display font loading in the root layout before relying on them.
@@ -148,7 +148,7 @@ Refactor as each screen is redesigned; avoid a destructive, app-wide rewrite.
 **References:** 051, 240.  
 **Priority:** P0.
 
-- Native-style dark sheet with handle, compact title “Log something” and close button.
+- Native-style light neutral bottom sheet with handle, compact title “Log something” and close button; support a matching dark variant only if the app has a complete dark theme.
 - Responsive 2-column/3-column action grid, large hit areas, consistent icons/labels.
 - Actions where currently supported: Describe/type food, Search food, Scan barcode, Voice input, Add custom food, Log workout/activity, Log body weight, Recovery check-in, Supplements.
 - Separate Food from Fitness & Body using small section captions.
@@ -404,7 +404,7 @@ The current More screen uses an active-section state; redesign with that model i
 - Report: period summary, evidenced wins, nutrition averages/adherence, strength, body composition, recovery history, next-month recommendations.
 - Only use scores tied to a clear algorithm; don't invent an overall score.
 - Surface missing logs/sparse data.
-- PDF should use print-appropriate styling, not simply screenshot the dark UI.
+- PDF should use print-appropriate styling, not simply screenshot the app UI.
 - Retry should not lose gathered data.
 
 ## Reusable Bevel patterns to adapt
@@ -443,7 +443,7 @@ The current More screen uses an active-section state; redesign with that model i
 
 ### Phase 1 — Tokens and primitives
 1. Sample chosen screenshots and record measured color, insets, radius, typography and icon styles.
-2. Create semantic dark-theme tokens.
+2. Create semantic light-theme tokens first, then add a parallel dark theme only if supported throughout the app.
 3. Refactor production Card, ScreenHeader, Button, MacroBar, MacroRing and loading/empty/error primitives.
 4. Implement shared action sheet, press states and snackbar.
 5. Verify contrast, safe areas, keyboard behavior and small screens.
@@ -551,5 +551,5 @@ Before choosing final reference screens or implementing the visual system, revie
 - A separate local archive used during the initial visual audit is numbered `screen_001.png` through `screen_545.png`; that archive is shuffled and **its numeric order does not map to the catalog IDs**. Never infer a catalog ID from a local archive number.
 - Use `docs/BEVEL_545_SCREEN_REFERENCE_MAP.csv` to locate all source catalog images and their flow tags.
 - Review every source image at readable resolution, compare neighboring images within each flow, and record purpose, UI state, layout hierarchy, controls, color/typography/spacing, navigation transition, and NutriLift applicability.
-- The light theme is the visual baseline evidenced by the screenshots. Do not implement a dark-first theme merely because a previous draft said so.
+- The light theme is the visual baseline evidenced by the screenshots. Do not implement a light-first theme merely because a previous draft said so.
 - OCR and contact sheets are navigation aids only. Confirm details in the actual image.
