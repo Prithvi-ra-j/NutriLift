@@ -1,6 +1,6 @@
 # NutriLift implementation progress tracker
 
-Last updated: 2026-10-14
+Last updated: 2026-10-15
 Base branch: `main`
 Base commit: `843cafd469d863d4d12380dda7fdbe9ab02fffda`
 Working branch: `implementation/phase-0-baseline`
@@ -20,7 +20,7 @@ Working branch: `implementation/phase-0-baseline`
 | Phase | Status | Evidence / notes |
 |---|---|---|
 | 0. Baseline and defect register | In progress | Tracker committed; overlapping PRs #1/#3/#4/#7 compared at metadata/diff level. No PR merged. |
-| 1. CI/build reproducibility | In progress / blocked on latest CI | `npm ci --legacy-peer-deps` passed on Node 22. Initial tsc identified two missing `PressableScale` imports; the module is now in the branch and its style/layout was adjusted. CI runner for a prior commit remains in progress; latest-head results are not yet available. |
+| 1. CI/build reproducibility | In progress / blocked by missing app assets | Latest validation run [#38612802861](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38612802861): dependency install, TypeScript, and Jest passed; Expo asset validation failed because four configured files are absent. Do not weaken the check to make CI green. |
 | 2. Domain/persistence foundations | Not started | Inspect current Drizzle schema/migration ownership and live app imports before schema edits. |
 | 3. Calendar dates/time zones | Not started | Blueprint calls this a cross-feature correctness priority; audit current production paths and tests before edits. |
 | 4. Nutrition pipeline | Not started | One shared validated command path is the target. |
@@ -45,6 +45,12 @@ Working branch: `implementation/phase-0-baseline`
 
 ## Progress log
 
+### 2026-10-15 — Phase 1 validation follow-up
+- [x] Inspect the failed validation run and job logs rather than inferring the cause from the red status.
+- [x] Confirm TypeScript and Jest passed on the tested head; failure is isolated to the missing Expo assets.
+- [x] Verify the configured assets are absent from the tracked baseline tree and the working branch; no native image assets are available to reuse.
+- [ ] Create intentional image assets and rerun the full validation workflow; keep Phase 1 open until evidence is green.
+
 ### 2026-10-14 — Baseline inspection
 - [x] Confirm repository access and default branch.
 - [x] Create `implementation/phase-0-baseline` from `main`.
@@ -57,7 +63,9 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Compared PR #4 quality gate and noted overlapping workflow. Keep this small validation-only PR isolated for now; reconcile before merging.
 - [x] Confirm strict TypeScript passed on commit `74a2b4c` after adding `PressableScale`.
 - [x] Jest passed on commit `68c488f`: 35 suites and 261 tests passed. Note: master-plan audit says only a small subset covers production `app/` imports; passing the broad `src/` test corpus is not equivalent to full app journey coverage.
-- [ ] Add the missing four app assets only after intentional design approval, then rerun Expo config/asset validation.
+- [x] Inspect `app.json`, `.gitignore`, the tracked Git tree, and the master plan: all four configured image assets are genuinely absent; no existing image assets can be safely reused.
+- [ ] Add intentional NutriLift app assets (dark base `#0A0A0F`, restrained fitness mark; avoid decorative in-app imagery), then rerun Expo config/asset validation.
+- [ ] Latest CI evidence: Node 22 dependency install passed; TypeScript passed; Jest passed (35 suites / 261 tests); Expo local-asset check failed on `assets/icon.png`, `assets/splash-icon.png`, `assets/adaptive-icon.png`, and `assets/favicon.png`.
 
 ## Update protocol
 
