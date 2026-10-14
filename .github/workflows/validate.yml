@@ -1,0 +1,61 @@
+name: NutriLift validation
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches:
+      - implementation/phase-0-baseline
+  workflow_dispatch:
+
+concurrency:
+  group: validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Typecheck, tests, and Expo config
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: TypeScript check
+        run: npx tsc --noEmit --pretty false
+
+      - name: Jest tests
+        run: npm test -- --passWithNoTests
+
+      - name: Validate Expo configuration and referenced assets
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const config = require('./app.json').expo;
+          const paths = [
+            config.icon,
+            config.splash?.image,
+            config.android?.adaptiveIcon?.foregroundImage,
+            config.web?.favicon,
+          ].filter(Boolean);
+          const missing = paths.filter((asset) => !fs.existsSync(path.resolve(asset)));
+          if (missing.length) {
+            console.error('Missing local Expo assets:');
+            for (const asset of missing) console.error(` - ${asset}`);
+            process.exitCode = 1;
+          } else {
+            console.log(`Validated ${paths.length} referenced local assets.`);
+          }
+          NODE
+          npx expo config --type public >/dev/null
+
