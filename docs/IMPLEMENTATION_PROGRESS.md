@@ -56,7 +56,7 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Validate `npm ci --legacy-peer-deps` on Node 22 (passed in run #38611739263 and later runs).
 - [x] Compared PR #4 quality gate and noted overlapping workflow. Keep this small validation-only PR isolated for now; reconcile before merging.
 - [x] Confirm strict TypeScript passed on commit `74a2b4c` after adding `PressableScale`.
-- [ ] Ensure Jest is completed successfully; earlier CI was interrupted/cancelled during test execution.
+- [x] Jest passed on commit `68c488f`: 35 suites and 261 tests passed. Note: master-plan audit says only a small subset covers production `app/` imports; passing the broad `src/` test corpus is not equivalent to full app journey coverage.
 - [ ] Add the missing four app assets only after intentional design approval, then rerun Expo config/asset validation.
 
 ## Update protocol
