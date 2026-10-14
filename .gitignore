@@ -67,7 +67,8 @@ coverage/
 # Debug
 .vscode/launch.json
 
-# Assets and Media
+# Generated/large media files are ignored by default. Explicit app assets must be allowlisted
+# so Expo icons, splash art, and favicon can be committed and validated.
 *.png
 *.jpg
 *.jpeg
@@ -82,6 +83,11 @@ coverage/
 *.mp3
 *.wav
 *.m4a
+!assets/
+!assets/**
+
+# Keep app assets versioned, even though generic image patterns above are ignored.
+assets/**/.*
 
 # OS
 Thumbs.db
