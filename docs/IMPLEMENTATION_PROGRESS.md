@@ -19,8 +19,8 @@ Working branch: `implementation/phase-0-baseline`
 
 | Phase | Status | Evidence / notes |
 |---|---|---|
-| 0. Baseline and defect register | In progress | Branch created from main. Repo inventory and recent CI failure inspected. |
-| 1. CI/build reproducibility | Not started | Current workflow uses Node 20, `npm install --legacy-peer-deps`, then immediately starts EAS. No inexpensive typecheck/test gate before cloud build. |
+| 0. Baseline and defect register | In progress | Tracker committed; overlapping PRs #1/#3/#4/#7 have been compared at metadata/diff level. No PR merged. |
+| 1. CI/build reproducibility | In progress | New `.github/workflows/validate.yml` added on the working branch using Node 22, `npm ci --legacy-peer-deps`, TypeScript, Jest and Expo asset/config validation. First CI run #38611739263 is still installing dependencies; not yet validated. |
 | 2. Domain/persistence foundations | Not started | Inspect current Drizzle schema/migration ownership and live app imports before schema edits. |
 | 3. Calendar dates/time zones | Not started | Blueprint calls this a cross-feature correctness priority; audit current production paths and tests before edits. |
 | 4. Nutrition pipeline | Not started | One shared validated command path is the target. |
@@ -51,9 +51,11 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Enumerate branches and open PRs.
 - [x] Inspect package scripts, workflow, Expo/EAS config, TypeScript config and README.
 - [x] Inspect recent failed EAS job logs and classify quota failure correctly.
-- [ ] Review overlapping PR diffs and decide which fixes can be safely reused.
-- [ ] Add reproducible cheap CI checks before any cloud build.
-- [ ] Run local checks and record actual outcomes.
+- [x] Inspect PR #1 Android build diff; PR #3 core P0 diff; PR #4 production hardening/quality workflow; PR #7 adaptive targets/date helpers. Reuse only after CI evidence; these are overlapping drafts with no validation evidence visible in their descriptions.
+- [x] Add reproducible cheap CI checks before any cloud build (workflow in PR #8; CI pending).
+- [ ] Validate whether `npm ci --legacy-peer-deps` completes on Node 22.
+- [ ] Review/avoid duplicating the quality gates proposed in PR #4.
+- [ ] Triage TypeScript, Jest and asset/config failures from the workflow before advancing to feature code.
 
 ## Update protocol
 
