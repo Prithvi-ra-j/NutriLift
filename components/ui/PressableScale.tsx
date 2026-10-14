@@ -44,24 +44,24 @@ export function PressableScale({
   };
 
   return (
-    <Animated.View style={[style, { transform: [{ scale }] }]}>
-      <Pressable
-        {...props}
-        disabled={disabled}
-        onPressIn={(event) => {
-          animateTo(pressedScale);
-          onPressIn?.(event);
-        }}
-        onPressOut={(event) => {
-          animateTo(1);
-          onPressOut?.(event);
-        }}
-        style={({ pressed }) => ({
-          opacity: disabled ? 0.45 : pressed ? 0.94 : 1,
-        })}
-      >
-        {children}
-      </Pressable>
-    </Animated.View>
+    <Pressable
+      {...props}
+      disabled={disabled}
+      onPressIn={(event) => {
+        animateTo(pressedScale);
+        onPressIn?.(event);
+      }}
+      onPressOut={(event) => {
+        animateTo(1);
+        onPressOut?.(event);
+      }}
+      style={(state) => [
+        style,
+        { opacity: disabled ? 0.45 : state.pressed ? 0.94 : 1 },
+        { transform: [{ scale }] },
+      ]}
+    >
+      {children}
+    </Pressable>
   );
 }
