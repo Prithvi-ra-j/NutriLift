@@ -20,7 +20,7 @@ Working branch: `implementation/phase-0-baseline`
 | Phase | Status | Evidence / notes |
 |---|---|---|
 | 0. Baseline and defect register | In progress | Tracker committed; overlapping PRs #1/#3/#4/#7 compared at metadata/diff level. No PR merged. |
-| 1. CI/build reproducibility | In progress / blocked by missing app assets | Latest validation run [#38612802861](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38612802861): dependency install, TypeScript, and Jest passed; Expo asset validation failed because four configured files are absent. Do not weaken the check to make CI green. |
+| 1. CI/build reproducibility | In progress / validation rerunning | Added four PNG files at the configured paths in commit `8d211db` using the dark/lime NutriLift mark. New validation run [#38618188547](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38618188547) was triggered, but dependency installation remained in progress when last checked; wait for a terminal result before marking the phase complete. |
 | 2. Domain/persistence foundations | Not started | Inspect current Drizzle schema/migration ownership and live app imports before schema edits. |
 | 3. Calendar dates/time zones | Not started | Blueprint calls this a cross-feature correctness priority; audit current production paths and tests before edits. |
 | 4. Nutrition pipeline | Not started | One shared validated command path is the target. |
@@ -64,8 +64,8 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Confirm strict TypeScript passed on commit `74a2b4c` after adding `PressableScale`.
 - [x] Jest passed on commit `68c488f`: 35 suites and 261 tests passed. Note: master-plan audit says only a small subset covers production `app/` imports; passing the broad `src/` test corpus is not equivalent to full app journey coverage.
 - [x] Inspect `app.json`, `.gitignore`, the tracked Git tree, and the master plan: all four configured image assets are genuinely absent; no existing image assets can be safely reused.
-- [ ] Add intentional NutriLift app assets (dark base `#0A0A0F`, restrained fitness mark; avoid decorative in-app imagery), then rerun Expo config/asset validation.
-- [ ] Latest CI evidence: Node 22 dependency install passed; TypeScript passed; Jest passed (35 suites / 261 tests); Expo local-asset check failed on `assets/icon.png`, `assets/splash-icon.png`, `assets/adaptive-icon.png`, and `assets/favicon.png`.
+- [x] Add four valid PNG assets at the paths configured in `app.json` (commit `8d211db`; shared dark background and lime NutriLift mark).
+- [ ] Rerun validation on the asset commit and capture terminal results for dependency install, TypeScript, Jest, and Expo config/asset checks.
 
 ## Update protocol
 
