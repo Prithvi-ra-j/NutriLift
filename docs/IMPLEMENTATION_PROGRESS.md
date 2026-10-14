@@ -20,7 +20,7 @@ Working branch: `implementation/phase-0-baseline`
 | Phase | Status | Evidence / notes |
 |---|---|---|
 | 0. Baseline and defect register | In progress | Tracker committed; overlapping PRs #1/#3/#4/#7 compared at metadata/diff level. No PR merged. |
-| 1. CI/build reproducibility | In progress / validation rerunning | Added four PNG files at the configured paths in commit `8d211db` using the dark/lime NutriLift mark. New validation run [#38618188547](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38618188547) was triggered, but dependency installation remained in progress when last checked; wait for a terminal result before marking the phase complete. |
+| 1. CI/build reproducibility | Complete | Validation run [#38618276698](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38618276698) succeeded on tracker/assets commit `390b31be`: locked dependency install, TypeScript, Jest, Expo local-asset validation, and public Expo config all passed. Earlier failed asset check is resolved. |
 | 2. Domain/persistence foundations | Not started | Inspect current Drizzle schema/migration ownership and live app imports before schema edits. |
 | 3. Calendar dates/time zones | Not started | Blueprint calls this a cross-feature correctness priority; audit current production paths and tests before edits. |
 | 4. Nutrition pipeline | Not started | One shared validated command path is the target. |
@@ -49,7 +49,8 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Inspect the failed validation run and job logs rather than inferring the cause from the red status.
 - [x] Confirm TypeScript and Jest passed on the tested head; failure is isolated to the missing Expo assets.
 - [x] Verify the configured assets are absent from the tracked baseline tree and the working branch; no native image assets are available to reuse.
-- [ ] Create intentional image assets and rerun the full validation workflow; keep Phase 1 open until evidence is green.
+- [x] Add required PNG assets and verify all configured asset paths in CI.
+- [x] Complete the validation workflow with a green terminal result; Phase 1 exit criteria satisfied.
 
 ### 2026-10-14 — Baseline inspection
 - [x] Confirm repository access and default branch.
@@ -65,7 +66,7 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Jest passed on commit `68c488f`: 35 suites and 261 tests passed. Note: master-plan audit says only a small subset covers production `app/` imports; passing the broad `src/` test corpus is not equivalent to full app journey coverage.
 - [x] Inspect `app.json`, `.gitignore`, the tracked Git tree, and the master plan: all four configured image assets are genuinely absent; no existing image assets can be safely reused.
 - [x] Add four valid PNG assets at the paths configured in `app.json` (commit `8d211db`; shared dark background and lime NutriLift mark).
-- [ ] Rerun validation on the asset commit and capture terminal results for dependency install, TypeScript, Jest, and Expo config/asset checks.
+- [x] Validation passed on commit `390b31be` in run [#38618276698](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38618276698): dependency installation, TypeScript, Jest, local asset checks, and `expo config --type public` all succeeded.
 
 ## Update protocol
 
