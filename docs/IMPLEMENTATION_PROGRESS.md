@@ -20,7 +20,7 @@ Working branch: `implementation/phase-0-baseline`
 | Phase | Status | Evidence / notes |
 |---|---|---|
 | 0. Baseline and defect register | In progress | Tracker committed; overlapping PRs #1/#3/#4/#7 compared at metadata/diff level. No PR merged. |
-| 1. CI/build reproducibility | In progress | `npm ci --legacy-peer-deps` passed on Node 22; strict tsc exposed missing `PressableScale`, now implemented. Run #38611849662 ran against the prior code and failed on those imports. Newer runs are queued; final validation pending. |
+| 1. CI/build reproducibility | In progress / blocked on latest CI | `npm ci --legacy-peer-deps` passed on Node 22. Initial tsc identified two missing `PressableScale` imports; the module is now in the branch and its style/layout was adjusted. CI runner for a prior commit remains in progress; latest-head results are not yet available. |
 | 2. Domain/persistence foundations | Not started | Inspect current Drizzle schema/migration ownership and live app imports before schema edits. |
 | 3. Calendar dates/time zones | Not started | Blueprint calls this a cross-feature correctness priority; audit current production paths and tests before edits. |
 | 4. Nutrition pipeline | Not started | One shared validated command path is the target. |
