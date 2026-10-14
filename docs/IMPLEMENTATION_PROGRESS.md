@@ -55,7 +55,9 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Add reproducible cheap CI checks before any cloud build (workflow in PR #8; CI pending).
 - [x] Validate `npm ci --legacy-peer-deps` on Node 22 (passed in run #38611739263 and later runs).
 - [x] Compared PR #4 quality gate and noted overlapping workflow. Keep this small validation-only PR isolated for now; reconcile before merging.
-- [ ] Confirm latest-head tsc result; run Jest and Expo config/asset checks, which were skipped on earlier failed runs.
+- [x] Confirm strict TypeScript passed on commit `74a2b4c` after adding `PressableScale`.
+- [ ] Ensure Jest is completed successfully; earlier CI was interrupted/cancelled during test execution.
+- [ ] Add the missing four app assets only after intentional design approval, then rerun Expo config/asset validation.
 
 ## Update protocol
 
