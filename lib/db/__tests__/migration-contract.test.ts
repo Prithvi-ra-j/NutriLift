@@ -1,4 +1,5 @@
 import {
+  ADDITIVE_COLUMN_MIGRATIONS,
   assertSupportedSchemaVersion,
   CURRENT_SCHEMA_VERSION,
   findMissingRequiredColumns,
@@ -16,6 +17,14 @@ describe("local database migration contract", () => {
     expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION + 1)).toThrow(/newer than this app supports/);
     expect(() => assertSupportedSchemaVersion(-1)).toThrow(/Invalid local database schema version/);
   });
+  it("keeps additive migration declarations aligned with required column checks", () => {
+    const declared = ADDITIVE_COLUMN_MIGRATIONS.map(({ table, column }) => `${table}.${column}`);
+    const required = Object.entries(REQUIRED_CORE_COLUMNS).flatMap(([table, columns]) =>
+      columns.filter((column) => !(table === "custom_exercises")).map((column) => `${table}.${column}`),
+    );
+    expect(declared.sort()).toEqual(required.sort());
+  });
+
   it("accepts a database containing every required core table", () => {
     expect(findMissingRequiredTables(new Set(REQUIRED_CORE_TABLES))).toEqual([]);
   });

@@ -27,6 +27,17 @@ export const REQUIRED_CORE_TABLES = [
  * Columns added after the original SQLite schema was shipped.
  * Keep this contract aligned with additive migrations in client.ts.
  */
+export const ADDITIVE_COLUMN_MIGRATIONS = [
+  { table: "set_logs", column: "duration_sec", type: "INTEGER" },
+  { table: "set_logs", column: "distance_km", type: "REAL" },
+  { table: "exercise_logs", column: "exercise_type", type: "TEXT" },
+  { table: "daily_nutrition", column: "updated_at", type: "TEXT" },
+  { table: "workout_sessions", column: "updated_at", type: "TEXT" },
+  { table: "personal_records", column: "updated_at", type: "TEXT" },
+  { table: "body_stats", column: "updated_at", type: "TEXT" },
+  { table: "recovery_logs", column: "updated_at", type: "TEXT" },
+] as const;
+
 export const REQUIRED_CORE_COLUMNS: Readonly<Record<string, readonly string[]>> = {
   daily_nutrition: ["updated_at"],
   workout_sessions: ["updated_at"],
