@@ -1,5 +1,7 @@
 import { getLast7DaysNutrition, getProteinHitRate } from "../db/queries/nutrition";
 import { getNutritionTargets } from "../db/queries/nutrition-targets";
+import { getCurrentCoachRecommendations } from "../analytics/current-coach-recommendations";
+import type { CoachRecommendation } from "../analytics/coach-recommendations";
 import { getRecentSessions, getAllPRs } from "../db/queries/workout";
 import { getLatestInBody, getLatestWeight } from "../db/queries/body";
 import { getRecentRecoveryLogs, getSupplementAdherence30d } from "../db/queries/recovery";
@@ -31,6 +33,7 @@ export interface CoachContext {
   last_recovery_logs: ReturnType<typeof approvedRecoveryRows>;
   today_nutrition: ReturnType<typeof approvedNutritionRows>[number] | null;
   today_workout: ReturnType<typeof approvedWorkoutRows>[number] | null;
+  today_recommendations: CoachRecommendation[];
 }
 
 /**
@@ -53,6 +56,7 @@ export async function buildCoachContext(
     recoveryLogs,
     proteinHitRate,
     currentTargets,
+    todayRecommendations,
   ] = await Promise.all([
     getLast7DaysNutrition(),
     getPreviousWeeksAISummaries(),
@@ -64,6 +68,7 @@ export async function buildCoachContext(
     getRecentRecoveryLogs(2),
     getProteinHitRate(30),
     getNutritionTargets(),
+    getCurrentCoachRecommendations(),
   ]);
 
   const approvedNutrition = approvedNutritionRows(last7DaysNutrition);
@@ -100,5 +105,6 @@ export async function buildCoachContext(
     last_recovery_logs: approvedRecoveryRows(recoveryLogs),
     today_nutrition: approvedTodayNutrition,
     today_workout: approvedTodayWorkout,
+    today_recommendations: todayRecommendations,
   };
 }
