@@ -44,6 +44,7 @@ import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { fromLocalDateKey } from "../../lib/utils/local-date";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -132,7 +133,7 @@ export default function WorkoutScreen() {
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const getDefaultDayType = (dateStr: string): DayType => {
-    const date = new Date(dateStr);
+    const date = fromLocalDateKey(dateStr);
     const dayOfWeek = date.getDay();
     if (dayOfWeek === 0) return "Cardio";
     const dayTypeMap: Record<number, DayType> = {
