@@ -88,7 +88,9 @@ export async function runMigrations(): Promise<void> {
       protein_target_met INTEGER,
       calorie_target_met INTEGER,
       adherence_score REAL,
-      notes TEXT
+      notes TEXT,
+      is_complete INTEGER NOT NULL DEFAULT 0,
+      completed_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS custom_exercises (
@@ -340,6 +342,8 @@ export async function runMigrations(): Promise<void> {
   // Inspect table_info before ALTER instead of swallowing arbitrary SQLite errors.
   for (const migration of ADDITIVE_COLUMN_MIGRATIONS) {
     const columns = await sqlite.getAllAsync(`PRAGMA table_info(${migration.table})`);
+    // Newer tables are created in later DDL below; skip their additive columns until they exist.
+    if (columns.length === 0) continue;
     const hasColumn = columns.some(
       (column: { name: string }) => column.name === migration.column,
     );
@@ -415,6 +419,23 @@ export async function runMigrations(): Promise<void> {
       ON nutrition_target_history(effective_date, created_at);
   `);
 
+  // Preserve an existing profile as the first known target version if history is empty.
+  await sqlite.execAsync(`
+    INSERT INTO nutrition_target_history (
+      id, effective_date, calorie_target_kcal, protein_target_g, carbs_target_g,
+      fat_target_g, source, goal, maintenance_estimate_kcal, algorithm_version,
+      explanation, created_at
+    )
+    SELECT
+      'migration:initial-target',
+      COALESCE(date(updated_at), date('now', 'localtime')),
+      calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g,
+      'migration', goal, NULL, NULL,
+      'Imported the previously saved nutrition target profile during schema migration.',
+      updated_at
+    FROM nutrition_profile
+    WHERE id = 1 AND NOT EXISTS (SELECT 1 FROM nutrition_target_history);
+  `);
   // Fail fast on incomplete local schema instead of allowing screens to fail later.
   const rows = await sqlite.getAllAsync("SELECT name FROM sqlite_master WHERE type = 'table'");
   const existingTables = new Set<string>(rows.map((row: { name: string }) => row.name));

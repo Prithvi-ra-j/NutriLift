@@ -75,7 +75,9 @@ CREATE TABLE `daily_nutrition` (
 	`calorie_target_met` integer,
 	`adherence_score` real,
 	`notes` text,
-	`updated_at` text
+	`updated_at` text,
+	`is_complete` integer DEFAULT 0 NOT NULL,
+	`completed_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `exercise_logs` (

@@ -31,6 +31,8 @@ export const dailyNutrition = sqliteTable("daily_nutrition", {
   adherence_score: real("adherence_score"), // 0-100
   notes: text("notes"),
   updated_at: text("updated_at"),
+  is_complete: integer("is_complete").notNull().default(0),
+  completed_at: text("completed_at"),
 });
 
 // ─── Persisted profile and effective-dated nutrition targets ──────────────────
