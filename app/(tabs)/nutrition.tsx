@@ -17,6 +17,13 @@ import {
   deleteFoodLog,
   getLast7DaysNutrition,
   setNutritionDayComplete,
+  getFavoriteFoods,
+  addFavoriteFoodFromLog,
+  logFavoriteFood,
+  removeFavoriteFood,
+  getRepeatableMeals,
+  saveRepeatableMealFromLogs,
+  repeatMeal,
 } from "../../lib/db/queries/nutrition";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
@@ -53,14 +60,18 @@ export default function NutritionScreen() {
   const [activeTargets, setActiveTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
   const [mealGroups, setMealGroups] = useState<MealGroup[]>([]);
+  const [favoriteFoods, setFavoriteFoods] = useState<Awaited<ReturnType<typeof getFavoriteFoods>>>([]);
+  const [repeatableMeals, setRepeatableMeals] = useState<Array<{ id: string; name: string; meal: string; created_at: string; updated_at: string; itemCount: number }>>([]);
 
   const loadData = useCallback(async () => {
     try {
-      const [nutritionData, mealData, weekData, targets] = await Promise.all([
+      const [nutritionData, mealData, weekData, targets, favoriteData, repeatableData] = await Promise.all([
         getDailyNutrition(selectedDate),
         getMealSummary(selectedDate),
         getLast7DaysNutrition(),
         getNutritionTargets(),
+        getFavoriteFoods("", 12),
+        getRepeatableMeals("", 8),
       ]);
       const completeMealGroups: MealGroup[] = MEALS.map((meal) => {
         const existing = mealData.find((group) => group.meal === meal);
@@ -73,6 +84,8 @@ export default function NutritionScreen() {
       setMealGroups(completeMealGroups);
       setFoodLogs(completeMealGroups.flatMap((group) => group.items));
       setLast7Days(weekData);
+      setFavoriteFoods(favoriteData);
+      setRepeatableMeals(repeatableData);
     } catch (err) {
       console.error("Nutrition load error:", err);
     } finally {
@@ -108,6 +121,63 @@ export default function NutritionScreen() {
       Alert.alert("Could not update day status", error instanceof Error ? error.message : "The nutrition day could not be updated.");
     }
   };
+  const handleAddFavorite = async (item: FoodLog) => {
+    try {
+      await addFavoriteFoodFromLog(item.id);
+      await loadData();
+      Alert.alert("Saved to quick log", item.name + " is now in your favourites.");
+    } catch (error) {
+      Alert.alert("Could not save favourite", error instanceof Error ? error.message : "Try again.");
+    }
+  };
+
+  const handleLogFavorite = async (favoriteId: string, name: string) => {
+    try {
+      await logFavoriteFood(favoriteId, selectedDate);
+      await loadData();
+      Alert.alert("Food logged", name + " was added to " + selectedDate + ".");
+    } catch (error) {
+      Alert.alert("Could not log favourite", error instanceof Error ? error.message : "Try again.");
+    }
+  };
+
+  const handleRepeatMeal = async (templateId: string, name: string) => {
+    try {
+      await repeatMeal(templateId, selectedDate);
+      await loadData();
+      Alert.alert("Meal repeated", name + " was added to " + selectedDate + ".");
+    } catch (error) {
+      Alert.alert("Could not repeat meal", error instanceof Error ? error.message : "Try again.");
+    }
+  };
+
+  const handleSaveMealTemplates = async () => {
+    const groupsWithItems = mealGroups.filter((group) => group.items.length > 0);
+    if (groupsWithItems.length === 0) {
+      Alert.alert("Nothing to save", "Log at least one meal item before creating a repeatable meal.");
+      return;
+    }
+    try {
+      for (const group of groupsWithItems) {
+        await saveRepeatableMealFromLogs(group.meal + " · " + selectedDate, group.meal, group.items.map((item) => item.id));
+      }
+      await loadData();
+      Alert.alert("Meals saved", groupsWithItems.length + " reusable meal template(s) saved.");
+    } catch (error) {
+      Alert.alert("Could not save meals", error instanceof Error ? error.message : "Try again.");
+    }
+  };
+
+  const handleRemoveFavorite = (favoriteId: string, name: string) => {
+    Alert.alert("Remove favourite", "Remove " + name + " from quick log?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Remove", style: "destructive", onPress: async () => {
+        try { await removeFavoriteFood(favoriteId); await loadData(); }
+        catch (error) { Alert.alert("Could not remove favourite", error instanceof Error ? error.message : "Try again."); }
+      } },
+    ]);
+  };
+
   const toggleMeal = (meal: MealType) => {
     setExpandedMeals((prev) => {
       const next = new Set(prev);
