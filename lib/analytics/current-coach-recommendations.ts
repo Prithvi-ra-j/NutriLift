@@ -2,12 +2,18 @@ import { getDailyNutrition } from "../db/queries/nutrition";
 import { getSessionsForDateRange } from "../db/queries/workout";
 import { getRecoveryLog } from "../db/queries/recovery";
 import { getNutritionTargetsForDate } from "../db/queries/nutrition-targets";
-import { getRecommendationOutcomesForDate } from "../db/queries/recommendations";
+import { getRecommendationOutcomesForDate, type RecommendationOutcome } from "../db/queries/recommendations";
 import { toLocalDateKey } from "../utils/local-date";
 import { evaluateTrainingConsistency, generateCoachRecommendations, type CoachRecommendation, type CoachStateSnapshot } from "./coach-recommendations";
 import type { DailyNutrition, WorkoutSession, RecoveryLog } from "../db/schema";
 import type { NutritionTargets } from "../nutrition/target-validation";
 
+export function filterActionedRecommendations(
+  candidates: CoachRecommendation[],
+  outcomes: Record<string, RecommendationOutcome>,
+): CoachRecommendation[] {
+  return candidates.filter((candidate) => !["dismissed", "completed", "corrected"].includes(outcomes[candidate.id] ?? ""));
+}
 /** Build a decision snapshot from authoritative persisted values only. */
 export function buildUserStateSnapshot(
   date: string,
@@ -46,5 +52,5 @@ export async function getCurrentCoachRecommendations(date = toLocalDateKey()): P
   ]);
   const candidates = generateCoachRecommendations(buildUserStateSnapshot(date, nutrition, sessions, recovery, targets));
   const outcomes = await getRecommendationOutcomesForDate(date);
-  return candidates.filter((candidate) => !["dismissed", "completed", "corrected"].includes(outcomes[candidate.id] ?? ""));
+  return filterActionedRecommendations(candidates, outcomes);
 }
