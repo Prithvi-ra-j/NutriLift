@@ -383,6 +383,35 @@ export async function runMigrations(): Promise<void> {
     );
     CREATE INDEX IF NOT EXISTS idx_app_telemetry_type_time ON app_telemetry_events(event_type, occurred_at);
     CREATE INDEX IF NOT EXISTS idx_app_telemetry_severity_time ON app_telemetry_events(severity, occurred_at);
+
+    CREATE TABLE IF NOT EXISTS favorite_foods (
+      id TEXT PRIMARY KEY,
+      normalized_name TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      meal TEXT NOT NULL,
+      quantity_g REAL,
+      calories REAL NOT NULL,
+      protein_g REAL NOT NULL,
+      carbs_g REAL NOT NULL,
+      fat_g REAL NOT NULL,
+      fiber_g REAL,
+      sugar_g REAL,
+      sodium_mg REAL,
+      source TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_favorite_foods_name ON favorite_foods(name);
+
+    CREATE TABLE IF NOT EXISTS repeatable_meals (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      meal TEXT NOT NULL,
+      items_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_repeatable_meals_name ON repeatable_meals(name);
   `);
 
   // ─── Additive column migrations (safe to run on existing DBs) ───────────────
