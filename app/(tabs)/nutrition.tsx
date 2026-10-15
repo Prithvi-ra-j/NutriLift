@@ -13,7 +13,7 @@ import { router, useFocusEffect } from "expo-router";
 import { useTodayStore } from "../../lib/stores/today.store";
 import {
   getDailyNutrition,
-  getFoodLogsForDate,
+  getMealSummary,
   deleteFoodLog,
   getLast7DaysNutrition,
   setNutritionDayComplete,
@@ -27,6 +27,7 @@ import { DateNavigator } from "../../components/ui/DateNavigator";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
+import type { MealSummary } from "../../lib/db/queries/nutrition";
 import { M3 } from "../../design-system/tokens";
 import { fromLocalDateKey, toLocalDateKey } from "../../lib/utils/local-date";
 
@@ -39,24 +40,6 @@ const MEAL_ICONS: Record<MealType, React.ComponentProps<typeof Feather>["name"]>
   dinner: "moon",
 };
 
-interface MealGroup {
-  meal: MealType;
-  items: FoodLog[];
-  totalCalories: number;
-  totalProtein: number;
-}
-
-function groupByMeal(logs: FoodLog[]): MealGroup[] {
-  return MEALS.map((meal) => {
-    const items = logs.filter((l) => l.meal === meal);
-    return {
-      meal,
-      items,
-      totalCalories: items.reduce((a, b) => a + b.calories, 0),
-      totalProtein: items.reduce((a, b) => a + b.protein_g, 0),
-    };
-  });
-}
 
 export default function NutritionScreen() {
   const todayStr = toLocalDateKey();
@@ -68,18 +51,23 @@ export default function NutritionScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTargets, setActiveTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
+  const [mealGroups, setMealGroups] = useState<MealSummary[]>([]);
 
   const loadData = useCallback(async () => {
     try {
-      const [nutritionData, logsData, weekData, targets] = await Promise.all([
+      const [nutritionData, mealData, weekData, targets] = await Promise.all([
         getDailyNutrition(selectedDate),
-        getFoodLogsForDate(selectedDate),
+        getMealSummary(selectedDate),
         getLast7DaysNutrition(),
-          getNutritionTargets(),
-        ]);
+        getNutritionTargets(),
+      ]);
+      const completeMealGroups: MealSummary[] = MEALS.map((meal) => mealData.find((group) => group.meal === meal) ?? {
+        meal, items: [], totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0,
+      });
       setActiveTargets(targets);
       setNutrition(nutritionData);
-      setFoodLogs(logsData);
+      setMealGroups(completeMealGroups);
+      setFoodLogs(completeMealGroups.flatMap((group) => group.items));
       setLast7Days(weekData);
     } catch (err) {
       console.error("Nutrition load error:", err);
@@ -129,7 +117,6 @@ export default function NutritionScreen() {
   const protein = nutrition?.total_protein_g ?? 0;
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
-  const mealGroups = groupByMeal(foodLogs);
 
   if (isLoading) {
     return (
