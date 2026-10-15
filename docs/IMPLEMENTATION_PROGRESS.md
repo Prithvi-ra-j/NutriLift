@@ -208,3 +208,15 @@ After every small implementation unit, update this file with the commit/PR, file
 - [x] Add manual recovery input validation and tests; wearable integrations remain out of scope.
 - [ ] Verify latest TypeScript/Jest/Expo CI and fix all failures.
 - [ ] Add end-to-end persistence coverage for session transitions and closed-session guards; device smoke remains unverified.
+
+
+### 2026-10-15 — Phase 4/6 correctness follow-up
+- [x] Fix food-log delete so the source row and daily aggregate are updated in one local transaction; deleting an already-absent row is now a no-op.
+- [x] Validate edited food-log values before mutation and recompute both the prior and resulting calendar-day aggregates when an edit moves a record across dates.
+- [x] Add a transaction-scoped aggregate recomputation path for food edits/deletes, preserving the rule that UI state must reflect committed local state.
+- [x] Validate recovery query date keys and date-range ordering; bound recovery reads to one row for a date.
+- [x] Serialize supplement date/name upserts in a local transaction and reject blank supplement names, reducing duplicate records from rapid repeated saves.
+- [x] Add regression tests for local-date month/year/leap-day boundaries and recovery input validation (real dates, clock times, ratings, missing signals, note length).
+- [ ] Run the repository's actual Node 22 / Jest / TypeScript / Expo validation workflow against the latest branch head. The GitHub commit-status endpoint currently reports a Vercel build-rate-limit failure, not a code-test result; no GitHub Actions run is currently associated with the latest commit.
+- [ ] Add direct database integration tests for food update/delete aggregate atomicity and supplement upsert idempotency before marking these paths complete.
+- Current commits: `4bf75278e138714d4b184e359b2c84f6a115d3e8` (nutrition mutation consistency), `37c3f315d00cbc136e7307071a01eb1b333dd034` (recovery/supplement persistence), `5058a8dd9a84896a46ffb4427b081aea527d73a5` (date tests), `a10ba7c9cfec41699f4ce505c6bd649f2c8a9f9` (recovery tests).
