@@ -242,16 +242,16 @@ CREATE TABLE `yearly_summaries` (
 	`stats_json` text NOT NULL
 );
 --> statement-breakpoint
---> statement-breakpoint
 CREATE TABLE `sync_tombstones` (
 	`id` text PRIMARY KEY NOT NULL,
 	`entity_type` text NOT NULL,
 	`entity_id` text NOT NULL,
 	`external_id` text,
 	`deleted_at` text NOT NULL,
-	`created_at` text NOT NULL,
-	CONSTRAINT `sync_tombstones_entity_type_entity_id_unique` UNIQUE(`entity_type`,`entity_id`)
+	`created_at` text NOT NULL
 );
+--> statement-breakpoint
+CREATE UNIQUE INDEX `sync_tombstones_entity_type_entity_id_unique` ON `sync_tombstones` (`entity_type`,`entity_id`);
 --> statement-breakpoint
 CREATE TABLE `sync_queue` (
 	`id` text PRIMARY KEY NOT NULL,

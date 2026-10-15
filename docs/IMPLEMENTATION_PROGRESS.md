@@ -68,8 +68,8 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Make root initialization failure visible and block database-dependent screens until retry succeeds (`74e05d1`).
 - [x] Add SQLite-backed tests for clean install, legacy upgrade/data preservation, idempotent rerun and future-version rejection (`runtime-migrations.test.ts`).
 - [x] Fix failures found in the first integration run; latest validation passed 37 suites / 271 tests in [run #38683792913](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38683792913).
-- [x] Align clean-install Drizzle SQL with runtime-only `updated_at` columns and sync tables; add parity regression coverage.
-- [ ] Re-run CI after migration snapshot parity update; then confirm Phase 2 exit criteria.\n\n### 2026-10-15 — Phase 1 validation follow-up
+- [x] Align the Drizzle schema’s sync tombstone uniqueness with runtime SQL and add clean-install SQL execution coverage.
+- [ ] Re-run CI after schema/migration parity tests; then confirm Phase 2 exit criteria.\n\n### 2026-10-15 — Phase 1 validation follow-up
 - [x] Inspect the failed validation run and job logs rather than inferring the cause from the red status.
 - [x] Confirm TypeScript and Jest passed on the tested head; failure is isolated to the missing Expo assets.
 - [x] Verify the configured assets are absent from the tracked baseline tree and the working branch; no native image assets are available to reuse.
