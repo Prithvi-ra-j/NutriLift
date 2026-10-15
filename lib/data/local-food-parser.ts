@@ -10,7 +10,7 @@ const MEAL_CUES: Array<{ meal: NonNullable<FoodParseResult["meal_suggestion"]>; 
   { meal: "breakfast", pattern: /\b(?:for\s+)?breakfast\b/i },
   { meal: "lunch", pattern: /\b(?:for\s+)?lunch\b/i },
   { meal: "dinner", pattern: /\b(?:for\s+)?dinner\b/i },
-  { meal: "snack", pattern: /\b(?:for\s+)?snack(?:s)?\b/i },
+  { meal: "snack", pattern: /\b(?:for\s+)?snacks?\b/i },
 ];
 
 function normalize(value: string): string {
@@ -25,8 +25,9 @@ function findFood(segment: string): { food: IndianFood; alias: string } | null {
 
   for (const candidate of candidates) {
     if (!candidate.normalizedAlias) continue;
-    const escaped = candidate.normalizedAlias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (new RegExp(`(^|\s)${escaped}(?=$|\s)`, "i").test(normalized)) {
+    // Aliases have already been normalized to letters, digits, and spaces, so
+    // no regex escaping is needed. This keeps aliases with punctuation safe.
+    if (new RegExp(`(^|\\s)${candidate.normalizedAlias}(?=$|\\s)`, "i").test(normalized)) {
       return { food: candidate.food, alias: candidate.alias };
     }
   }
@@ -87,6 +88,7 @@ function getQuantityGrams(segment: string, food: IndianFood): { grams: number; l
     label: amount + " " + labelUnit + (amount === 1 ? "" : "s") + " (estimated)",
   };
 }
+
 function splitFoodSegments(input: string): string[] {
   return input
     .replace(/\b(?:for\s+)?(?:breakfast|lunch|dinner|snacks?)\b/gi, " ")
