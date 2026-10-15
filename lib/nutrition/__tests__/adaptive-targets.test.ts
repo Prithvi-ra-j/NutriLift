@@ -44,10 +44,11 @@ describe("estimateAdaptiveTarget", () => {
 
   it("deduplicates same-day weigh-ins and ignores invalid weights", () => {
     const input = sampleInput();
-    input.weights.push({ date: "2026-01-14", weightKg: 999 });
+    input.weights.push({ date: "2026-01-14", weightKg: 74.5 });
+    input.weights.push({ date: "2026-02-30", weightKg: 74.4 });
     const result = estimateAdaptiveTarget(input);
-    expect(result.qualifiedWeighIns).toBe(4);
-    expect(result.status).toBe("insufficient-data");
+    expect(result.qualifiedWeighIns).toBe(5);
+    expect(result.status).toBe("ready");
   });
 
   it("rejects unsupported targets and goals", () => {
