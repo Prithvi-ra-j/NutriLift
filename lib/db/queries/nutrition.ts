@@ -349,6 +349,15 @@ function validateRepeatableMealItems(items: RepeatableMealItem[]): void {
   if (!Array.isArray(items) || items.length < 1 || items.length > 50) throw new Error("A repeatable meal must contain between 1 and 50 items.");
   for (const item of items) {
     if (!item.name?.trim()) throw new Error("Every repeatable meal item needs a name.");
+    if (item.provenance_type != null && !["user_entered", "verified_reference", "ai_estimated", "imported", "manual_override", "legacy_unknown"].includes(item.provenance_type)) {
+      throw new Error("Repeatable meal provenance type is invalid.");
+    }
+    if (item.estimate_confidence != null && (!Number.isFinite(item.estimate_confidence) || item.estimate_confidence < 0 || item.estimate_confidence > 1)) {
+      throw new Error("Repeatable meal confidence must be between 0 and 1.");
+    }
+    if (item.estimate_reviewed != null && item.estimate_reviewed !== 0 && item.estimate_reviewed !== 1) {
+      throw new Error("Repeatable meal review state is invalid.");
+    }
     for (const [label, value] of Object.entries({
       quantity_g: item.quantity_g, calories: item.calories, protein_g: item.protein_g,
       carbs_g: item.carbs_g, fat_g: item.fat_g, fiber_g: item.fiber_g ?? null,
