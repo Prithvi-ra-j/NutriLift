@@ -485,9 +485,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
 
 // Helper functions
 function getDateDaysAgo(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().split("T")[0];
+  return addCalendarDays(toLocalDateKey(), -days);
 }
 
 function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
