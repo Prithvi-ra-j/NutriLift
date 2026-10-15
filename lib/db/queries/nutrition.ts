@@ -22,12 +22,12 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
   validateFoodLogsInput(logs);
 
   // The food rows and their daily aggregate commit or roll back together.
-  await db.transaction(async (tx) => {
+  await db.transaction(async (tx: any) => {
     await tx.insert(foodLogs).values(logs);
     const date = logs[0].date;
     const rows = await tx.select().from(foodLogs).where(eq(foodLogs.date, date));
     const totals = rows.reduce(
-      (acc, log) => ({
+      (acc: { calories: number; protein_g: number; carbs_g: number; fat_g: number }, log: FoodLog) => ({
         calories: acc.calories + log.calories,
         protein_g: acc.protein_g + log.protein_g,
         carbs_g: acc.carbs_g + log.carbs_g,
