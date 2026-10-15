@@ -92,7 +92,8 @@ ${JSON.stringify(context, null, 2)}`;
       max_tokens: 1000,
     });
 
-    const content = completion.choices[0]?.message?.content || "";
+    const content = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!content) throw new Error("Coach returned an empty response.");
     if (onChunk && content) onChunk(content);
     return content;
   }) as Promise<string>;
