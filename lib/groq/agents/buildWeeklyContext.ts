@@ -9,16 +9,15 @@ import {
 import { gte, desc, eq } from "drizzle-orm";
 import { WeeklyContext } from "./weeklyCoach";
 import { USER_PROFILE } from "../../constants/user-profile";
+import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 
 /**
  * Build weekly context from SQLite database for AI coach analysis
  */
 export async function buildWeeklyContext(): Promise<WeeklyContext> {
   const now = new Date();
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-  const weekAgoStr = weekAgo.toISOString().split("T")[0];
-  const nowStr = now.toISOString().split("T")[0];
+  const nowStr = toLocalDateKey(now);
+  const weekAgoStr = addCalendarDays(nowStr, -7);
 
   // Fetch all data in parallel
   const [nutrition, sessions, weights] = await Promise.all([
