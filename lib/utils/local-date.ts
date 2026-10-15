@@ -55,6 +55,14 @@ export function getMondayWeekRange(dateKey: string): { start: string; end: strin
   return { start, end: toLocalDateKey(date) };
 }
 
+export function differenceInCalendarDays(laterDateKey: string, earlierDateKey: string): number {
+  const later = fromLocalDateKey(laterDateKey);
+  const earlier = fromLocalDateKey(earlierDateKey);
+  const laterUtc = Date.UTC(later.getFullYear(), later.getMonth(), later.getDate());
+  const earlierUtc = Date.UTC(earlier.getFullYear(), earlier.getMonth(), earlier.getDate());
+  return Math.round((laterUtc - earlierUtc) / 86_400_000);
+}
+
 export function isSameLocalCalendarDay(left: Date, right: Date): boolean {
   return toLocalDateKey(left) === toLocalDateKey(right);
 }
