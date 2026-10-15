@@ -25,6 +25,7 @@ import {
 import uuid from "react-native-uuid";
 import { eq } from "drizzle-orm";
 import { USER_PROFILE } from "../constants/user-profile";
+import { addCalendarDays, toLocalDateKey } from "../utils/local-date";
 
 // Get dates for the last 30 days (a full month)
 function getLast30Days(): string[] {
