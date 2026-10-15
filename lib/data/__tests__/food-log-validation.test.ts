@@ -48,4 +48,12 @@ describe("food log input validation", () => {
     expect(() => validateFoodLogInput(validLog({ fat_g: -0.1 }))).toThrow("non-negative");
     expect(() => validateFoodLogInput(validLog({ quantity_g: 0 }))).toThrow("quantity must be greater than zero");
   });
+  it("validates estimate provenance, confidence and review state", () => {
+    expect(() => validateFoodLogInput(validLog({ provenance_type: "made_up" }))).toThrow("provenance type is invalid");
+    expect(() => validateFoodLogInput(validLog({ estimate_confidence: 1.2 }))).toThrow("between 0 and 1");
+    expect(() => validateFoodLogInput(validLog({ estimate_reviewed: 2 }))).toThrow("review state is invalid");
+    expect(() => validateFoodLogInput(validLog({ provenance_json: "[]" }))).toThrow("valid JSON object");
+    expect(() => validateFoodLogInput(validLog({ provenance_type: "ai_estimated", estimate_confidence: 0.82, estimate_reviewed: 0 }))).not.toThrow();
+  });
+
 });
