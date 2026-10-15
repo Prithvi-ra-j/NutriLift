@@ -2,6 +2,7 @@ jest.mock("../../db/queries/nutrition", () => ({ getDailyNutrition: jest.fn() })
 jest.mock("../../db/queries/workout", () => ({ getSessionsForDateRange: jest.fn() }));
 jest.mock("../../db/queries/recovery", () => ({ getRecoveryLog: jest.fn() }));
 jest.mock("../../db/queries/nutrition-targets", () => ({ getNutritionTargetsForDate: jest.fn() }));
+jest.mock("../../db/queries/recommendations", () => ({ getRecommendationOutcomesForDate: jest.fn() }));
 import { buildUserStateSnapshot } from "../current-coach-recommendations";
 import { evaluateNutritionAdherence, evaluateRecoveryReadiness, generateCoachRecommendations } from "../coach-recommendations";
 import { DEFAULT_NUTRITION_TARGETS } from "../../nutrition/target-validation";
