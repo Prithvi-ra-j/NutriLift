@@ -18,7 +18,7 @@ import {
   type NewCustomExercise,
 } from "../schema";
 import { toLocalDateKey } from "../../utils/local-date";
-import { validateWorkoutSetInput, type WorkoutSessionStatus } from "../../workout/workout-validation";
+import { assertWorkoutStatusTransition, validateWorkoutSetInput, type WorkoutSessionStatus } from "../../workout/workout-validation";
 
 // ─── Epley 1RM Formula ────────────────────────────────────────────────────────
 export function calculateEpley1RM(weight_kg: number, reps: number): number {
@@ -69,9 +69,8 @@ export async function setSessionStatus(id: string, status: WorkoutSessionStatus)
   const session = await getSessionById(id);
   if (!session) throw new Error("Workout session not found.");
   const current = (session.status ?? "planned") as WorkoutSessionStatus;
-  const allowed: Record<WorkoutSessionStatus, WorkoutSessionStatus[]> = { planned: ["in_progress", "cancelled"], in_progress: ["completed", "cancelled"], completed: [], cancelled: [] };
+  assertWorkoutStatusTransition(current, status);
   if (current === status) return;
-  if (!allowed[current].includes(status)) throw new Error("Cannot change workout session from " + current + " to " + status + ".");
   const now = Math.floor(Date.now() / 1000);
   const updates: Partial<NewWorkoutSession> = { status, updated_at: new Date().toISOString() };
   if (status === "in_progress" && session.started_at == null) updates.started_at = now;
