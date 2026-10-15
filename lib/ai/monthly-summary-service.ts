@@ -12,6 +12,7 @@ import {
 } from "../db/queries/reports";
 import { generateMonthlySummary } from "../groq/generateCoachResponse";
 import type { MonthlyReport } from "../db/schema";
+import { toLocalDateKey } from "../utils/local-date";
 
 /**
  * Generate or retrieve AI-powered monthly summary
@@ -44,8 +45,8 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
     // Calculate month date range
     const startDate = new Date(year, monthNum - 1, 1);
     const endDate = new Date(year, monthNum, 0); // Last day of month
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
+    const startStr = toLocalDateKey(startDate);
+    const endStr = toLocalDateKey(endDate);
 
     // Gather month data
     const [nutrition, workouts, recovery, bodyStats] = await Promise.all([
