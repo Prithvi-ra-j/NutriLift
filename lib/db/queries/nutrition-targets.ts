@@ -19,7 +19,7 @@ export interface NutritionTargetSaveOptions {
   effectiveDate?: string;
   source?: "manual" | "adaptive" | "migration";
   maintenanceEstimateKcal?: number | null;
-  algorithmVersion?: string | null;
+  algorithmVersion?: number | null;
   explanation?: string | null;
 }
 
