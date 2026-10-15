@@ -261,6 +261,22 @@ export async function addFavoriteFoodFromLog(foodLogId: string): Promise<void> {
   });
 }
 
+export async function logFavoriteFood(favoriteId: string, date: string): Promise<void> {
+  if (!favoriteId.trim()) throw new Error("Favorite food id is required.");
+  try { fromLocalDateKey(date); } catch { throw new Error("Favorite food date must be a real YYYY-MM-DD calendar date."); }
+  const rows = await db.select().from(favoriteFoods).where(eq(favoriteFoods.id, favoriteId)).limit(1);
+  const favorite = rows[0] as FavoriteFood | undefined;
+  if (!favorite) throw new Error("Favorite food not found.");
+  const { default: uuid } = await import("react-native-uuid");
+  await insertFoodLogs([{
+    id: uuid.v4() as string, date, meal: favorite.meal, name: favorite.name,
+    quantity_g: favorite.quantity_g ?? null, calories: favorite.calories, protein_g: favorite.protein_g,
+    carbs_g: favorite.carbs_g, fat_g: favorite.fat_g, fiber_g: favorite.fiber_g ?? null,
+    sugar_g: favorite.sugar_g ?? null, sodium_mg: favorite.sodium_mg ?? null,
+    source: "local", raw_input: `Saved favourite: ${favorite.name}`, created_at: Math.floor(Date.now() / 1000),
+  }]);
+}
+
 export async function removeFavoriteFood(favoriteId: string): Promise<void> {
   if (!favoriteId.trim()) throw new Error("Favorite food id is required.");
   await db.transaction(async (tx: any) => {
