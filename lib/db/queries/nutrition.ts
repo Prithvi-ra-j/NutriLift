@@ -107,6 +107,62 @@ export async function getDailyNutrition(date: string): Promise<DailyNutrition | 
   return result[0] ?? null;
 }
 
+export interface NutritionCompleteness {
+  date: string;
+  itemCount: number;
+  isComplete: boolean;
+  completedAt: string | null;
+  sourceCounts: Record<string, number>;
+}
+
+/** Return explicit coverage and review state; never infer that missing entries were eaten. */
+export async function getNutritionCompleteness(date: string): Promise<NutritionCompleteness> {
+  const [logs, summary] = await Promise.all([
+    db.select().from(foodLogs).where(eq(foodLogs.date, date)),
+    getDailyNutrition(date),
+  ]);
+  const sourceCounts: Record<string, number> = {};
+  for (const log of logs as FoodLog[]) sourceCounts[log.source] = (sourceCounts[log.source] ?? 0) + 1;
+  return {
+    date,
+    itemCount: logs.length,
+    isComplete: summary?.is_complete === 1,
+    completedAt: summary?.completed_at ?? null,
+    sourceCounts,
+  };
+}
+
+export interface RecentFoodSuggestion {
+  name: string;
+  meal: string;
+  quantity_g: number | null;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  lastUsedDate: string;
+}
+
+/** Return actual recent logged foods, deduplicated by name; never invent favourites. */
+export async function getRecentFoods(query = "", limit = 12): Promise<RecentFoodSuggestion[]> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 50) throw new Error("Recent food limit must be an integer from 1 to 50.");
+  const rows = await db.select().from(foodLogs).orderBy(desc(foodLogs.created_at)).limit(500) as FoodLog[];
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const seen = new Set<string>();
+  const result: RecentFoodSuggestion[] = [];
+  for (const row of rows) {
+    const key = row.name.trim().toLocaleLowerCase();
+    if (!key || seen.has(key) || (normalizedQuery && !key.includes(normalizedQuery))) continue;
+    seen.add(key);
+    result.push({
+      name: row.name, meal: row.meal, quantity_g: row.quantity_g ?? null,
+      calories: row.calories, protein_g: row.protein_g, carbs_g: row.carbs_g, fat_g: row.fat_g,
+      lastUsedDate: row.date,
+    });
+    if (result.length >= limit) break;
+  }
+  return result;
+}
 export async function getDailyNutritionRange(
   startDate: string,
   endDate: string
