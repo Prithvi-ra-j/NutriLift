@@ -227,10 +227,10 @@ export default function WorkoutScreen() {
   }, [selectedDate]);
 
   const loadCompletedDayTypes = async () => {
-    const curr = new Date(selectedDate);
+    const curr = fromLocalDateKey(selectedDate);
     const first = curr.getDate() - curr.getDay() + 1;
     const monday = new Date(curr.setDate(first));
-    const mondayStr = monday.toISOString().split("T")[0];
+    const mondayStr = toLocalDateKey(monday);
     const { getSessionsInRange } = await import("../../lib/db/queries/workout");
     const sessions = await getSessionsInRange(mondayStr, selectedDate);
     setCompletedDayTypes(new Set(sessions.map((s) => s.day_type)));
