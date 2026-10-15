@@ -400,3 +400,18 @@ CREATE TABLE `repeatable_meals` (
 );
 --> statement-breakpoint
 CREATE INDEX `idx_repeatable_meals_name` ON `repeatable_meals` (`name`);
+--> statement-breakpoint
+CREATE TABLE `life_os_goal_progress` (
+	`goal_id` text PRIMARY KEY NOT NULL,
+	`status` text NOT NULL,
+	`current_value` real,
+	`target_value` real NOT NULL,
+	`progress_percent` real,
+	`unit` text,
+	`as_of` text NOT NULL,
+	`evidence_json` text NOT NULL,
+	`rule_version` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `idx_life_os_goal_progress_status_updated` ON `life_os_goal_progress` (`status`,`updated_at`);
