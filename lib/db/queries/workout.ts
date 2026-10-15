@@ -18,6 +18,7 @@ import {
   type NewCustomExercise,
 } from "../schema";
 import { toLocalDateKey } from "../../utils/local-date";
+import { validateWorkoutSetInput, type WorkoutSessionStatus } from "../../workout/workout-validation";
 
 // ─── Epley 1RM Formula ────────────────────────────────────────────────────────
 export function calculateEpley1RM(weight_kg: number, reps: number): number {
@@ -59,7 +60,26 @@ export async function getSessionsInRange(
 export const getSessionsForDateRange = getSessionsInRange;
 
 export async function insertSession(session: NewWorkoutSession): Promise<void> {
-  await db.insert(workoutSessions).values({ ...session, updated_at: new Date().toISOString() });
+  const status = session.status ?? "planned";
+  if (status !== "planned" && status !== "in_progress") throw new Error("A new workout session must be planned or in progress.");
+  await db.insert(workoutSessions).values({ ...session, status, updated_at: new Date().toISOString() });
+}
+
+export async function setSessionStatus(id: string, status: WorkoutSessionStatus): Promise<void> {
+  const session = await getSessionById(id);
+  if (!session) throw new Error("Workout session not found.");
+  const current = (session.status ?? "planned") as WorkoutSessionStatus;
+  const allowed: Record<WorkoutSessionStatus, WorkoutSessionStatus[]> = { planned: ["in_progress", "cancelled"], in_progress: ["completed", "cancelled"], completed: [], cancelled: [] };
+  if (current === status) return;
+  if (!allowed[current].includes(status)) throw new Error("Cannot change workout session from " + current + " to " + status + ".");
+  const now = Math.floor(Date.now() / 1000);
+  const updates: Partial<NewWorkoutSession> = { status, updated_at: new Date().toISOString() };
+  if (status === "in_progress" && session.started_at == null) updates.started_at = now;
+  if (status === "completed" || status === "cancelled") {
+    updates.ended_at = now;
+    updates.duration_min = session.started_at == null ? 0 : Math.max(0, Math.round((now - session.started_at) / 60));
+  }
+  await updateSession(id, updates);
 }
 
 export async function updateSession(
@@ -114,7 +134,10 @@ export async function getSetsForExercise(exerciseLogId: string): Promise<SetLog[
     .orderBy(setLogs.set_number);
 }
 
-export async function insertSetLog(set: NewSetLog): Promise<{ isPR: boolean }> {
+export async function insertSetLog(set: NewSetLog): Promise<{ isPR: boolean; duplicate?: boolean }> {
+  validateWorkoutSetInput(set);
+  const existing = await db.select().from(setLogs).where(eq(setLogs.id, set.id)).limit(1);
+  if (existing[0]) return { isPR: Boolean(existing[0].is_pr), duplicate: true };
   // Check for PR before inserting
   const isPR = await checkAndUpdatePR(set);
   await db.insert(setLogs).values({ ...set, is_pr: isPR ? 1 : 0 });
