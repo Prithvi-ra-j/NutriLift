@@ -67,24 +67,29 @@ export async function insertFoodLog(log: NewFoodLog): Promise<void> {
 }
 
 export async function deleteFoodLog(id: string, date: string): Promise<void> {
-  // Keep the source row and its derived daily aggregate consistent on disk.
+  // Keep the source row and every potentially affected aggregate consistent.
   await db.transaction(async (tx: any) => {
     const rows = await tx.select().from(foodLogs).where(eq(foodLogs.id, id)).limit(1);
-    if (!rows[0]) return;
+    const existing = rows[0] as FoodLog | undefined;
+    if (!existing) return;
     await tx.delete(foodLogs).where(eq(foodLogs.id, id));
-    await recomputeDailyNutritionInTransaction(tx, date);
+    for (const affectedDate of new Set([existing.date, date])) {
+      await recomputeDailyNutritionInTransaction(tx, affectedDate);
+    }
   });
 }
 
 export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, date: string): Promise<void> {
+  // A caller may edit a meal's date, but must never be able to change its identity.
+  const { id: _ignoredId, ...mutableUpdates } = updates;
   const existingRows = await db.select().from(foodLogs).where(eq(foodLogs.id, id)).limit(1);
   const existing = existingRows[0] as FoodLog | undefined;
   if (!existing) throw new Error("Food log not found.");
-  const next = { ...existing, ...updates } as FoodLog;
+  const next = { ...existing, ...mutableUpdates } as FoodLog;
   validateFoodLogInput(next as NewFoodLog);
   const affectedDates = Array.from(new Set([existing.date, next.date, date]));
   await db.transaction(async (tx: any) => {
-    await tx.update(foodLogs).set(updates).where(eq(foodLogs.id, id));
+    await tx.update(foodLogs).set(mutableUpdates).where(eq(foodLogs.id, id));
     for (const affectedDate of affectedDates) {
       await recomputeDailyNutritionInTransaction(tx, affectedDate);
     }
