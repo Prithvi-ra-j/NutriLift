@@ -52,7 +52,8 @@ export const nutritionTargetHistory = sqliteTable("nutrition_target_history", {
   protein_target_g: real("protein_target_g").notNull(),
   carbs_target_g: real("carbs_target_g").notNull(),
   fat_target_g: real("fat_target_g").notNull(),
-  source: text("source").notNull(), // manual | adaptive
+  source: text("source").notNull(), // manual | adaptive | migration
+  goal: text("goal"), // effective goal; nullable for legacy versions without historical goal data
   maintenance_estimate_kcal: integer("maintenance_estimate_kcal"),
   algorithm_version: integer("algorithm_version"),
   explanation: text("explanation"),
