@@ -345,7 +345,7 @@ export default function NutritionScreen() {
                       }}
                     />
                     <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
-                      {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
+                      {fromLocalDateKey(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                     </Text>
                   </View>
                 );
