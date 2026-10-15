@@ -482,6 +482,10 @@ export const favoriteFoods = sqliteTable("favorite_foods", {
   sugar_g: real("sugar_g"),
   sodium_mg: real("sodium_mg"),
   source: text("source").notNull(),
+  provenance_type: text("provenance_type").notNull().default("legacy_unknown"),
+  provenance_json: text("provenance_json"),
+  estimate_confidence: real("estimate_confidence"),
+  estimate_reviewed: integer("estimate_reviewed").notNull().default(0),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
 }, (table) => ({
