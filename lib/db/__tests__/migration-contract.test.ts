@@ -10,7 +10,7 @@ import {
 
 describe("local database migration contract", () => {
   it("supports legacy and current schema versions but rejects future versions", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(11);
+    expect(CURRENT_SCHEMA_VERSION).toBe(12);
     expect(() => assertSupportedSchemaVersion(0)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(1)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();
@@ -80,6 +80,10 @@ describe("local database migration contract", () => {
       "food_logs.provenance_json",
       "food_logs.estimate_confidence",
       "food_logs.estimate_reviewed",
+      "favorite_foods.provenance_type",
+      "favorite_foods.provenance_json",
+      "favorite_foods.estimate_confidence",
+      "favorite_foods.estimate_reviewed",
       "daily_nutrition.updated_at",
       "daily_nutrition.is_complete",
       "daily_nutrition.completed_at",
