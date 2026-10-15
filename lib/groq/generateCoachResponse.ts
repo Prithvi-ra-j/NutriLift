@@ -6,6 +6,29 @@ import { recordAIRequestMetrics } from "../observability/telemetry";
 
 async function recordAIMetricsSafely(input: Parameters<typeof recordAIRequestMetrics>[0]): Promise<void> {
   try { await recordAIRequestMetrics(input); } catch { /* Telemetry must never replace a real AI result or provider error. */ }
+
+async function trackAIRequest<T>(model: string, operation: () => Promise<T>): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    const result = await operation();
+    await recordAIMetricsSafely({
+      provider: "groq",
+      model,
+      latencyMs: Date.now() - startedAt,
+      outputValid: typeof result === "string" ? result.trim().length > 0 : result != null,
+    });
+    return result;
+  } catch (error) {
+    await recordAIMetricsSafely({
+      provider: "groq",
+      model,
+      latencyMs: Date.now() - startedAt,
+      outputValid: false,
+      failureCategory: "model_operation_failed",
+    });
+    throw error;
+  }
+}
 }
 
 export type { CoachContext } from "../ai/context-builder";
@@ -147,7 +170,7 @@ export async function generateDailyInsight(todayData: {
   workoutCompleted: boolean;
   dayType: string;
 }): Promise<string> {
-  return safeGroqCall(async () => {
+  return trackAIRequest(AI_MODELS.daily_insight, () => safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
       model: AI_MODELS.daily_insight,
       messages: [
@@ -162,7 +185,7 @@ export async function generateDailyInsight(todayData: {
       ],
       temperature: 0.4,
       max_tokens: 100,
-    });
+    }));
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Daily insight returned an empty response.");
@@ -200,7 +223,7 @@ export async function generateWeeklySummary(weekData: {
     ending_weight?: number;
   };
 }): Promise<string> {
-  return safeGroqCall(async () => {
+  return trackAIRequest(AI_MODELS.weekly_review, () => safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
       model: AI_MODELS.weekly_review,
       messages: [
@@ -221,7 +244,7 @@ Be direct, reference actual numbers, and focus on actionable insights. This summ
       ],
       temperature: 0.3,
       max_tokens: 200,
-    });
+    }));
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Weekly summary returned an empty response.");
@@ -247,7 +270,7 @@ export async function generateMonthlySummary(monthData: {
     body_fat_change?: number;
   };
 }): Promise<string> {
-  return safeGroqCall(async () => {
+  return trackAIRequest(AI_MODELS.periodic_report, () => safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
       model: AI_MODELS.periodic_report,
       messages: [
@@ -268,7 +291,7 @@ Be analytical, reference specific numbers, and tell the story of the month. This
       ],
       temperature: 0.3,
       max_tokens: 500,
-    });
+    }));
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Monthly summary returned an empty response.");
@@ -294,7 +317,7 @@ export async function generateQuarterlySummary(quarterData: {
     avg_protein_adherence: number;
   };
 }): Promise<string> {
-  return safeGroqCall(async () => {
+  return trackAIRequest(AI_MODELS.periodic_report, () => safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
       model: AI_MODELS.periodic_report,
       messages: [
@@ -316,7 +339,7 @@ Be comprehensive, tell the 3-month story, and provide strategic analysis. This w
       ],
       temperature: 0.3,
       max_tokens: 800,
-    });
+    }));
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Quarterly summary returned an empty response.");
@@ -350,7 +373,7 @@ export async function generateYearlySummary(yearData: {
     };
   };
 }): Promise<string> {
-  return safeGroqCall(async () => {
+  return trackAIRequest(AI_MODELS.periodic_report, () => safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
       model: AI_MODELS.periodic_report,
       messages: [
@@ -373,7 +396,7 @@ Be inspirational yet analytical. This is the user's annual transformation story.
       ],
       temperature: 0.3,
       max_tokens: 1000,
-    });
+    }));
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Yearly summary returned an empty response.");
