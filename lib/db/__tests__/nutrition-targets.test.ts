@@ -1,6 +1,7 @@
 import {
   DEFAULT_NUTRITION_TARGETS,
   validateNutritionTargets,
+  calculateTargetComparison,
   type NutritionTargets,
 } from "../../nutrition/target-validation";
 
@@ -39,5 +40,37 @@ describe("nutrition target validation", () => {
       ...DEFAULT_NUTRITION_TARGETS,
       protein_g: Number.NaN,
     })).toThrow(/Protein/);
+  });
+});
+
+
+describe("target-aware adherence comparison", () => {
+  it("computes target flags and score from actual totals", () => {
+    const result = calculateTargetComparison({
+      total_calories: DEFAULT_NUTRITION_TARGETS.calories,
+      total_protein_g: DEFAULT_NUTRITION_TARGETS.protein_g,
+    }, DEFAULT_NUTRITION_TARGETS);
+    expect(result).toEqual({
+      protein_target_met: 1,
+      calorie_target_met: 1,
+      adherence_score: 100,
+    });
+  });
+
+  it("caps protein contribution and never modifies actual intake", () => {
+    const result = calculateTargetComparison({
+      total_calories: 0,
+      total_protein_g: DEFAULT_NUTRITION_TARGETS.protein_g * 2,
+    }, DEFAULT_NUTRITION_TARGETS);
+    expect(result.protein_target_met).toBe(1);
+    expect(result.calorie_target_met).toBe(0);
+    expect(result.adherence_score).toBe(40);
+  });
+
+  it("rejects corrupted stored totals instead of scoring them", () => {
+    expect(() => calculateTargetComparison({
+      total_calories: Number.NaN,
+      total_protein_g: 80,
+    }, DEFAULT_NUTRITION_TARGETS)).toThrow("finite, non-negative");
   });
 });
