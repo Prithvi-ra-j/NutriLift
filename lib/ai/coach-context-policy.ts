@@ -1,4 +1,5 @@
 import { USER_PROFILE } from "../constants/user-profile";
+import type { NutritionTargets } from "../nutrition/target-validation";
 import type { BodyStat, DailyNutrition, PersonalRecord, RecoveryLog, WorkoutSession } from "../db/schema";
 
 export interface CoachProfileContext {
@@ -21,18 +22,18 @@ export interface CoachProfileContext {
   };
 }
 
-export function buildApprovedCoachProfile(): CoachProfileContext {
+export function buildApprovedCoachProfile(nutritionTargets?: NutritionTargets): CoachProfileContext {
   return {
     age: USER_PROFILE.age,
     sex: USER_PROFILE.sex,
     height_cm: USER_PROFILE.height_cm,
     training_start_date: USER_PROFILE.training_start_date,
     targets: {
-      calories: USER_PROFILE.targets.calories,
-      protein_g: USER_PROFILE.targets.protein_g,
-      carbs_g: USER_PROFILE.targets.carbs_g,
-      fat_g: USER_PROFILE.targets.fat_g,
-      physique_goal: USER_PROFILE.targets.physique_goal,
+      calories: nutritionTargets?.calories ?? USER_PROFILE.targets.calories,
+      protein_g: nutritionTargets?.protein_g ?? USER_PROFILE.targets.protein_g,
+      carbs_g: nutritionTargets?.carbs_g ?? USER_PROFILE.targets.carbs_g,
+      fat_g: nutritionTargets?.fat_g ?? USER_PROFILE.targets.fat_g,
+      physique_goal: nutritionTargets?.goal ?? USER_PROFILE.targets.physique_goal,
     },
     training: {
       current_split: USER_PROFILE.training.current_split,
