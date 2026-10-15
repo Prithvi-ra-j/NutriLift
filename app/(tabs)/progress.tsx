@@ -259,7 +259,7 @@ export default function ProgressScreen() {
                       Projected Date
                     </Text>
                     <Text style={{ color: bodySummary.onTrackForGoal ? M3.colors.success : M3.colors.warning, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                      {new Date(bodySummary.projectedBFDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                      {fromLocalDateKey(bodySummary.projectedBFDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                     </Text>
                   </View>
                 )}
@@ -502,7 +502,7 @@ export default function ProgressScreen() {
                         <View key={i} style={{ flex: 1, alignItems: "center", gap: 3 }}>
                           <View style={{ width: "100%", height: Math.max(4, pct * 52), backgroundColor: color, borderRadius: 3 }} />
                           <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 8, fontFamily: "DMSans_400Regular" }}>
-                            {new Date(log.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
+                            {fromLocalDateKey(log.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                           </Text>
                         </View>
                       );
