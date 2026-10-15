@@ -461,3 +461,41 @@ export const appTelemetryEvents = sqliteTable("app_telemetry_events", {
 }));
 export type AppTelemetryEvent = typeof appTelemetryEvents.$inferSelect;
 export type NewAppTelemetryEvent = typeof appTelemetryEvents.$inferInsert;
+
+
+// ─── User-owned quick-log favourites and reusable meal snapshots ───────────────
+export const favoriteFoods = sqliteTable("favorite_foods", {
+  id: text("id").primaryKey(),
+  normalized_name: text("normalized_name").notNull(),
+  name: text("name").notNull(),
+  meal: text("meal").notNull(),
+  quantity_g: real("quantity_g"),
+  calories: real("calories").notNull(),
+  protein_g: real("protein_g").notNull(),
+  carbs_g: real("carbs_g").notNull(),
+  fat_g: real("fat_g").notNull(),
+  fiber_g: real("fiber_g"),
+  sugar_g: real("sugar_g"),
+  sodium_mg: real("sodium_mg"),
+  source: text("source").notNull(),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+}, (table) => ({
+  normalizedNameUnique: uniqueIndex("idx_favorite_foods_normalized_name").on(table.normalized_name),
+}));
+
+export const repeatableMeals = sqliteTable("repeatable_meals", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  meal: text("meal").notNull(),
+  items_json: text("items_json").notNull(),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+}, (table) => ({
+  nameIndex: index("idx_repeatable_meals_name").on(table.name),
+}));
+
+export type FavoriteFood = typeof favoriteFoods.$inferSelect;
+export type NewFavoriteFood = typeof favoriteFoods.$inferInsert;
+export type RepeatableMeal = typeof repeatableMeals.$inferSelect;
+export type NewRepeatableMeal = typeof repeatableMeals.$inferInsert;
