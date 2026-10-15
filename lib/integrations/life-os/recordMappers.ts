@@ -1,4 +1,5 @@
 import { type SupportedRecordType, type SyncRecord } from "./exportSchema";
+import { toLocalDateKey } from "../../utils/local-date";
 
 type SyncableRow = Record<string, unknown> & { updated_at?: string | null; date?: string | null };
 
@@ -7,7 +8,7 @@ function dateToIso(date: string | null | undefined, timestamp?: unknown): string
     return new Date(timestamp > 10_000_000_000 ? timestamp : timestamp * 1000).toISOString();
   }
 
-  return `${date ?? new Date().toISOString().slice(0, 10)}T00:00:00.000Z`;
+  return `${date ?? toLocalDateKey()}T00:00:00.000Z`;
 }
 
 function sourceUpdatedAt(row: SyncableRow): string {
