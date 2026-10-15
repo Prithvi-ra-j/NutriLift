@@ -56,12 +56,26 @@ export async function getFoodLogsByMeal(date: string, meal: string): Promise<Foo
 }
 
 export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
-  validateFoodLogsInput(logs);
+  const preparedLogs: NewFoodLog[] = logs.map((log) => {
+    const provenanceType = log.provenance_type ?? (
+      log.source === "ai" || log.source === "voice" ? "ai_estimated" :
+      log.source === "barcode" ? "verified_reference" :
+      ["manual", "local", "repeat"].includes(log.source) ? "user_entered" : "legacy_unknown"
+    );
+    return {
+      ...log,
+      provenance_type: provenanceType,
+      provenance_json: log.provenance_json ?? JSON.stringify({ source: log.source, inferred: log.provenance_type == null }),
+      estimate_confidence: log.estimate_confidence ?? null,
+      estimate_reviewed: log.estimate_reviewed ?? (provenanceType === "ai_estimated" ? 0 : 1),
+    };
+  });
+  validateFoodLogsInput(preparedLogs);
   // The food rows and their daily aggregate commit or roll back together.
   await db.transaction(async (tx: any) => {
-    const date = logs[0].date;
+    const date = preparedLogs[0].date;
     const targets = await getNutritionTargetsForDate(date, tx);
-    await tx.insert(foodLogs).values(logs);
+    await tx.insert(foodLogs).values(preparedLogs);
     const rows = await tx.select().from(foodLogs).where(eq(foodLogs.date, date));
     const totals = rows.reduce(
       (acc: { calories: number; protein_g: number; carbs_g: number; fat_g: number }, log: FoodLog) => ({
@@ -94,7 +108,7 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
     }
     const persistedSummary = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
     if (persistedSummary[0]) await enqueueDailyNutrition(tx, persistedSummary[0]);
-    for (const log of logs) {
+    for (const log of preparedLogs) {
       await appendDomainEvent(tx, {
         id: `food-log:${log.id}:created`, eventType: "nutrition.food.created",
         entityType: "food_log", entityId: log.id, entityVersion: Math.max(1, Math.floor(log.created_at)),
