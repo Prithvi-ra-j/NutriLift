@@ -5,6 +5,7 @@ import { USER_PROFILE } from "../../constants/user-profile";
 import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
 import { validateRecoveryInput } from "../../recovery/validation";
 import { appendDomainEvent } from "./domain-events";
+import { enqueueRecoveryLog } from "./sync-outbox";
 
 // ─── Recovery Queries ─────────────────────────────────────────────────────────
 
@@ -58,6 +59,8 @@ export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
       occurredAt: record.updated_at,
       metadata: { date: log.date, hasSleepDuration: log.sleep_duration_hr != null },
     });
+    const persistedRows = await tx.select().from(recoveryLogs).where(eq(recoveryLogs.date, log.date)).limit(1);
+    if (persistedRows[0]) await enqueueRecoveryLog(tx, persistedRows[0]);
   });
 }
 
