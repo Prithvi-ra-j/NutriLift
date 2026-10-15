@@ -50,7 +50,8 @@ export function toSupabaseSyncRow(record: SyncRecord, userId: string): SupabaseS
 
 async function acknowledgeSyncInvalidationsIfQueueDrained(): Promise<void> {
   try {
-    const counts = await getSyncQueueCounts();
+    const repository = await import("./syncRepository");
+    const counts = await repository.getSyncQueueCounts();
     if (counts.pending > 0 || counts.uploading > 0 || counts.failed > 0 || counts.needs_attention > 0) return;
     const pending = await getPendingDerivedStateInvalidations(db, 500);
     for (const invalidation of pending) {
