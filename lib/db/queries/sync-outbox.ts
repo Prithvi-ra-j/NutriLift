@@ -22,7 +22,11 @@ export async function enqueueSyncRecord(tx: any, record: SyncRecord): Promise<vo
   });
 }
 
-export async function enqueueBodyStat(tx: any, row: BodyStat): Promise<void> {\n  await enqueueSyncRecord(tx, mapBodyStat(row as any));\n}\n\nexport async function enqueueDailyNutrition(tx: any, row: DailyNutrition): Promise<void> {
+export async function enqueueBodyStat(tx: any, row: BodyStat): Promise<void> {
+  await enqueueSyncRecord(tx, mapBodyStat(row as any));
+}
+
+export async function enqueueDailyNutrition(tx: any, row: DailyNutrition): Promise<void> {
   await enqueueSyncRecord(tx, mapDailyNutrition(row as unknown as Record<string, unknown>));
 }
 
