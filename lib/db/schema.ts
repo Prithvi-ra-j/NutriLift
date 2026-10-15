@@ -1,4 +1,4 @@
-import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, real, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // ─── Food Logs ────────────────────────────────────────────────────────────────
 export const foodLogs = sqliteTable("food_logs", {
@@ -271,14 +271,23 @@ export const customExercises = sqliteTable("custom_exercises", {
 });
 
 // ─── Sync Metadata ──────────────────────────────────────────────────────────
-export const syncTombstones = sqliteTable("sync_tombstones", {
-  id: text("id").primaryKey(),
-  entity_type: text("entity_type").notNull(),
-  entity_id: text("entity_id").notNull(),
-  external_id: text("external_id"),
-  deleted_at: text("deleted_at").notNull(),
-  created_at: text("created_at").notNull(),
-});
+export const syncTombstones = sqliteTable(
+  "sync_tombstones",
+  {
+    id: text("id").primaryKey(),
+    entity_type: text("entity_type").notNull(),
+    entity_id: text("entity_id").notNull(),
+    external_id: text("external_id"),
+    deleted_at: text("deleted_at").notNull(),
+    created_at: text("created_at").notNull(),
+  },
+  (table) => ({
+    entityUnique: uniqueIndex("sync_tombstones_entity_type_entity_id_unique").on(
+      table.entity_type,
+      table.entity_id,
+    ),
+  }),
+);
 
 export const syncQueue = sqliteTable("sync_queue", {
   id: text("id").primaryKey(),

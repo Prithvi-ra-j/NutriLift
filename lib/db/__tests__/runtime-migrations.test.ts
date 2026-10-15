@@ -36,6 +36,45 @@ describe("runtime SQLite migrations", () => {
     jest.resetModules();
   });
 
+
+  it("executes the clean-install Drizzle SQL snapshot successfully", () => {
+    const { readFileSync } = require("node:fs");
+    const { join } = require("node:path");
+    const migrationSql = readFileSync(
+      join(__dirname, "../../../drizzle/0000_wakeful_supernaut.sql"),
+      "utf8",
+    );
+    const database = new DatabaseSync(":memory:");
+    try {
+      database.exec(migrationSql);
+      const tables = new Set<string>(
+        database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all()
+          .map((row: { name: string }) => row.name),
+      );
+      for (const table of [
+        "food_logs", "daily_nutrition", "workout_sessions", "exercise_logs",
+        "set_logs", "custom_exercises", "sync_tombstones", "sync_queue", "sync_state",
+      ]) {
+        expect(tables.has(table)).toBe(true);
+      }
+      for (const [table, column] of [
+        ["daily_nutrition", "updated_at"],
+        ["workout_sessions", "updated_at"],
+        ["personal_records", "updated_at"],
+        ["body_stats", "updated_at"],
+        ["recovery_logs", "updated_at"],
+        ["sync_tombstones", "external_id"],
+      ]) {
+        expect(
+          database.prepare(`PRAGMA table_info(${table})`).all()
+            .some((row: { name: string }) => row.name === column),
+        ).toBe(true);
+      }
+    } finally {
+      database.close();
+    }
+  });
+
   it("creates every required core table on an empty database", async () => {
     const database = new DatabaseSync(":memory:");
     try {
