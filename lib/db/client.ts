@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import * as schema from "./schema";
+import { findMissingRequiredTables, REQUIRED_CORE_TABLES } from "./migration-contract";
 
 // Platform-specific imports and initialization
 let sqlite: any = null;
@@ -83,6 +84,15 @@ export async function runMigrations(): Promise<void> {
       calorie_target_met INTEGER,
       adherence_score REAL,
       notes TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS custom_exercises (
+      id TEXT PRIMARY KEY,
+      exercise_name TEXT NOT NULL UNIQUE,
+      muscle_group TEXT,
+      equipment TEXT,
+      exercise_type TEXT NOT NULL,
+      created_at INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workout_sessions (
@@ -369,4 +379,12 @@ export async function runMigrations(): Promise<void> {
       updated_at TEXT NOT NULL
     );
   `);
+
+  // Fail fast on incomplete local schema instead of allowing screens to fail later.
+  const rows = await sqlite.getAllAsync("SELECT name FROM sqlite_master WHERE type = 'table'");
+  const existingTables = new Set<string>(rows.map((row: { name: string }) => row.name));
+  const missingTables = findMissingRequiredTables(existingTables);
+  if (missingTables.length > 0) {
+    throw new Error("Local database migration incomplete. Missing tables: " + missingTables.join(", "));
+  }
 }
