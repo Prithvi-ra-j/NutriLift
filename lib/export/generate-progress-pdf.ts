@@ -612,7 +612,7 @@ export async function exportCurrentMonth() {
   
   return generateProgressPDF({
     startDate: toLocalDateKey(startOfMonth),
-    endDate: now.toISOString().split("T")[0],
+    endDate: toLocalDateKey(now),
   });
 }
 
