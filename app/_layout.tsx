@@ -18,7 +18,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
 import { M3 } from "../design-system/tokens";
-import { syncToSupabase } from "../lib/integrations/life-os/syncClient";
+import { processSyncQueue } from "../lib/integrations/life-os/syncClient";
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
@@ -42,7 +42,7 @@ export default function RootLayout() {
         setDbReady(true);
         if (Platform.OS === "web") return;
 
-        syncToSupabase().then((result) => {
+        processSyncQueue().then((result) => {
           if (result.error && result.error !== "Supabase is not configured." && result.error !== "Sign in before syncing NutriLift.") {
             logger.warn("NutriLift sync did not complete", { error: result.error });
           }
