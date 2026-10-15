@@ -51,7 +51,8 @@ CREATE TABLE `body_stats` (
 	`seg_fat_right_leg` real,
 	`seg_fat_left_leg` real,
 	`raw_paste` text,
-	`source` text
+	`source` text,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `custom_exercises` (
@@ -73,7 +74,8 @@ CREATE TABLE `daily_nutrition` (
 	`protein_target_met` integer,
 	`calorie_target_met` integer,
 	`adherence_score` real,
-	`notes` text
+	`notes` text,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `exercise_logs` (
@@ -156,7 +158,8 @@ CREATE TABLE `personal_records` (
 	`best_volume_single_set` real,
 	`achieved_date` text NOT NULL,
 	`previous_best_kg` real,
-	`improvement_pct` real
+	`improvement_pct` real,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `quarterly_summaries` (
@@ -180,7 +183,8 @@ CREATE TABLE `recovery_logs` (
 	`energy_level` integer,
 	`muscle_soreness` integer,
 	`stress_level` integer,
-	`notes` text
+	`notes` text,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `set_logs` (
@@ -225,7 +229,8 @@ CREATE TABLE `workout_sessions` (
 	`duration_min` integer,
 	`total_volume_kg` real,
 	`notes` text,
-	`rpe` integer
+	`rpe` integer,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `yearly_summaries` (
@@ -235,4 +240,40 @@ CREATE TABLE `yearly_summaries` (
 	`ai_summary` text NOT NULL,
 	`transformation_story` text,
 	`stats_json` text NOT NULL
+);
+--> statement-breakpoint
+--> statement-breakpoint
+CREATE TABLE `sync_tombstones` (
+	`id` text PRIMARY KEY NOT NULL,
+	`entity_type` text NOT NULL,
+	`entity_id` text NOT NULL,
+	`external_id` text,
+	`deleted_at` text NOT NULL,
+	`created_at` text NOT NULL,
+	CONSTRAINT `sync_tombstones_entity_type_entity_id_unique` UNIQUE(`entity_type`,`entity_id`)
+);
+--> statement-breakpoint
+CREATE TABLE `sync_queue` (
+	`id` text PRIMARY KEY NOT NULL,
+	`external_id` text NOT NULL,
+	`payload_json` text NOT NULL,
+	`state` text NOT NULL,
+	`attempt_count` integer DEFAULT 0 NOT NULL,
+	`last_error` text,
+	`next_retry_at` text,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `sync_queue_external_id_unique` ON `sync_queue` (`external_id`);
+--> statement-breakpoint
+CREATE INDEX `idx_sync_queue_state` ON `sync_queue` (`state`,`next_retry_at`);
+--> statement-breakpoint
+CREATE TABLE `sync_state` (
+	`source_app` text PRIMARY KEY NOT NULL,
+	`cursor` text,
+	`last_synced_at` text,
+	`last_success_at` text,
+	`last_error` text,
+	`updated_at` text NOT NULL
 );

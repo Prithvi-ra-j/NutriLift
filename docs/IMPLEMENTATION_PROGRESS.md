@@ -58,10 +58,18 @@ Working branch: `implementation/phase-0-baseline`
 - [x] CI passed for additive-migration refactor commit `3fce6ef` in run [#38681135821](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38681135821): dependency install, TypeScript, Jest, and Expo config/assets passed.
 - [x] Add real in-memory SQLite integration tests for empty install, upgrade from a legacy schema while preserving a saved food log, repeat migration, and rejecting a future schema version (`runtime-migrations.test.ts`).
 - [ ] Re-run CI after restoring the pre-DDL future-version guard and aligning sync-tombstone column assertions.
-- [ ] Reconcile runtime SQL with generated Drizzle migration before phase exit.
+- [x] Reconcile the clean-install Drizzle SQL snapshot with runtime schema additions (`updated_at` columns and sync tables) and add a parity regression test. Runtime `runMigrations()` remains the production upgrade path for existing installs.
 - [x] Ensure `sync_tombstones` exists before additive-column checks, so older installations receive the `external_id` upgrade; include it in migration-contract assertions.
 
-### 2026-10-15 — Phase 2, unit 2: migration assertions and recoverable failure states\n- [x] Validate required additive columns after migrations, not just table presence (`fbdaedc`).\n- [x] Replace the Workout screen’s indefinite loading failure with a visible error and retry (`fbdaedc`).\n- [x] Add SQLite `user_version` tracking and reject future schema versions (`9f976b3`, formatting follow-up `e7afd7a`).\n- [x] Make root initialization failure visible and block database-dependent screens until retry succeeds (`74e05d1`).\n- [ ] Wait for CI on latest head `e7afd7a`; clean-install integration coverage and migration-source reconciliation are still open.\n\n### 2026-10-15 — Phase 1 validation follow-up
+### 2026-10-15 — Phase 2, unit 2: migration assertions and recoverable failure states
+- [x] Validate required additive columns after migrations, not just table presence (`fbdaedc`).
+- [x] Replace the Workout screen’s indefinite loading failure with a visible error and retry (`fbdaedc`).
+- [x] Add SQLite `user_version` tracking and reject future schema versions (`9f976b3`, formatting follow-up `e7afd7a`).
+- [x] Make root initialization failure visible and block database-dependent screens until retry succeeds (`74e05d1`).
+- [x] Add SQLite-backed tests for clean install, legacy upgrade/data preservation, idempotent rerun and future-version rejection (`runtime-migrations.test.ts`).
+- [x] Fix failures found in the first integration run; latest validation passed 37 suites / 271 tests in [run #38683792913](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38683792913).
+- [x] Align clean-install Drizzle SQL with runtime-only `updated_at` columns and sync tables; add parity regression coverage.
+- [ ] Re-run CI after migration snapshot parity update; then confirm Phase 2 exit criteria.\n\n### 2026-10-15 — Phase 1 validation follow-up
 - [x] Inspect the failed validation run and job logs rather than inferring the cause from the red status.
 - [x] Confirm TypeScript and Jest passed on the tested head; failure is isolated to the missing Expo assets.
 - [x] Verify the configured assets are absent from the tracked baseline tree and the working branch; no native image assets are available to reuse.
