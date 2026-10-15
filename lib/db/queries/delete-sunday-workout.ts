@@ -50,6 +50,6 @@ export async function deleteWorkoutForDate(date: string): Promise<void> {
 
 // Helper function to delete today's workout
 export async function deleteTodayWorkout(): Promise<void> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
   await deleteWorkoutForDate(today);
 }
