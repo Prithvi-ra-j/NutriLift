@@ -66,6 +66,7 @@ describe("runtime SQLite migrations", () => {
         ["body_stats", "updated_at"],
         ["recovery_logs", "updated_at"],
         ["sync_tombstones", "external_id"],
+        ["nutrition_target_history", "goal"],
       ]) {
         expect(
           database.prepare(`PRAGMA table_info(${table})`).all()
@@ -94,7 +95,7 @@ describe("runtime SQLite migrations", () => {
       for (const table of REQUIRED_CORE_TABLES) {
         expect(tables.has(table)).toBe(true);
       }
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(4);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(5);
     } finally {
       database.close();
     }
@@ -157,7 +158,7 @@ describe("runtime SQLite migrations", () => {
       expect(
         database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'custom_exercises'").get(),
       ).toBeDefined();
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(4);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(5);
 
       expect(database.prepare("SELECT status FROM workout_sessions WHERE id = ?").get("legacy-active").status).toBe("in_progress");
       expect(database.prepare("SELECT status FROM workout_sessions WHERE id = ?").get("legacy-finished").status).toBe("completed");
