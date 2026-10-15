@@ -74,7 +74,8 @@ export default function NutritionScreen() {
         getDailyNutrition(selectedDate),
         getFoodLogsForDate(selectedDate),
         getLast7DaysNutrition(),
-      , getNutritionTargets()]);
+          getNutritionTargets(),
+        ]);
       setActiveTargets(targets);
       setNutrition(nutritionData);
       setFoodLogs(logsData);
