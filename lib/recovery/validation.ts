@@ -1,4 +1,4 @@
-import { parseLocalDateKey } from "../utils/local-date";
+import { fromLocalDateKey } from "../utils/local-date";
 
 export interface RecoveryInput {
   date: string;
@@ -29,7 +29,7 @@ function assertClockTime(value: string | null | undefined, label: string): void 
 export function validateRecoveryInput(input: RecoveryInput): void {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) throw new Error("Recovery date must use YYYY-MM-DD.");
   try {
-    parseLocalDateKey(input.date);
+    fromLocalDateKey(input.date);
   } catch {
     throw new Error("Recovery date must be a real calendar date.");
   }
