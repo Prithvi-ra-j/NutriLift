@@ -150,6 +150,7 @@ export default function WorkoutScreen() {
   const [exercises, setExercises] = useState<ExerciseLog[]>([]);
   const [sets, setSets] = useState<Record<string, SetLog[]>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedDayType, setSelectedDayType] = useState<DayType>(getDefaultDayType(todayStr));
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -185,6 +186,8 @@ export default function WorkoutScreen() {
   // ─── Load ──────────────────────────────────────────────────────────────────
 
   const loadWorkout = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     setSession(null);
     setExercises([]);
     setSets({});
@@ -192,28 +195,34 @@ export default function WorkoutScreen() {
     setEditingSetId(null);
     setEditSetForm(null);
 
-    const sessions = await getSessionsForDate(selectedDate);
-    if (sessions[0]) {
-      setSession(sessions[0]);
-      setSelectedDayType(sessions[0].day_type as DayType);
-      const exs = await getExercisesForSession(sessions[0].id);
-      setExercises(exs);
+    try {
+      const sessions = await getSessionsForDate(selectedDate);
+      if (sessions[0]) {
+        setSession(sessions[0]);
+        setSelectedDayType(sessions[0].day_type as DayType);
+        const exs = await getExercisesForSession(sessions[0].id);
+        setExercises(exs);
 
-      const setsData: Record<string, SetLog[]> = {};
-      for (const ex of exs) {
-        const s = await getSetsForExercise(ex.id);
-        setsData[ex.id] = s;
+        const setsData: Record<string, SetLog[]> = {};
+        for (const ex of exs) {
+          const s = await getSetsForExercise(ex.id);
+          setsData[ex.id] = s;
+        }
+        setSets(setsData);
+      } else {
+        setSelectedDayType(getDefaultDayType(selectedDate));
       }
-      setSets(setsData);
-    } else {
-      setSelectedDayType(getDefaultDayType(selectedDate));
+
+      const custom = await getCustomExercises();
+      setCustomExercises(custom);
+
+      await loadCompletedDayTypes();
+    } catch (error) {
+      console.error("Failed to load workout data", error);
+      setLoadError("Workout data could not be loaded. Your saved data has not been changed. Check the database and try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    const custom = await getCustomExercises();
-    setCustomExercises(custom);
-
-    await loadCompletedDayTypes();
-    setIsLoading(false);
   }, [selectedDate]);
 
   const loadCompletedDayTypes = async () => {
@@ -787,6 +796,36 @@ export default function WorkoutScreen() {
           <CardSkeleton />
           <CardSkeleton />
           <CardSkeleton />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+        <View style={{ flex: 1, justifyContent: "center", padding: 24, gap: 16 }}>
+          <Feather name="alert-circle" size={36} color={M3.colors.error} />
+          <Text style={{ color: M3.colors.onSurface, fontSize: 20, fontFamily: "DMSans_700Bold" }}>
+            Workout unavailable
+          </Text>
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 14, lineHeight: 21 }}>
+            {loadError}
+          </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading workout"
+            onPress={loadWorkout}
+            style={{
+              alignSelf: "flex-start",
+              backgroundColor: M3.colors.primary,
+              borderRadius: M3.shape.full,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+            }}
+          >
+            <Text style={{ color: M3.colors.onPrimary, fontFamily: "DMSans_700Bold" }}>Try again</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
