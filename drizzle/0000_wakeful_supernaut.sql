@@ -256,6 +256,19 @@ CREATE TABLE `sync_tombstones` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `sync_tombstones_entity_type_entity_id_unique` ON `sync_tombstones` (`entity_type`,`entity_id`);
 --> statement-breakpoint
+CREATE TABLE `recommendation_outcomes` (
+	`id` text PRIMARY KEY NOT NULL,
+	`recommendation_id` text NOT NULL,
+	`local_date` text NOT NULL,
+	`outcome` text NOT NULL,
+	`rule_version` text NOT NULL,
+	`evidence_json` text NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_recommendation_outcomes_date_id` ON `recommendation_outcomes` (`local_date`,`recommendation_id`);
+--> statement-breakpoint
 CREATE TABLE `sync_queue` (
 	`id` text PRIMARY KEY NOT NULL,
 	`external_id` text NOT NULL,
@@ -278,6 +291,7 @@ CREATE TABLE `sync_state` (
 	`last_synced_at` text,
 	`last_success_at` text,
 	`last_error` text,
+	`owner_user_id` text,
 	`updated_at` text NOT NULL
 );
 --> statement-breakpoint
