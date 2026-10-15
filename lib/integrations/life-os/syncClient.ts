@@ -1,5 +1,7 @@
 import { Platform } from "react-native";
 import { getCurrentUser } from "../../supabase/auth";
+import { db } from "../../db/client";
+import { getPendingDerivedStateInvalidations, markDerivedStateInvalidationProcessed } from "../../db/queries/domain-events";
 import { isSupabaseConfigured, supabase } from "../../supabase/client";
 import { type SyncRecord, validateSyncRecord } from "./exportSchema";
 import { parseNutriLiftExternalId, resolveSourceEntity } from "./sourceResolver";
@@ -44,6 +46,21 @@ export function toSupabaseSyncRow(record: SyncRecord, userId: string): SupabaseS
     schema_version: record.schemaVersion,
     deleted_at: record.deleted ? sourceUpdatedAt ?? new Date().toISOString() : null,
   };
+}
+
+async function acknowledgeSyncInvalidationsIfQueueDrained(): Promise<void> {
+  try {
+    const counts = await getSyncQueueCounts();
+    if (counts.pending > 0 || counts.uploading > 0 || counts.failed > 0 || counts.needs_attention > 0) return;
+    const pending = await getPendingDerivedStateInvalidations(db, 500);
+    for (const invalidation of pending) {
+      if (invalidation.projection_key.startsWith("sync.")) {
+        await markDerivedStateInvalidationProcessed(db, invalidation.id);
+      }
+    }
+  } catch {
+    // Keep invalidations pending if queue health cannot be proven.
+  }
 }
 
 export async function upsertExternalFact(record: SyncRecord, userId: string) {
@@ -128,6 +145,7 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   const nextCursor = repository.newestSourceTimestamp(changedRecords) ?? cursor;
   if (queuedRecords.length === 0) {
     await repository.saveSyncState({ cursor: nextCursor ?? undefined, success: true });
+    if (needsAttention === 0) await acknowledgeSyncInvalidationsIfQueueDrained();
     await recordSyncAttemptSafely({ outcome: needsAttention > 0 ? "permanent_failure" : "success", latencyMs: Date.now() - attemptStartedAt, retryCategory: needsAttention > 0 ? "invalid_records_quarantined" : null, operationCount: changedRecords.length, acceptedCount: 0, rejectedCount: needsAttention });
     return {
       uploaded: 0,
@@ -186,6 +204,7 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
     error: failureSummary ?? null,
     success: failedItems.length === 0,
   });
+  if (failedItems.length === 0 && needsAttention === 0) await acknowledgeSyncInvalidationsIfQueueDrained();
   await recordSyncAttemptSafely({
     outcome: failedItems.length || needsAttention ? (failedItems.length ? "retryable_failure" : "permanent_failure") : "success",
     latencyMs: Date.now() - attemptStartedAt,
