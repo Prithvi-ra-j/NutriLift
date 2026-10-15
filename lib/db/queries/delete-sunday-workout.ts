@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../client";
 import { workoutSessions, exerciseLogs, setLogs } from "../schema";
+import { toLocalDateKey } from "../../utils/local-date";
 
 /**
  * Delete all workout data for a specific date
