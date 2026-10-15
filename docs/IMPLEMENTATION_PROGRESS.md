@@ -228,3 +228,6 @@ After every small implementation unit, update this file with the commit/PR, file
 - [ ] CI is not yet evidenced for these commits. The Vercel status is a build-rate-limit failure; GitHub Actions has not returned a run for the latest head. Do not treat either as a passing test suite.
 - [ ] Next: obtain actual validation on the latest branch head, add database-level tests for nutrition mutation transactions, then integrate target-history changes with daily comparisons and Coach context.
 - Latest nutrition invariant commit: `923f7a3b9fa418928cfe8d46a59b72019285ec32`.
+
+
+- [x] Correct recent recovery history windows: `days=7` now means today plus the six preceding calendar dates, and invalid/oversized window lengths are rejected (`84b0adabfbe00cb69886a386c3b5141b905a026c`).
