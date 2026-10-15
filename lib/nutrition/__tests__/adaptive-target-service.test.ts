@@ -1,3 +1,6 @@
+jest.mock("../../db/queries/nutrition", () => ({ getLast30DaysNutrition: jest.fn() }));
+jest.mock("../../db/queries/nutrition-targets", () => ({ getNutritionTargets: jest.fn() }));
+jest.mock("../../db/queries/body", () => ({ getWeightHistory: jest.fn() }));
 import { buildAdaptiveTargetInput } from "../adaptive-target-service";
 import { DEFAULT_NUTRITION_TARGETS } from "../target-validation";
 import type { DailyNutrition, BodyStat } from "../../db/schema";
