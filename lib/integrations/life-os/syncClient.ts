@@ -54,6 +54,7 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   }
 
   const repository = await import("./syncRepository");
+  await repository.recoverInterruptedSyncOperations();
   const cursor = await repository.getSyncCursor();
   const changedRecords = await repository.getChangedRecords(cursor);
   const validChangedRecords = changedRecords.filter((record) => validateSyncRecord({ ...record, userId: user.id }).valid);
