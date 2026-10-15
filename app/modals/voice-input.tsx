@@ -12,6 +12,7 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 
 export default function VoiceInputModal() {
   const [isRecording, setIsRecording] = useState(false);
@@ -92,7 +93,7 @@ export default function VoiceInputModal() {
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = toLocalDateKey();
       const meal = parsedFood.meal_suggestion || "snack";
 
       // Save each food item
