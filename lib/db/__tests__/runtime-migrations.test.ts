@@ -142,6 +142,22 @@ describe("runtime SQLite migrations", () => {
         VALUES ('legacy-active', '2026-10-14', 'Push A', 1000, NULL);
         INSERT INTO workout_sessions (id, date, day_type, started_at, ended_at)
         VALUES ('legacy-finished', '2026-10-13', 'Pull A', 900, 1800);
+        CREATE TABLE nutrition_target_history (
+          id TEXT PRIMARY KEY,
+          effective_date TEXT NOT NULL,
+          calorie_target_kcal INTEGER NOT NULL,
+          protein_target_g REAL NOT NULL,
+          carbs_target_g REAL NOT NULL,
+          fat_target_g REAL NOT NULL,
+          source TEXT NOT NULL,
+          maintenance_estimate_kcal INTEGER,
+          algorithm_version INTEGER,
+          explanation TEXT,
+          created_at TEXT NOT NULL
+        );
+        INSERT INTO nutrition_target_history
+          (id, effective_date, calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g, source, created_at)
+        VALUES ('legacy-target', '2026-10-01', 2200, 130, 250, 70, 'manual', '2026-10-01T00:00:00.000Z');
         PRAGMA user_version = 1;
       `);
 
@@ -166,6 +182,9 @@ describe("runtime SQLite migrations", () => {
       // A second run must be safe and must not duplicate or remove saved data.
       await runMigrations();
       expect(database.prepare("SELECT COUNT(*) AS count FROM food_logs").get().count).toBe(1);
+      expect(database.prepare("SELECT id, calorie_target_kcal FROM nutrition_target_history WHERE id = ?").get("legacy-target"))
+        .toEqual({ id: "legacy-target", calorie_target_kcal: 2200 });
+      expect(database.prepare("SELECT goal FROM nutrition_target_history WHERE id = ?").get("legacy-target").goal).toBeNull();
     } finally {
       database.close();
     }
