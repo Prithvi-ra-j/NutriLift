@@ -52,7 +52,11 @@ export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
 }
 
 export async function getRecentRecoveryLogs(days: number = 7): Promise<RecoveryLog[]> {
-  const cutoffStr = addCalendarDays(toLocalDateKey(), -days);
+  if (!Number.isInteger(days) || days < 1 || days > 365) {
+    throw new Error("Recovery history days must be an integer from 1 to 365.");
+  }
+  // Inclusive range: seven days means today plus the six preceding dates.
+  const cutoffStr = addCalendarDays(toLocalDateKey(), -(days - 1));
 
   return db
     .select()
