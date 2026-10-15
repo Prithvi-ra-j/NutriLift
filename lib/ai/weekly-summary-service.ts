@@ -7,7 +7,7 @@ import { getBodyStatsForDateRange } from "../db/queries/body";
 import { getWeeklySummary, insertWeeklySummary, getPreviousWeeklySummaries } from "../db/queries/reports";
 import { generateWeeklySummary } from "../groq/generateCoachResponse";
 import type { WeeklySummary } from "../db/schema";
-import { fromLocalDateKey, toLocalDateKey } from "../utils/local-date";
+import { toLocalDateKey } from "../utils/local-date";
 
 /**
  * Generate or retrieve AI-powered weekly summary
