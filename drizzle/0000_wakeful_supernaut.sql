@@ -107,6 +107,10 @@ CREATE TABLE `food_logs` (
 	`sodium_mg` real,
 	`source` text NOT NULL,
 	`raw_input` text,
+	`provenance_type` text DEFAULT 'legacy_unknown' NOT NULL,
+	`provenance_json` text,
+	`estimate_confidence` real,
+	`estimate_reviewed` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
