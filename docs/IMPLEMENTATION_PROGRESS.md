@@ -21,7 +21,7 @@ Working branch: `implementation/phase-0-baseline`
 |---|---|---|
 | 0. Baseline and defect register | In progress | Tracker committed; overlapping PRs #1/#3/#4/#7 compared at metadata/diff level. No PR merged. |
 | 1. CI/build reproducibility | Complete | Validation run [#38618276698](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38618276698) succeeded on tracker/assets commit `390b31be`: locked dependency install, TypeScript, Jest, Expo local-asset validation, and public Expo config all passed. Earlier failed asset check is resolved. |
-| 2. Domain/persistence foundations | In progress | Runtime setup now creates `custom_exercises`, validates required core tables and additive columns, and Workout shows a retryable error instead of remaining on a loading skeleton when data loading fails. CI still needs to validate the follow-up commit; clean-install and upgrade behavior must be verified before phase exit. |
+| 2. Domain/persistence foundations | In progress | Runtime setup creates `custom_exercises`, validates required core tables and additive columns, tracks SQLite `user_version`, rejects databases written by newer app versions, and blocks app screens with a retryable error if initialization fails. Workout also has a retryable load-error state. Latest validation run is pending; integration-level clean-install and legacy-data-preservation coverage remains before phase exit. |
 | 3. Calendar dates/time zones | Not started | Blueprint calls this a cross-feature correctness priority; audit current production paths and tests before edits. |
 | 4. Nutrition pipeline | Not started | One shared validated command path is the target. |
 | 5. Profile/targets | Not started | Effective-dated history; existing PR #7 must be reviewed first. |
@@ -53,9 +53,12 @@ Working branch: `implementation/phase-0-baseline`
 - [x] CI passed for first unit in run [#38679440691](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38679440691) (commit `e999f9d`).
 - [x] Extend post-migration validation to required additive columns (`duration_sec`, `distance_km`, `exercise_type`, and update fields), not just table names.
 - [x] Make Workout loading failure recoverable with an explicit error and retry action.
-- [ ] Validate clean-install and existing-database migration behavior in an integration-level test; review migration ownership/versioning before phase exit.
+- [x] Add `PRAGMA user_version` schema tracking; schema version advances only after table/column assertions pass and future-version databases fail closed.
+- [x] Stop rendering database-dependent screens when root initialization fails; show the error and offer retry.
+- [ ] Capture green CI evidence for the follow-up implementation commits.
+- [ ] Add integration-level clean-install and legacy-data-preservation coverage; reconcile runtime SQL with generated Drizzle migration before phase exit.
 
-### 2026-10-15 — Phase 1 validation follow-up
+### 2026-10-15 — Phase 2, unit 2: migration assertions and recoverable failure states\n- [x] Validate required additive columns after migrations, not just table presence (`fbdaedc`).\n- [x] Replace the Workout screen’s indefinite loading failure with a visible error and retry (`fbdaedc`).\n- [x] Add SQLite `user_version` tracking and reject future schema versions (`9f976b3`, formatting follow-up `e7afd7a`).\n- [x] Make root initialization failure visible and block database-dependent screens until retry succeeds (`74e05d1`).\n- [ ] Wait for CI on latest head `e7afd7a`; clean-install integration coverage and migration-source reconciliation are still open.\n\n### 2026-10-15 — Phase 1 validation follow-up
 - [x] Inspect the failed validation run and job logs rather than inferring the cause from the red status.
 - [x] Confirm TypeScript and Jest passed on the tested head; failure is isolated to the missing Expo assets.
 - [x] Verify the configured assets are absent from the tracked baseline tree and the working branch; no native image assets are available to reuse.
