@@ -26,6 +26,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { fromLocalDateKey, toLocalDateKey } from "../../lib/utils/local-date";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -56,7 +57,7 @@ function groupByMeal(logs: FoodLog[]): MealGroup[] {
 }
 
 export default function NutritionScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = toLocalDateKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const { nutrition, foodLogs, setNutrition, setFoodLogs } = useTodayStore();
 
@@ -140,7 +141,7 @@ export default function NutritionScreen() {
         {/* ── Header ── */}
         <ScreenHeader
           title="NUTRITION"
-          subtitle={new Date(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+          subtitle={fromLocalDateKey(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
           actionIcon="plus"
           actionLabel="Log Food"
           onAction={() => router.push("/modals/log-food")}
@@ -150,7 +151,7 @@ export default function NutritionScreen() {
         <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />
 
         {/* ── Marathon Day Notice ── */}
-        {new Date(selectedDate).getDay() === 0 && (
+        {fromLocalDateKey(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
               <Feather name="activity" size={20} color={M3.colors.error} />
