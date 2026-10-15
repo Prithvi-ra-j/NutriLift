@@ -25,8 +25,8 @@ describe("recoverInterruptedSyncOperations", () => {
     expect(sql).toContain("state = 'uploading'");
     expect(sql).toContain("state = 'pending'");
     expect(sql).toContain("next_retry_at = NULL");
-    expect(params[0]).toBeInstanceOf(String);
-    expect(params[1]).toBeInstanceOf(String);
+    expect(typeof params[0]).toBe("string");
+    expect(typeof params[1]).toBe("string");
     expect(Date.parse(params[1])).toBeLessThanOrEqual(before - 60_000);
   });
 
