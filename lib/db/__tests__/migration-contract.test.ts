@@ -10,7 +10,7 @@ import {
 
 describe("local database migration contract", () => {
   it("supports legacy and current schema versions but rejects future versions", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(4);
+    expect(CURRENT_SCHEMA_VERSION).toBe(5);
     expect(() => assertSupportedSchemaVersion(0)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(1)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();
@@ -38,6 +38,7 @@ describe("local database migration contract", () => {
     }
     expect(migrationSql).toContain("`updated_at` text");
     expect(migrationSql).toContain("`external_id` text");
+    expect(migrationSql).toContain("`goal` text");
   });
 
   it("accepts a database containing every required core table", () => {
@@ -76,6 +77,7 @@ describe("local database migration contract", () => {
       "body_stats.updated_at",
       "recovery_logs.updated_at",
       "sync_tombstones.external_id",
+      "nutrition_target_history.goal",
       "custom_exercises.exercise_type",
       "custom_exercises.created_at",
     ]);
