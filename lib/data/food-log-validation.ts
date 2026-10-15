@@ -31,3 +31,17 @@ export function validateFoodLogInput(log: NewFoodLog): void {
     throw new Error("Food quantity must be greater than zero.");
   }
 }
+
+export function validateFoodLogsInput(logs: NewFoodLog[]): void {
+  if (logs.length === 0) throw new Error("Add at least one food item.");
+  logs.forEach(validateFoodLogInput);
+  if (new Set(logs.map((log) => log.id)).size !== logs.length) {
+    throw new Error("Food log contains duplicate item IDs.");
+  }
+  if (new Set(logs.map((log) => log.date)).size !== 1) {
+    throw new Error("A meal batch must use one calendar date.");
+  }
+  if (new Set(logs.map((log) => log.meal)).size !== 1) {
+    throw new Error("A meal batch must use one meal type.");
+  }
+}
