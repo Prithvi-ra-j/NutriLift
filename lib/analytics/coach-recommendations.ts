@@ -170,3 +170,48 @@ export function generateCoachRecommendations(
     .sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id))
     .slice(0, 3);
 }
+
+
+export interface RecommendationExplanation {
+  recommendationId: string;
+  title: string;
+  explanation: string;
+  evidence: CoachEvidence[];
+  confidence: CoachConfidence;
+  priority: number;
+  ruleVersion: string;
+  limitations: string[];
+}
+
+/**
+ * Explain an already-validated recommendation without changing its facts or
+ * creating new evidence. This is an audit/explanation contract, not a Coach
+ * reply fallback: the AI conversation still uses the real provider path.
+ */
+export function explainRecommendation(recommendation: CoachRecommendation): RecommendationExplanation {
+  if (!recommendation.id.trim() || !recommendation.title.trim() || !recommendation.explanation.trim()) {
+    throw new Error("A recommendation needs an id, title, and explanation before it can be explained.");
+  }
+  if (!Number.isFinite(recommendation.priority) || recommendation.priority < 0 || recommendation.priority > 100) {
+    throw new Error("Recommendation priority must be a finite value between 0 and 100.");
+  }
+  if (!recommendation.ruleVersion.trim()) throw new Error("Recommendation rule version is required.");
+  if (!Array.isArray(recommendation.evidence) || recommendation.evidence.length === 0) {
+    throw new Error("A recommendation cannot be explained without supporting evidence.");
+  }
+  for (const item of recommendation.evidence) {
+    if (!item.id.trim() || !item.summary.trim() || !["nutrition", "workout", "recovery", "measurement"].includes(item.kind)) {
+      throw new Error("Recommendation evidence is invalid.");
+    }
+  }
+  return {
+    recommendationId: recommendation.id,
+    title: recommendation.title,
+    explanation: recommendation.explanation,
+    evidence: recommendation.evidence.map((item) => ({ ...item })),
+    confidence: recommendation.confidence,
+    priority: recommendation.priority,
+    ruleVersion: recommendation.ruleVersion,
+    limitations: ["This explanation uses only the recommendation's recorded evidence; it does not infer unlogged behavior."],
+  };
+}
