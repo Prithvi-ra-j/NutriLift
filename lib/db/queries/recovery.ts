@@ -3,6 +3,7 @@ import { eq, gte, lte, and, desc } from "drizzle-orm";
 import { db } from "../client";
 import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, type SupplementLog } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
+import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 
 // ─── Recovery Queries ─────────────────────────────────────────────────────────
 
@@ -25,9 +26,7 @@ export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
 }
 
 export async function getRecentRecoveryLogs(days: number = 7): Promise<RecoveryLog[]> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = addCalendarDays(toLocalDateKey(), -days);
 
   return db
     .select()
