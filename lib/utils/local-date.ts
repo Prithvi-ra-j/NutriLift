@@ -45,6 +45,15 @@ export function addCalendarDays(dateKey: string, days: number): string {
   return toLocalDateKey(date);
 }
 
+/** Sunday-start week range, returned as inclusive date-only keys. */
+export function getSundayWeekRange(dateKey: string): { start: string; end: string } {
+  const date = fromLocalDateKey(dateKey);
+  date.setDate(date.getDate() - date.getDay());
+  const start = toLocalDateKey(date);
+  date.setDate(date.getDate() + 6);
+  return { start, end: toLocalDateKey(date) };
+}
+
 /** Monday-start week range, returned as inclusive date-only keys. */
 export function getMondayWeekRange(dateKey: string): { start: string; end: string } {
   const date = fromLocalDateKey(dateKey);
