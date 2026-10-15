@@ -48,7 +48,12 @@ export async function runMigrations(): Promise<void> {
     console.warn("Skipping migrations on web platform");
     return;
   }
-  
+
+  // Read the version before any DDL. A newer database must remain untouched.
+  const versionRows = await sqlite.getAllAsync("PRAGMA user_version");
+  const databaseVersion = Number(versionRows[0]?.user_version ?? 0);
+  assertSupportedSchemaVersion(databaseVersion);
+
   await sqlite.execAsync(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
