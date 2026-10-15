@@ -445,3 +445,18 @@ export type DomainEvent = typeof domainEvents.$inferSelect;
 export type NewDomainEvent = typeof domainEvents.$inferInsert;
 export type DerivedStateInvalidation = typeof derivedStateInvalidations.$inferSelect;
 export type NewDerivedStateInvalidation = typeof derivedStateInvalidations.$inferInsert;
+
+
+// ─── Privacy-filtered local operational telemetry ─────────────────────────────
+export const appTelemetryEvents = sqliteTable("app_telemetry_events", {
+  id: text("id").primaryKey(),
+  event_type: text("event_type").notNull(),
+  severity: text("severity").notNull(),
+  correlation_id: text("correlation_id"),
+  occurred_at: text("occurred_at").notNull(),
+  metadata_json: text("metadata_json").notNull(),
+}, (table) => ({
+  typeTimeIndex: uniqueIndex("idx_app_telemetry_event_id").on(table.id),
+}));
+export type AppTelemetryEvent = typeof appTelemetryEvents.$inferSelect;
+export type NewAppTelemetryEvent = typeof appTelemetryEvents.$inferInsert;
