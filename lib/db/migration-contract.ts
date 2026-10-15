@@ -36,6 +36,7 @@ export const ADDITIVE_COLUMN_MIGRATIONS = [
   { table: "personal_records", column: "updated_at", type: "TEXT" },
   { table: "body_stats", column: "updated_at", type: "TEXT" },
   { table: "recovery_logs", column: "updated_at", type: "TEXT" },
+  { table: "sync_tombstones", column: "external_id", type: "TEXT" },
 ] as const;
 
 export const REQUIRED_CORE_COLUMNS: Readonly<Record<string, readonly string[]>> = {
