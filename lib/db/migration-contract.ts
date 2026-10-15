@@ -1,5 +1,5 @@
 /** Increment when a forward-compatible local SQLite schema migration is introduced. */
-export const CURRENT_SCHEMA_VERSION = 12;
+export const CURRENT_SCHEMA_VERSION = 13;
 
 /** Reject a database written by a newer app version. */
 export function assertSupportedSchemaVersion(databaseVersion: number): void {
@@ -32,6 +32,7 @@ export const REQUIRED_CORE_TABLES = [
   "app_telemetry_events",
   "favorite_foods",
   "repeatable_meals",
+  "life_os_goal_progress",
 ] as const;
 
 /**
