@@ -385,7 +385,7 @@ export async function checkDoubleProgression(
   }
 
   const sessionData = await Promise.all(
-    recentExercises.map(async (ex) => {
+    recentExercises.map(async (ex: { exercise_log_id: string; date: string }) => {
       const sets = await getSetsForExercise(ex.exercise_log_id);
       const workingSets = sets.filter((s) => !s.is_warmup);
       const allHit12 = workingSets.length >= 3 && workingSets.every((s) => s.reps >= 12);
