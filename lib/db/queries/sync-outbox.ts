@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
-import { syncQueue, syncTombstones, type BodyStat, type DailyNutrition, type WorkoutSession, type RecoveryLog } from "../schema";
-import { mapBodyStat, mapDailyNutrition, mapRecoveryLog, mapTombstone, mapWorkoutSession } from "../../integrations/life-os/recordMappers";
+import { syncQueue, syncTombstones, type BodyStat, type DailyNutrition, type WorkoutSession, type RecoveryLog, type PersonalRecord } from "../schema";
+import { mapBodyStat, mapDailyNutrition, buildPersonalRecordExternalId, mapPersonalRecord, mapRecoveryLog, mapTombstone, mapWorkoutSession } from "../../integrations/life-os/recordMappers";
 import type { SyncRecord } from "../../integrations/life-os/exportSchema";
 
 /** Durable local outbox write; callers pass their active domain transaction. */
@@ -46,6 +46,26 @@ export async function enqueueWorkoutSession(tx: any, row: WorkoutSession): Promi
     eq(syncTombstones.entity_id, row.id),
   ));
   await enqueueSyncRecord(tx, mapWorkoutSession(row as any));
+}
+
+export async function enqueuePersonalRecord(tx: any, row: PersonalRecord): Promise<void> {
+  const entityId = `${row.exercise_name}:${row.achieved_date}`;
+  await tx.delete(syncTombstones).where(and(
+    eq(syncTombstones.entity_type, "personal_record"),
+    eq(syncTombstones.entity_id, entityId),
+  ));
+  await enqueueSyncRecord(tx, mapPersonalRecord(row as any));
+}
+
+export async function enqueuePersonalRecordTombstone(tx: any, row: PersonalRecord, deletedAt: string): Promise<void> {
+  const entityId = `${row.exercise_name}:${row.achieved_date}`;
+  await enqueueTombstone(
+    tx,
+    "personal_record",
+    entityId,
+    deletedAt,
+    buildPersonalRecordExternalId(row.exercise_name, row.achieved_date),
+  );
 }
 
 export async function enqueueRecoveryLog(tx: any, row: RecoveryLog): Promise<void> {
