@@ -1,10 +1,16 @@
 import { eq, and, desc, lte, gte } from "drizzle-orm";
 import { db } from "../client";
-import { bodyStats, syncTombstones, type BodyStat, type NewBodyStat } from "../schema";
+import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
+import { enqueueBodyStat, enqueueTombstone } from "./sync-outbox";
 import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 
 export async function insertBodyStat(stat: NewBodyStat): Promise<void> {
-  await db.insert(bodyStats).values({ ...stat, updated_at: new Date().toISOString() });
+  await db.transaction(async (tx: any) => {
+    const record = { ...stat, updated_at: new Date().toISOString() };
+    await tx.insert(bodyStats).values(record);
+    const rows = await tx.select().from(bodyStats).where(eq(bodyStats.id, stat.id)).limit(1);
+    if (rows[0]) await enqueueBodyStat(tx, rows[0]);
+  });
 }
 
 export async function getLatestWeight(): Promise<BodyStat | null> {
@@ -77,19 +83,8 @@ export async function deleteBodyStat(id: string): Promise<void> {
     const rows = await tx.select().from(bodyStats).where(eq(bodyStats.id, id)).limit(1);
     if (!rows[0]) return;
     const now = new Date().toISOString();
-    const externalId = `nutrilift:body_stat:${id}`;
+    await enqueueTombstone(tx, "body_stat", id, now, `nutrilift:body_stat:${id}`);
     await tx.delete(bodyStats).where(eq(bodyStats.id, id));
-    await tx.insert(syncTombstones).values({
-      id: `tombstone:body_stat:${id}`,
-      entity_type: "body_stat",
-      entity_id: id,
-      external_id: externalId,
-      deleted_at: now,
-      created_at: now,
-    }).onConflictDoUpdate({
-      target: [syncTombstones.entity_type, syncTombstones.entity_id],
-      set: { external_id: externalId, deleted_at: now },
-    });
   });
 }
 
