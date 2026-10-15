@@ -1,5 +1,6 @@
 import {
   addCalendarDays,
+  differenceInCalendarDays,
   fromLocalDateKey,
   getMondayWeekRange,
   isSameLocalCalendarDay,
@@ -66,6 +67,18 @@ describe("local calendar date utilities", () => {
       process.env.TZ = "America/Los_Angeles";
       expect(toLocalDateKey(new Date("2026-10-15T00:30:00.000Z"))).toBe("2026-10-14");
       expect(fromLocalDateKey("2026-10-14").getDate()).toBe(14);
+    } finally {
+      if (previousTz === undefined) delete process.env.TZ;
+      else process.env.TZ = previousTz;
+    }
+  });
+
+  it("measures calendar-day differences independently of DST-length days", () => {
+    const previousTz = process.env.TZ;
+    try {
+      process.env.TZ = "America/Los_Angeles";
+      expect(differenceInCalendarDays("2026-03-09", "2026-03-08")).toBe(1);
+      expect(differenceInCalendarDays("2026-11-02", "2026-11-01")).toBe(1);
     } finally {
       if (previousTz === undefined) delete process.env.TZ;
       else process.env.TZ = previousTz;
