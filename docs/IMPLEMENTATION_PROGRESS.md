@@ -239,3 +239,39 @@ After every small implementation unit, update this file with the commit/PR, file
 - [x] Add a review/apply flow in More/Settings. Applying rechecks saved targets and recomputes the estimator before writing; suggestions remain advisory and are never auto-applied.
 - [x] Recompute target comparisons for already-logged days from the effective date forward inside the target-save transaction, without changing actual intake totals.
 - [ ] Run strict TypeScript, full Jest, Expo config/assets, and migration tests on the latest branch head; no phase is considered validated until CI evidence is captured.
+## Measured implementation coverage — 2026-10-15
+
+**Conservative contract score: 54 / 72 = 75.0%.** The denominator is the 72 named function contracts across blueprint tables 3, 5, 6, 8, 9, 10, 11, and 13. This is implementation-scope coverage, not a claim that the app is release-ready. Items counted as partial or incomplete are excluded from the numerator.
+
+| Blueprint area | Implemented contracts | Total | Remaining exclusions / limits |
+|---|---:|---:|---|
+| Baseline and validation | 7 | 7 | Current CI validates source/type/tests/assets; physical-device and cloud-build gates remain separate. |
+| Domain mutation/persistence | 7 | 9 | No append-only domain-event journal; transactional outbox is not yet wired to every domain mutation. |
+| Nutrition pipeline | 12 | 15 | Explicit favourites and repeatable-meal flows are not implemented; nutrition-estimate uncertainty/review provenance is incomplete. |
+| Workout lifecycle | 11 | 11 | Unit-level lifecycle and set guards exist; real-device interruption/resume smoke remains pending. |
+| Coach/recommendations | 8 | 10 | No separate derived-state invalidation service; recommendation explanation is a real Coach interaction rather than a standalone service contract. |
+| Sync queue | 7 | 8 | Queue claim, validation, upload, retry, recovery and account binding exist; enqueue coverage is not yet uniform across all domain writes. |
+| Life OS facts/goals | 2 | 6 | Source-entity resolution, goal evidence evaluation/progress refresh and source deep links remain. |
+| Observability | 0 | 6 | Durable app/command/AI event telemetry and a complete local-health report remain. |
+| **Total** | **54** | **72** | **75.0% contract implementation coverage; not release completion.** |
+
+### Latest validated implementation slice
+- [x] Persisted nutrition-day completion; food mutations reset completion so edited days must be reviewed again.
+- [x] Adaptive calorie suggestions use explicitly reviewed daily intake and recorded weigh-ins; target changes require review and revalidation before apply.
+- [x] Effective target history is persisted and daily comparisons are recomputed for the applicable date range without changing intake totals.
+- [x] Food edit/delete, daily aggregate recomputation and body-measurement tombstones are transactionally coordinated with durable outbox writes.
+- [x] Workout set insert/update/delete now transact with session-volume and personal-record recalculation; closed sessions reject edits.
+- [x] Sync retries preserve partial progress, quarantine invalid payloads, recover interrupted claims, and prevent a different account from syncing a dataset already bound to another user.
+- [x] Coach cards are grounded in logged nutrition, explicit workout status and manual recovery signals; accept/dismiss/complete/correction outcomes are persisted with rule version and evidence.
+- [x] Provider failures remain UI errors rather than being stored as assistant replies; empty model responses are rejected.
+- [x] Recent-food and meal-summary queries are based on actual logs; unknown legacy meal labels are not silently dropped.
+- [x] Schema version 7 includes reviewed-day state, sync owner binding, and recommendation outcome persistence; clean-install and legacy-upgrade checks cover the migrations.
+- [x] Latest GitHub Actions validation: [run 38742696653](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38742696653) succeeded on commit `6c928485750eeb2da6cbde771de5e63a36c22cbc`: TypeScript passed, **61 Jest suites / 460 tests passed**, and Expo config plus all four referenced local assets passed.
+- [ ] Still unverified: physical-device fresh install/upgrade, workout interruption/resume on device, and an installable Android artifact. The latest EAS Android attempt was quota-blocked, so do not infer a successful native build.
+
+### Remaining work after the 70% implementation threshold
+1. Complete the transactional domain-event journal and wire outbox projections to workout and recovery mutations.
+2. Finish nutrition favourites/repeatable meals and estimate provenance/uncertainty review.
+3. Complete Life OS source-entity resolution, goal evidence/progress refresh and source deep links.
+4. Add durable app/command/AI telemetry and a full local-health report with sensitive-field redaction.
+5. Reconcile overlapping PRs before merge, then run physical-device upgrade/interruption smoke tests and obtain an installable Android artifact.
