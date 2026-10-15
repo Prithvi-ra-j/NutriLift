@@ -327,10 +327,25 @@ export async function saveRepeatableMeal(input: {
   const { default: uuid } = await import("react-native-uuid");
   const id = input.id?.trim() || (uuid.v4() as string);
   const now = new Date().toISOString();
-  const { id: _id, ...values } = { id, name, meal, items_json: JSON.stringify(input.items), created_at: now, updated_at: now };
-  await db.insert(repeatableMeals).values({ id, ...values }).onConflictDoUpdate({
-    target: repeatableMeals.id,
-    set: { name, meal, items_json: JSON.stringify(input.items), updated_at: now },
+  await db.transaction(async (tx: any) => {
+    const existingRows = await tx.select().from(repeatableMeals).where(eq(repeatableMeals.id, id)).limit(1);
+    await tx.insert(repeatableMeals).values({
+      id, name, meal, items_json: JSON.stringify(input.items),
+      created_at: existingRows[0]?.created_at ?? now, updated_at: now,
+    }).onConflictDoUpdate({
+      target: repeatableMeals.id,
+      set: { name, meal, items_json: JSON.stringify(input.items), updated_at: now },
+    });
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, {
+      id: `repeatable-meal:${id}:saved:${now}`,
+      eventType: "nutrition.repeatable-meal.changed",
+      entityType: "repeatable_meal",
+      entityId: id,
+      entityVersion: eventVersion,
+      occurredAt: now,
+      metadata: { action: existingRows[0] ? "updated" : "saved" },
+    });
   });
   return id;
 }
@@ -358,8 +373,14 @@ export async function getRepeatableMeals(query = "", limit = 20): Promise<Array<
   const normalizedQuery = query.trim().toLocaleLowerCase();
   return rows.filter((row: any) => !normalizedQuery || row.name.toLocaleLowerCase().includes(normalizedQuery))
     .slice(0, limit).map((row: any) => {
-      const meal = JSON.parse(row.items_json);
-      return { id: row.id, name: row.name, meal: row.meal, created_at: row.created_at, updated_at: row.updated_at, itemCount: Array.isArray(meal) ? meal.length : 0 };
+      let itemCount = 0;
+      try {
+        const parsed: unknown = JSON.parse(row.items_json);
+        itemCount = Array.isArray(parsed) ? parsed.length : 0;
+      } catch {
+        itemCount = 0;
+      }
+      return { id: row.id, name: row.name, meal: row.meal, created_at: row.created_at, updated_at: row.updated_at, itemCount };
     });
 }
 
@@ -397,7 +418,22 @@ export async function repeatMeal(id: string, date: string): Promise<void> {
 
 export async function deleteRepeatableMeal(id: string): Promise<void> {
   if (!id.trim()) throw new Error("Repeatable meal id is required.");
-  await db.delete(repeatableMeals).where(eq(repeatableMeals.id, id));
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(repeatableMeals).where(eq(repeatableMeals.id, id)).limit(1);
+    if (!rows[0]) return;
+    await tx.delete(repeatableMeals).where(eq(repeatableMeals.id, id));
+    const now = new Date().toISOString();
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, {
+      id: `repeatable-meal:${id}:deleted:${now}`,
+      eventType: "nutrition.repeatable-meal.changed",
+      entityType: "repeatable_meal",
+      entityId: id,
+      entityVersion: eventVersion,
+      occurredAt: now,
+      metadata: { action: "deleted" },
+    });
+  });
 }
 
 export async function getDailyNutritionRange(
