@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,13 +9,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useTodayStore } from "../../lib/stores/today.store";
 import {
   getDailyNutrition,
   getFoodLogsForDate,
   deleteFoodLog,
   getLast7DaysNutrition,
+  setNutritionDayComplete,
 } from "../../lib/db/queries/nutrition";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
@@ -88,9 +89,9 @@ export default function NutritionScreen() {
     }
   }, [selectedDate]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(useCallback(() => {
+    void loadData();
+  }, [loadData]));
 
   const handleDeleteFood = (log: FoodLog) => {
     Alert.alert("Delete Food", `Remove "${log.name}"?`, [
@@ -106,6 +107,15 @@ export default function NutritionScreen() {
     ]);
   };
 
+  const handleToggleDayComplete = async () => {
+    const nextComplete = nutrition?.is_complete !== 1;
+    try {
+      await setNutritionDayComplete(selectedDate, nextComplete);
+      await loadData();
+    } catch (error) {
+      Alert.alert("Could not update day status", error instanceof Error ? error.message : "The nutrition day could not be updated.");
+    }
+  };
   const toggleMeal = (meal: MealType) => {
     setExpandedMeals((prev) => {
       const next = new Set(prev);
@@ -186,6 +196,31 @@ export default function NutritionScreen() {
           <MacroBar label="Fat" current={fat} target={activeTargets.fat_g} color={M3.macroColors.fat} />
         </Card>
 
+        <Card>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+            <Feather name={nutrition?.is_complete === 1 ? "check-circle" : "circle"} size={20}
+              color={nutrition?.is_complete === 1 ? M3.colors.success : M3.colors.onSurfaceVariant} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
+                {nutrition?.is_complete === 1 ? "Day reviewed" : "Review this day"}
+              </Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 17, marginTop: 3 }}>
+                Confirm that the food log is complete and entries have been reviewed. Adaptive targets use only days you explicitly mark complete.
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity accessibilityRole="button"
+            accessibilityState={{ disabled: foodLogs.length === 0 || selectedDate > todayStr }}
+            disabled={foodLogs.length === 0 || selectedDate > todayStr}
+            onPress={handleToggleDayComplete}
+            style={{ marginTop: 12, paddingVertical: 11, borderRadius: M3.shape.medium, alignItems: "center",
+              backgroundColor: nutrition?.is_complete === 1 ? M3.colors.surfaceVariant : M3.colors.primary,
+              opacity: foodLogs.length === 0 || selectedDate > todayStr ? 0.45 : 1 }}>
+            <Text style={{ color: nutrition?.is_complete === 1 ? M3.colors.onSurface : M3.colors.onPrimary, fontFamily: "DMSans_700Bold", fontSize: 13 }}>
+              {nutrition?.is_complete === 1 ? "Mark as incomplete" : "Mark day complete"}
+            </Text>
+          </TouchableOpacity>
+        </Card>
         {/* ── Log Mode Buttons ── */}
         <View style={{ flexDirection: "row", gap: 8 }}>
           {(["type", "voice", "paste", "scan"] as const).map((mode) => (
