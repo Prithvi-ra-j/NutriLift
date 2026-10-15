@@ -22,7 +22,7 @@ import { Button } from "../../components/ui/Button";
 import { ListRow } from "../../components/ui/ListRow";
 import type { SupplementLog, MonthlyReport } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
-import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
+import { processSyncQueue } from "../../lib/integrations/life-os/syncClient";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/auth";
 import { M3 } from "../../design-system/tokens";
@@ -268,7 +268,7 @@ export default function MoreScreen() {
   const syncNow = async () => {
     setIsSyncing(true);
     try {
-      const result = await syncToSupabase();
+      const result = await processSyncQueue();
       const summary = `Uploaded ${result.uploaded}; ${result.needsAttention} need attention`;
       setSyncStatus(result.error ? `${summary}. Retryable errors remain queued.` : summary);
 
