@@ -33,37 +33,60 @@ function findFood(segment: string): { food: IndianFood; alias: string } | null {
   return null;
 }
 
+function chooseServing(food: IndianFood, unit = ""): { label: string; grams: number } {
+  const servings = food.commonServings;
+  const patterns: Record<string, RegExp> = {
+    cup: /\bcup\b/i,
+    cups: /\bcup\b/i,
+    bowl: /\bbowl\b/i,
+    bowls: /\bbowl\b/i,
+    scoop: /\bscoop\b/i,
+    scoops: /\bscoop\b/i,
+    tbsp: /\btbsp|tablespoon\b/i,
+    tablespoon: /\btablespoon\b/i,
+    tablespoons: /\btablespoon\b/i,
+    tsp: /\btsp|teaspoon\b/i,
+    teaspoon: /\bteaspoon\b/i,
+    teaspoons: /\bteaspoon\b/i,
+    serving: /\bserving|portion\b/i,
+    servings: /\bserving|portion\b/i,
+  };
+  const pattern = patterns[unit];
+  if (pattern) {
+    const match = servings.find((serving) => pattern.test(serving.label));
+    if (match) return match;
+  }
+  return servings.find((serving) => /medium|1 portion|1 serving/i.test(serving.label))
+    ?? servings[0]
+    ?? { label: "1 serving (100g)", grams: 100 };
+}
+
 function getQuantityGrams(segment: string, food: IndianFood): { grams: number; label: string } {
   const normalized = normalize(segment);
   const amountMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*(kg|g|grams?|ml|cups?|bowls?|servings?|scoops?|tbsp|tablespoons?|tsp|teaspoons?)?\b/);
   if (!amountMatch) {
-    const serving = food.commonServings.find((item) => /medium|1 portion|1 cup|1 bowl/i.test(item.label)) ?? food.commonServings[0] ?? { label: "1 serving (100g)", grams: 100 };
+    const serving = chooseServing(food);
     return { grams: serving.grams, label: serving.label };
   }
 
   const amount = Number(amountMatch[1]);
   const unit = amountMatch[2] ?? "";
   if (!Number.isFinite(amount) || amount <= 0) {
-    const serving = food.commonServings[0] ?? { label: "1 serving (100g)", grams: 100 };
+    const serving = chooseServing(food);
     return { grams: serving.grams, label: serving.label };
   }
 
-  if (unit === "kg") return { grams: amount * 1000, label: `${amount} kg` };
-  if (unit === "g" || unit.startsWith("gram")) return { grams: amount, label: `${amount} g` };
-  if (unit === "ml") return { grams: amount, label: `${amount} ml (estimated as grams)` };
+  if (unit === "kg") return { grams: amount * 1000, label: amount + " kg" };
+  if (unit === "g" || unit.startsWith("gram")) return { grams: amount, label: amount + " g" };
+  if (unit === "ml") return { grams: amount, label: amount + " ml (estimated as grams)" };
 
-  const count = amount;
-  const serving = food.commonServings[0] ?? { label: "1 serving (100g)", grams: 100 };
-  const unitMultiplier: Record<string, number> = {
-    cup: 1, cups: 1, bowl: 1, bowls: 1, serving: 1, servings: 1,
-    scoop: 1, scoops: 1, tbsp: 1, tablespoon: 1, tablespoons: 1, tsp: 1, teaspoon: 1, teaspoons: 1,
+  const serving = chooseServing(food, unit);
+  const labelUnit = unit || "serving";
+  return {
+    grams: amount * serving.grams,
+    label: amount + " " + labelUnit + (amount === 1 ? "" : "s") + " (estimated)",
   };
-  // Food counts such as "2 eggs" use the first serving weight; explicit kitchen
-  // measures also use the starter catalogue's first serving as a conservative estimate.
-  const multiplier = unitMultiplier[unit] ?? 1;
-  return { grams: count * serving.grams * multiplier, label: `${amount} ${unit || "serving"}${amount === 1 ? "" : "s"} (estimated)` };
 }
-
 function splitFoodSegments(input: string): string[] {
   return input
     .replace(/\b(?:for\s+)?(?:breakfast|lunch|dinner|snacks?)\b/gi, " ")
