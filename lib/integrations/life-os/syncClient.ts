@@ -77,9 +77,9 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   await repository.enqueueNeedsAttentionRecords(needsAttentionRecords);
   const needsAttention = needsAttentionRecords.length;
 
-  const queuedRecords = await repository.getQueuedRecords(batchSize);
+  const queuedRecords = await repository.claimQueuedRecords(batchSize);
+  const nextCursor = repository.newestSourceTimestamp(changedRecords) ?? cursor;
   if (queuedRecords.length === 0) {
-    const nextCursor = repository.newestSourceTimestamp(changedRecords) ?? cursor;
     await repository.saveSyncState({ cursor: nextCursor ?? undefined, success: true });
     return {
       uploaded: 0,
@@ -90,27 +90,62 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
     };
   }
 
-  const externalIds = queuedRecords.map((record) => record.externalId);
-  await repository.setQueueState(externalIds, "uploading");
-  const { error } = await supabase
-    .from("sync_records")
-    .upsert(queuedRecords.map((record) => toSupabaseSyncRow(record, user.id)), { onConflict: "user_id,external_id" });
+  const uploadedIds: string[] = [];
+  const failedItems: Array<{ externalId: string; message: string }> = [];
+  const uploadOne = async (record: SyncRecord) => {
+    const result = await supabase
+      .from("sync_records")
+      .upsert([toSupabaseSyncRow(record, user.id)], { onConflict: "user_id,external_id" });
+    return result.error;
+  };
 
-  if (error) {
-    await repository.setQueueState(externalIds, "failed", error.message);
-    await repository.saveSyncState({ error: error.message });
-    return { uploaded: 0, queued: validChangedRecords.length, skipped: needsAttention, needsAttention, cursor, error: error.message };
+  // Batch the common case. If the server rejects a batch for a record-level
+  // constraint, isolate the bad row so unrelated valid records still progress.
+  for (let offset = 0; offset < queuedRecords.length; offset += 20) {
+    const batch = queuedRecords.slice(offset, offset + 20);
+    const batchResult = await supabase
+      .from("sync_records")
+      .upsert(batch.map((record) => toSupabaseSyncRow(record, user.id)), { onConflict: "user_id,external_id" });
+    if (!batchResult.error) {
+      uploadedIds.push(...batch.map((record) => record.externalId));
+      continue;
+    }
+
+    const status = Number((batchResult.error as { status?: number }).status ?? 0);
+    if (status === 400 || status === 409 || status === 422) {
+      for (const record of batch) {
+        const rowError = await uploadOne(record);
+        if (rowError) failedItems.push({ externalId: record.externalId, message: rowError.message });
+        else uploadedIds.push(record.externalId);
+      }
+    } else {
+      for (const record of batch) {
+        failedItems.push({ externalId: record.externalId, message: batchResult.error.message });
+      }
+    }
   }
 
-  await repository.setQueueState(externalIds, "uploaded");
-  const nextCursor = repository.newestSourceTimestamp(changedRecords) ?? cursor;
-  await repository.saveSyncState({ cursor: nextCursor ?? undefined, success: true });
+  await repository.setQueueState(uploadedIds, "uploaded");
+  for (const failure of failedItems) {
+    await repository.setQueueState([failure.externalId], "failed", failure.message);
+  }
+
+  const failureSummary = failedItems.length
+    ? `${failedItems.length} sync record(s) failed; local copies remain queued for retry. First error: ${failedItems[0].message}`
+    : undefined;
+  await repository.saveSyncState({
+    cursor: nextCursor ?? undefined,
+    error: failureSummary ?? null,
+    success: failedItems.length === 0,
+  });
+
   return {
-    uploaded: queuedRecords.length,
+    uploaded: uploadedIds.length,
     queued: validChangedRecords.length,
     skipped: needsAttention,
     needsAttention,
     cursor: nextCursor,
+    ...(failureSummary ? { error: failureSummary } : {}),
   };
 }
 
