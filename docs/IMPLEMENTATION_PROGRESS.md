@@ -61,7 +61,16 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Reconcile the clean-install Drizzle SQL snapshot with runtime schema additions (`updated_at` columns and sync tables) and add a parity regression test. Runtime `runMigrations()` remains the production upgrade path for existing installs.
 - [x] Ensure `sync_tombstones` exists before additive-column checks, so older installations receive the `external_id` upgrade; include it in migration-contract assertions.
 
-### 2026-10-15 — Phase 3, unit 1: canonical local-calendar date foundations\n- [x] Add `lib/utils/local-date.ts` with local date-key formatting, strict parsing, calendar-day arithmetic, Monday–Sunday week ranges, and local-day comparison.\n- [x] Add focused date utility tests covering invalid dates, month/year transitions, and Sunday/Monday week boundaries.\n- [x] Migrate DateNavigator, Nutrition and Progress date navigation, Today store initialization, and nutrition date-range queries to local-calendar semantics.\n- [x] CI passed on commit `96708e4` in run [#38685341809](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38685341809): TypeScript, 38 suites / 284 tests, and Expo config/assets.\n- [x] Extend the migration to food/InBody entry, dashboard/workout/More, body and recovery windows, PR dates, monthly/quarterly/weekly summaries, and progress exports.\n- [ ] Finish the remaining production-path audit and reconcile week-start semantics across reports and UI before closing Phase 3.\n\n### 2026-10-15 — Phase 2, unit 2: migration assertions and recoverable failure states
+### 2026-10-15 — Phase 3, unit 1: canonical local-calendar date foundations
+- [x] Add `lib/utils/local-date.ts` with local date-key formatting, strict parsing, calendar-day arithmetic, DST-safe calendar differences, and explicit Monday-start and Sunday-start week helpers.
+- [x] Add tests for invalid dates, month/year boundaries, local midnight in IST/UTC/negative-offset zones, DST transitions, and both week conventions.
+- [x] Migrate app date entry, navigation, labels, history displays, analytics queries, summary boundaries, report ranges, weekly Coach context, logger date labels, export windows, Life OS date-only fallback, and demo seed generation.
+- [x] Fix Sunday selection in Workout's completed-week lookup by using the canonical Monday-start week helper.
+- [x] Preserve UTC for true timestamps and server-side AI usage quota windows; those represent instants/server accounting rather than user-local calendar labels.
+- [x] CI passed on commit `664d512` in run [#38685724797](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38685724797): TypeScript, 38 Jest suites / 284 tests, and Expo config/assets.
+- [ ] Re-run CI after final display/seed/analytics updates, review any remaining production date-only parsing, and close Phase 3 only after green validation.
+
+### 2026-10-15 — Phase 2, unit 2: migration assertions and recoverable failure states
 - [x] Validate required additive columns after migrations, not just table presence (`fbdaedc`).
 - [x] Replace the Workout screen’s indefinite loading failure with a visible error and retry (`fbdaedc`).
 - [x] Add SQLite `user_version` tracking and reject future schema versions (`9f976b3`, formatting follow-up `e7afd7a`).
@@ -69,7 +78,9 @@ Working branch: `implementation/phase-0-baseline`
 - [x] Add SQLite-backed tests for clean install, legacy upgrade/data preservation, idempotent rerun and future-version rejection (`runtime-migrations.test.ts`).
 - [x] Fix failures found in the first integration run; latest validation passed 37 suites / 271 tests in [run #38683792913](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38683792913).
 - [x] Align the Drizzle schema’s sync tombstone uniqueness with runtime SQL and add clean-install SQL execution coverage.
-- [ ] Re-run CI after schema/migration parity tests; then confirm Phase 2 exit criteria.\n\n### 2026-10-15 — Phase 1 validation follow-up
+- [ ] Re-run CI after schema/migration parity tests; then confirm Phase 2 exit criteria.
+
+### 2026-10-15 — Phase 1 validation follow-up
 - [x] Inspect the failed validation run and job logs rather than inferring the cause from the red status.
 - [x] Confirm TypeScript and Jest passed on the tested head; failure is isolated to the missing Expo assets.
 - [x] Verify the configured assets are absent from the tracked baseline tree and the working branch; no native image assets are available to reuse.
