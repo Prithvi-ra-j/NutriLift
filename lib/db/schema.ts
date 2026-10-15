@@ -337,9 +337,20 @@ export const syncState = sqliteTable("sync_state", {
   last_synced_at: text("last_synced_at"),
   last_success_at: text("last_success_at"),
   last_error: text("last_error"),
+  owner_user_id: text("owner_user_id"),
   updated_at: text("updated_at").notNull(),
 });
 
+export const recommendationOutcomes = sqliteTable("recommendation_outcomes", {
+  id: text("id").primaryKey(),
+  recommendation_id: text("recommendation_id").notNull(),
+  local_date: text("local_date").notNull(),
+  outcome: text("outcome").notNull(),
+  rule_version: text("rule_version").notNull(),
+  evidence_json: text("evidence_json").notNull(),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+}, (table) => [uniqueIndex("idx_recommendation_outcomes_date_id").on(table.local_date, table.recommendation_id)]);
 // ─── Type Exports ─────────────────────────────────────────────────────────────
 export type FoodLog = typeof foodLogs.$inferSelect;
 export type NewFoodLog = typeof foodLogs.$inferInsert;
