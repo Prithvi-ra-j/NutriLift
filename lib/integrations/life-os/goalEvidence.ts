@@ -43,6 +43,7 @@ function validateGoal(goal: LifeOsGoalDefinition): void {
   if (!Number.isFinite(goal.targetValue) || goal.targetValue < 0) throw new Error("Goal target must be finite and non-negative.");
   if (!["gte", "lte", "eq"].includes(goal.comparator)) throw new Error("Goal comparator is unsupported.");
   if (!["latest", "sum", "average", "count"].includes(goal.aggregation)) throw new Error("Goal aggregation is unsupported.");
+  if (goal.aggregation !== "count" && !goal.unit?.trim()) throw new Error("A unit is required for numeric goal aggregation.");
   if (goal.windowDays != null && (!Number.isInteger(goal.windowDays) || goal.windowDays < 1 || goal.windowDays > 3650)) {
     throw new Error("Goal evidence window must be an integer from 1 to 3650 days.");
   }
@@ -70,7 +71,7 @@ export function evaluateGoalEvidence(
 ): GoalProgressSnapshot {
   validateGoal(goal);
   if (!Number.isFinite(Date.parse(asOf))) throw new Error("Goal evaluation timestamp is invalid.");
-  const evidenceIds = evidence.filter((fact) => !fact.deleted).map((fact) => fact.id);
+  const evidenceIds = evidence.filter((fact) => !fact.deleted && fact.metric === goal.metric && Number.isFinite(Date.parse(fact.occurredAt)) && (goal.unit == null || fact.unit === goal.unit)).map((fact) => fact.id);
   if (actualValue == null || !Number.isFinite(actualValue)) {
     return { goalId: goal.id, status: "unknown", currentValue: null, targetValue: goal.targetValue, progressPercent: null, unit: goal.unit ?? null, asOf, evidenceIds, ruleVersion: goal.ruleVersion };
   }
