@@ -1,6 +1,6 @@
 import type { BodyStat } from "../db/schema";
 import { USER_PROFILE } from "../constants/user-profile";
-import { differenceInCalendarDays, toLocalDateKey } from "../utils/local-date";
+import { addCalendarDays, differenceInCalendarDays, toLocalDateKey } from "../utils/local-date";
 
 export interface BodyCompositionSummary {
   currentWeight: number | null;
@@ -60,9 +60,9 @@ export function computeBodySummary(
   if (latestInBody?.body_fat_pct) {
     const currentBF = latestInBody.body_fat_pct;
     const targetBF = USER_PROFILE.targets.body_fat_pct_dec2026;
-    const goalDate = new Date("2026-12-31");
-    const today = new Date();
-    const daysToGoal = (goalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
+    const goalDateKey = "2026-12-31";
+    const todayKey = toLocalDateKey();
+    const daysToGoal = differenceInCalendarDays(goalDateKey, todayKey);
 
     // Estimate weekly fat loss rate from weight trend
     const weeklyWeightChange = weightChange7d ?? -0.2; // default conservative
@@ -75,10 +75,8 @@ export function computeBodySummary(
 
     if (weeklyFatLossPct > 0) {
       const weeksNeeded = (currentBF - targetBF) / weeklyFatLossPct;
-      const projectedDate = new Date(today);
-      projectedDate.setDate(today.getDate() + weeksNeeded * 7);
-      projectedBFDate = toLocalDateKey(projectedDate);
-      onTrackForGoal = projectedDate <= goalDate;
+      projectedBFDate = addCalendarDays(todayKey, Math.trunc(weeksNeeded * 7));
+      onTrackForGoal = projectedBFDate <= goalDateKey;
     }
   }
 
