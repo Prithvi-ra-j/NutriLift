@@ -21,7 +21,7 @@ import {
 } from "../db/schema";
 import { desc, gte, sql } from "drizzle-orm";
 import { USER_PROFILE } from "../constants/user-profile";
-import { toLocalDateKey } from "../utils/local-date";
+import { addCalendarDays, toLocalDateKey } from "../utils/local-date";
 
 interface ExportOptions {
   startDate?: string; // YYYY-MM-DD
@@ -601,7 +601,7 @@ export async function generateProgressPDF(options: ExportOptions = {}): Promise<
 export async function exportLast30Days() {
   return generateProgressPDF({
     startDate: getDateDaysAgo(30),
-    endDate: new Date().toISOString().split("T")[0],
+    endDate: toLocalDateKey(),
   });
 }
 
@@ -613,7 +613,7 @@ export async function exportCurrentMonth() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   
   return generateProgressPDF({
-    startDate: startOfMonth.toISOString().split("T")[0],
+    startDate: toLocalDateKey(startOfMonth),
     endDate: now.toISOString().split("T")[0],
   });
 }
