@@ -267,17 +267,31 @@ export default function MoreScreen() {
 
   const syncNow = async () => {
     setIsSyncing(true);
-    const result = await syncToSupabase();
-    setIsSyncing(false);
+    try {
+      const result = await syncToSupabase();
+      const summary = `Uploaded ${result.uploaded}; ${result.needsAttention} need attention`;
+      setSyncStatus(result.error ? `${summary}. Retryable errors remain queued.` : summary);
 
-    if (result.error) {
-      setSyncStatus(result.error);
-      Alert.alert("Sync unavailable", result.error);
-      return;
+      if (result.error) {
+        Alert.alert(
+          result.uploaded > 0 ? "Sync partially completed" : "Sync needs attention",
+          `${result.uploaded} record(s) uploaded. ${result.needsAttention} invalid record(s) were quarantined. Retryable records remain on this device. ${result.error}`,
+        );
+      } else if (result.needsAttention > 0) {
+        Alert.alert(
+          "Sync completed with records to review",
+          `${result.uploaded} record(s) uploaded. ${result.needsAttention} invalid record(s) were kept locally for attention rather than silently discarded.`,
+        );
+      } else {
+        Alert.alert("Sync complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sync failed unexpectedly.";
+      setSyncStatus(message);
+      Alert.alert("Sync failed", message);
+    } finally {
+      setIsSyncing(false);
     }
-
-    setSyncStatus(`Uploaded ${result.uploaded}, skipped ${result.skipped}`);
-    Alert.alert("Sync complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
   };
 
   const handleSignIn = async () => {
