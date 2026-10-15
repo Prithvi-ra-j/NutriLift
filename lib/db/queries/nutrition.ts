@@ -266,7 +266,10 @@ export async function addFavoriteFoodFromLog(foodLogId: string): Promise<void> {
       quantity_g: food.quantity_g ?? null, calories: food.calories, protein_g: food.protein_g,
       carbs_g: food.carbs_g, fat_g: food.fat_g, fiber_g: food.fiber_g ?? null,
       sugar_g: food.sugar_g ?? null, sodium_mg: food.sodium_mg ?? null,
-      source: food.source, created_at: existing?.created_at ?? now, updated_at: now,
+      source: food.source, provenance_type: food.provenance_type ?? "legacy_unknown",
+      provenance_json: food.provenance_json ?? null, estimate_confidence: food.estimate_confidence ?? null,
+      estimate_reviewed: food.estimate_reviewed ?? 0,
+      created_at: existing?.created_at ?? now, updated_at: now,
     };
     await tx.insert(favoriteFoods).values(favorite).onConflictDoUpdate({
       target: favoriteFoods.normalized_name,
@@ -293,7 +296,10 @@ export async function logFavoriteFood(favoriteId: string, date: string): Promise
     quantity_g: favorite.quantity_g ?? null, calories: favorite.calories, protein_g: favorite.protein_g,
     carbs_g: favorite.carbs_g, fat_g: favorite.fat_g, fiber_g: favorite.fiber_g ?? null,
     sugar_g: favorite.sugar_g ?? null, sodium_mg: favorite.sodium_mg ?? null,
-    source: "local", raw_input: `Saved favourite: ${favorite.name}`, created_at: Math.floor(Date.now() / 1000),
+    source: favorite.source, raw_input: `Saved favourite: ${favorite.name}`,
+    provenance_type: favorite.provenance_type, provenance_json: favorite.provenance_json,
+    estimate_confidence: favorite.estimate_confidence, estimate_reviewed: favorite.estimate_reviewed,
+    created_at: Math.floor(Date.now() / 1000),
   }]);
 }
 
@@ -324,6 +330,10 @@ export interface RepeatableMealItem {
   sugar_g?: number | null;
   sodium_mg?: number | null;
   source?: string;
+  provenance_type?: string;
+  provenance_json?: string | null;
+  estimate_confidence?: number | null;
+  estimate_reviewed?: number;
 }
 
 export interface RepeatableMealWithItems {
