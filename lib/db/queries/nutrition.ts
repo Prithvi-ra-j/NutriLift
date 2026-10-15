@@ -13,6 +13,40 @@ export async function getFoodLogsForDate(date: string): Promise<FoodLog[]> {
   return db.select().from(foodLogs).where(eq(foodLogs.date, date));
 }
 
+export interface MealSummary {
+  meal: string;
+  items: FoodLog[];
+  totalCalories: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+}
+
+export function groupFoodLogsByMeal(logs: FoodLog[]): MealSummary[] {
+  const groups = new Map<string, FoodLog[]>();
+  for (const log of logs) {
+    const items = groups.get(log.meal) ?? [];
+    items.push(log);
+    groups.set(log.meal, items);
+  }
+  const standardOrder = ["breakfast", "lunch", "snack", "dinner"];
+  const orderedMeals = [...standardOrder.filter((meal) => groups.has(meal)), ...Array.from(groups.keys()).filter((meal) => !standardOrder.includes(meal))];
+  return orderedMeals.map((meal) => {
+    const items = groups.get(meal) ?? [];
+    return {
+      meal, items,
+      totalCalories: items.reduce((sum, item) => sum + item.calories, 0),
+      totalProtein: items.reduce((sum, item) => sum + item.protein_g, 0),
+      totalCarbs: items.reduce((sum, item) => sum + item.carbs_g, 0),
+      totalFat: items.reduce((sum, item) => sum + item.fat_g, 0),
+    };
+  });
+}
+
+export async function getMealSummary(date: string): Promise<MealSummary[]> {
+  try { fromLocalDateKey(date); } catch { throw new Error("Meal summary date must be a real YYYY-MM-DD calendar date."); }
+  return groupFoodLogsByMeal(await getFoodLogsForDate(date));
+}
 export async function getFoodLogsByMeal(date: string, meal: string): Promise<FoodLog[]> {
   return db
     .select()
@@ -117,12 +151,13 @@ export interface NutritionCompleteness {
 
 /** Return explicit coverage and review state; never infer that missing entries were eaten. */
 export async function getNutritionCompleteness(date: string): Promise<NutritionCompleteness> {
-  const [logs, summary] = await Promise.all([
-    db.select().from(foodLogs).where(eq(foodLogs.date, date)),
+  const [meals, summary] = await Promise.all([
+    getMealSummary(date),
     getDailyNutrition(date),
   ]);
+  const logs = meals.flatMap((meal) => meal.items);
   const sourceCounts: Record<string, number> = {};
-  for (const log of logs as FoodLog[]) sourceCounts[log.source] = (sourceCounts[log.source] ?? 0) + 1;
+  for (const log of logs) sourceCounts[log.source] = (sourceCounts[log.source] ?? 0) + 1;
   return {
     date,
     itemCount: logs.length,
