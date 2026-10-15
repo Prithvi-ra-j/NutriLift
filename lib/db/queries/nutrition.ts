@@ -3,7 +3,7 @@ import { db } from "../client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
 import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
-import { validateFoodLogInput } from "../../data/food-log-validation";
+import { validateFoodLogInput, validateFoodLogsInput } from "../../data/food-log-validation";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
 
@@ -19,17 +19,7 @@ export async function getFoodLogsByMeal(date: string, meal: string): Promise<Foo
 }
 
 export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
-  if (logs.length === 0) throw new Error("Add at least one food item.");
-  logs.forEach(validateFoodLogInput);
-  if (new Set(logs.map((log) => log.id)).size !== logs.length) {
-    throw new Error("Food log contains duplicate item IDs.");
-  }
-  if (new Set(logs.map((log) => log.date)).size !== 1) {
-    throw new Error("A meal batch must use one calendar date.");
-  }
-  if (new Set(logs.map((log) => log.meal)).size !== 1) {
-    throw new Error("A meal batch must use one meal type.");
-  }
+  validateFoodLogsInput(logs);
 
   // The food rows and their daily aggregate commit or roll back together.
   await db.transaction(async (tx) => {
