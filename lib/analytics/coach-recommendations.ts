@@ -38,6 +38,28 @@ export interface CoachStateSnapshot {
   } | null;
 }
 
+export interface NutritionAdherenceEvaluation {
+  status: "unlogged" | "provisional" | "reviewed";
+  calorieGapKcal: number | null;
+  proteinGapG: number | null;
+  calorieTargetMet: boolean | null;
+  proteinTargetMet: boolean | null;
+}
+
+/** Evaluate adherence only against explicit targets; incomplete days remain provisional. */
+export function evaluateNutritionAdherence(nutrition: CoachStateSnapshot["nutrition"]): NutritionAdherenceEvaluation {
+  if (!nutrition) return { status: "unlogged", calorieGapKcal: null, proteinGapG: null, calorieTargetMet: null, proteinTargetMet: null };
+  if (![nutrition.calories, nutrition.calorieTarget, nutrition.proteinG, nutrition.proteinTargetG].every(Number.isFinite) || nutrition.calorieTarget <= 0 || nutrition.proteinTargetG <= 0 || nutrition.calories < 0 || nutrition.proteinG < 0) {
+    throw new Error("Nutrition adherence requires finite, non-negative intake and positive targets.");
+  }
+  return {
+    status: nutrition.explicitlyMarkedComplete ? "reviewed" : "provisional",
+    calorieGapKcal: nutrition.calorieTarget - nutrition.calories,
+    proteinGapG: nutrition.proteinTargetG - nutrition.proteinG,
+    calorieTargetMet: nutrition.calories >= nutrition.calorieTarget * 0.9 && nutrition.calories <= nutrition.calorieTarget * 1.1,
+    proteinTargetMet: nutrition.proteinG >= nutrition.proteinTargetG,
+  };
+}
 export interface TrainingConsistencyEvaluation {
   plannedToday: boolean;
   completedToday: boolean;
@@ -70,7 +92,8 @@ export function generateCoachRecommendations(
 ): CoachRecommendation[] {
   const candidates: CoachRecommendation[] = [];
 
-  if (snapshot.nutrition && !snapshot.nutrition.explicitlyMarkedComplete) {
+  const nutritionEvaluation = evaluateNutritionAdherence(snapshot.nutrition);
+  if (nutritionEvaluation.status === "provisional") {
     candidates.push({
       id: `review-food-log:${snapshot.localDate}`,
       type: "review_food_log",
@@ -87,14 +110,9 @@ export function generateCoachRecommendations(
     });
   }
 
-  if (snapshot.nutrition?.explicitlyMarkedComplete) {
+  if (nutritionEvaluation.status === "reviewed" && snapshot.nutrition && nutritionEvaluation.proteinGapG != null) {
     const { proteinG, proteinTargetG } = snapshot.nutrition;
-    if (
-      Number.isFinite(proteinG) &&
-      Number.isFinite(proteinTargetG) &&
-      proteinTargetG > 0 &&
-      proteinG < proteinTargetG * 0.75
-    ) {
+    if (nutritionEvaluation.proteinGapG > proteinTargetG * 0.25) {
       candidates.push({
         id: `protein-support:${snapshot.localDate}`,
         type: "protein_support",
