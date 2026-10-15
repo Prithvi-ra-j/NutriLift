@@ -1,4 +1,6 @@
 import { parseFoodFromText } from "../groq/parseFood";
+import type { FoodParseResult } from "../groq/parseFood";
+import { fromLocalDateKey } from "../utils/local-date";
 import { parseFoodLocally } from "../data/local-food-parser";
 import { parseExerciseFromText } from "../groq/parseExercise";
 import { parseInBodyText } from "../groq/parseInBody";
@@ -38,36 +40,65 @@ async function trackedAIParser<T>(operation: string, fn: () => Promise<T>): Prom
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
 
-export async function parseFoodInput(input: string) {
-  const local = parseFoodLocally(input);
+export interface ParseFoodInputOptions {
+  rawText: string;
+  locale?: string;
+  localDate: string;
+  mealType?: NonNullable<FoodParseResult["meal_suggestion"]>;
+}
+
+export async function parseFoodInput(input: string | ParseFoodInputOptions): Promise<FoodParseResult> {
+  const options = typeof input === "string" ? null : input;
+  const rawText = typeof input === "string" ? input : input.rawText;
+  const locale = options?.locale ?? "en-IN";
+  const localDate = options?.localDate;
+  const mealType = options?.mealType;
+
+  if (!rawText.trim()) throw new Error("Enter the foods you ate before parsing.");
+  if (options && !localDate) throw new Error("A local calendar date is required for contextual food parsing.");
+  if (localDate) fromLocalDateKey(localDate);
+  if (locale.length > 35 || !/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/i.test(locale)) {
+    throw new Error("Food parser locale must be a valid short locale identifier.");
+  }
+  if (mealType && !["breakfast", "lunch", "snack", "dinner"].includes(mealType)) {
+    throw new Error("Food meal type is invalid.");
+  }
+
+  const local = parseFoodLocally(rawText);
+  const contextualize = (result: FoodParseResult): FoodParseResult => ({
+    ...result,
+    meal_suggestion: mealType ?? result.meal_suggestion,
+    ...(localDate ? { local_date: localDate } : {}),
+    locale,
+  });
 
   // The deterministic catalogue handles familiar foods without consuming AI quota.
   if (local.items.length > 0 && local.unresolved_items.length === 0) {
-    return local;
+    return contextualize(local);
   }
 
   // Use AI only when the local catalogue cannot resolve the whole input.
   try {
-    const aiResult = await trackedAIParser("food_parse", () => parseFoodFromText(input));
-    return {
+    const aiResult = await trackedAIParser("food_parse", () => parseFoodFromText(rawText, { locale }));
+    return contextualize({
       ...aiResult,
-      meal_suggestion: aiResult.meal_suggestion ?? local.meal_suggestion,
+      meal_suggestion: mealType ?? aiResult.meal_suggestion ?? local.meal_suggestion,
       parse_notes: [
         aiResult.parse_notes,
         local.unresolved_items.length
-          ? `Review uncertain items: ${local.unresolved_items.join(", ")}.`
+          ? "Review uncertain items: " + local.unresolved_items.join(", ") + "."
           : null,
       ].filter(Boolean).join(" ") || null,
-    };
+    });
   } catch (error) {
     // Keep useful deterministic matches available even when AI is offline.
     if (local.items.length > 0) {
-      return {
+      return contextualize({
         ...local,
-        parse_notes: `${local.parse_notes ?? ""} AI fallback unavailable; confirm all quantities. Unresolved: ${local.unresolved_items.join(", ") || "none"}.`.trim(),
-      };
+        parse_notes: ((local.parse_notes ?? "") + " AI fallback unavailable; confirm all quantities. Unresolved: " + (local.unresolved_items.join(", ") || "none") + ".").trim(),
+      });
     }
-    throw new Error(`Food parsing failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    throw new Error("Food parsing failed: " + (error instanceof Error ? error.message : "Unknown error"));
   }
 }
 
