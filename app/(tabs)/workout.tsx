@@ -44,7 +44,7 @@ import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
-import { fromLocalDateKey, toLocalDateKey } from "../../lib/utils/local-date";
+import { fromLocalDateKey, getMondayWeekRange, toLocalDateKey } from "../../lib/utils/local-date";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -227,10 +227,7 @@ export default function WorkoutScreen() {
   }, [selectedDate]);
 
   const loadCompletedDayTypes = async () => {
-    const curr = fromLocalDateKey(selectedDate);
-    const first = curr.getDate() - curr.getDay() + 1;
-    const monday = new Date(curr.setDate(first));
-    const mondayStr = toLocalDateKey(monday);
+    const { start: mondayStr } = getMondayWeekRange(selectedDate);
     const { getSessionsInRange } = await import("../../lib/db/queries/workout");
     const sessions = await getSessionsInRange(mondayStr, selectedDate);
     setCompletedDayTypes(new Set(sessions.map((s) => s.day_type)));
