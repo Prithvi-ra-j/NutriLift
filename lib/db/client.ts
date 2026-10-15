@@ -348,6 +348,30 @@ export async function runMigrations(): Promise<void> {
       updated_at TEXT NOT NULL,
       UNIQUE(local_date, recommendation_id)
     );
+
+    CREATE TABLE IF NOT EXISTS domain_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      entity_version INTEGER NOT NULL,
+      schema_version INTEGER NOT NULL DEFAULT 1,
+      occurred_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL,
+      UNIQUE(entity_type, entity_id, entity_version)
+    );
+    CREATE INDEX IF NOT EXISTS idx_domain_events_type_time ON domain_events(event_type, occurred_at);
+
+    CREATE TABLE IF NOT EXISTS derived_state_invalidations (
+      id TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL REFERENCES domain_events(id),
+      projection_key TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      invalidated_at TEXT NOT NULL,
+      processed_at TEXT,
+      UNIQUE(event_id, projection_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_derived_invalidations_pending ON derived_state_invalidations(processed_at, invalidated_at);
   `);
 
   // ─── Additive column migrations (safe to run on existing DBs) ───────────────
