@@ -7,7 +7,7 @@ import { useAudioRecorder, RecordingPresets } from "expo-audio";
 import { transcribeAudioMultilingual } from "../../lib/groq/transcribeAudio";
 import { parseFoodFromVoice } from "../../lib/groq/parseFood";
 import { isGroqConfigured } from "../../lib/groq/client";
-import { insertFoodLog } from "../../lib/db/queries/nutrition";
+import { insertFoodLogs } from "../../lib/db/queries/nutrition";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
@@ -96,26 +96,27 @@ export default function VoiceInputModal() {
       const today = toLocalDateKey();
       const meal = parsedFood.meal_suggestion || "snack";
 
-      // Save each food item
-      for (const item of parsedFood.items) {
-        await insertFoodLog({
-          id: uuid.v4() as string,
-          date: today,
-          meal,
-          name: item.name,
-          quantity_g: item.quantity_g,
-          calories: item.calories,
-          protein_g: item.protein_g,
-          carbs_g: item.carbs_g,
-          fat_g: item.fat_g,
-          fiber_g: item.fiber_g,
-          sugar_g: null,
-          sodium_mg: null,
-          source: "voice",
-          raw_input: transcript,
-          created_at: Date.now(),
-        });
-      }
+      // Save all recognized items together to prevent partial meal writes.
+      await insertFoodLogs(parsedFood.items.map((item: {
+        name: string; quantity_g: number | null; calories: number; protein_g: number;
+        carbs_g: number; fat_g: number; fiber_g: number | null;
+      }) => ({
+        id: uuid.v4() as string,
+        date: today,
+        meal,
+        name: item.name,
+        quantity_g: item.quantity_g,
+        calories: item.calories,
+        protein_g: item.protein_g,
+        carbs_g: item.carbs_g,
+        fat_g: item.fat_g,
+        fiber_g: item.fiber_g,
+        sugar_g: null,
+        sodium_mg: null,
+        source: "voice",
+        raw_input: transcript,
+        created_at: Math.floor(Date.now() / 1000),
+      })));
 
       Alert.alert(
         "Success!",
