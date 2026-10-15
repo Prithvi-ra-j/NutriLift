@@ -10,7 +10,7 @@ import {
 
 describe("local database migration contract", () => {
   it("supports legacy and current schema versions but rejects future versions", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(8);
+    expect(CURRENT_SCHEMA_VERSION).toBe(9);
     expect(() => assertSupportedSchemaVersion(0)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(1)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();
@@ -33,7 +33,7 @@ describe("local database migration contract", () => {
       join(__dirname, "../../../drizzle/0000_wakeful_supernaut.sql"),
       "utf8",
     );
-    for (const table of ["sync_tombstones", "sync_queue", "sync_state", "recommendation_outcomes", "domain_events", "derived_state_invalidations"]) {
+    for (const table of ["sync_tombstones", "sync_queue", "sync_state", "recommendation_outcomes", "domain_events", "derived_state_invalidations", "app_telemetry_events"]) {
       expect(migrationSql).toContain(`CREATE TABLE \`${table}\``);
     }
     expect(migrationSql).toContain("`updated_at` text");
