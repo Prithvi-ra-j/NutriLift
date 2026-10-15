@@ -16,6 +16,7 @@ import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsInRange, getAllPRs } from "../../lib/db/queries/workout";
 import { getAllInBodyRecords, getWeightHistory } from "../../lib/db/queries/body";
 import { getRecentRecoveryLogs, getSupplementAdherence30d } from "../../lib/db/queries/recovery";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 import { insertReport } from "../../lib/db/queries/reports";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
