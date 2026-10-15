@@ -2,7 +2,7 @@ import {
   DEFAULT_NUTRITION_TARGETS,
   validateNutritionTargets,
   type NutritionTargets,
-} from "../queries/nutrition-targets";
+} from "../../nutrition/target-validation";
 
 describe("nutrition target validation", () => {
   it("accepts the persisted default target set", () => {
