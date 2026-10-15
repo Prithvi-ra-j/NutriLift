@@ -3,7 +3,7 @@ import { db } from "../client";
 import { foodLogs, dailyNutrition, favoriteFoods, repeatableMeals, type FoodLog, type NewFoodLog, type DailyNutrition, type FavoriteFood } from "../schema";
 import { getNutritionTargetsForDate } from "./nutrition-targets";
 import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
-import { validateFoodLogInput, validateFoodLogsInput } from "../../data/food-log-validation";
+import { validateFoodLogInput, validateFoodLogsInput, validateNutritionEstimate } from "../../data/food-log-validation";
 import { calculateTargetComparison } from "../../nutrition/target-validation";
 import { enqueueDailyNutrition, enqueueTombstone } from "./sync-outbox";
 import { appendDomainEvent } from "./domain-events";
@@ -71,6 +71,10 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
     };
   });
   validateFoodLogsInput(preparedLogs);
+  for (const log of preparedLogs) {
+    const estimateValidation = validateNutritionEstimate(log);
+    if (!estimateValidation.valid) throw new Error(estimateValidation.errors.join(" "));
+  }
   // The food rows and their daily aggregate commit or roll back together.
   await db.transaction(async (tx: any) => {
     const date = preparedLogs[0].date;
