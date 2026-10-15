@@ -381,6 +381,37 @@ export async function runMigrations(): Promise<void> {
     );
   `);
 
+  // Persist user-selected nutrition targets and preserve every effective-date change.
+  await sqlite.execAsync(`
+    CREATE TABLE IF NOT EXISTS nutrition_profile (
+      id INTEGER PRIMARY KEY,
+      calorie_target_kcal INTEGER NOT NULL,
+      protein_target_g REAL NOT NULL,
+      carbs_target_g REAL NOT NULL,
+      fat_target_g REAL NOT NULL,
+      goal TEXT NOT NULL DEFAULT 'lose',
+      target_mode TEXT NOT NULL DEFAULT 'manual',
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS nutrition_target_history (
+      id TEXT PRIMARY KEY,
+      effective_date TEXT NOT NULL,
+      calorie_target_kcal INTEGER NOT NULL,
+      protein_target_g REAL NOT NULL,
+      carbs_target_g REAL NOT NULL,
+      fat_target_g REAL NOT NULL,
+      source TEXT NOT NULL,
+      maintenance_estimate_kcal INTEGER,
+      algorithm_version INTEGER,
+      explanation TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_nutrition_target_history_effective_date
+      ON nutrition_target_history(effective_date, created_at);
+  `);
+
   // Fail fast on incomplete local schema instead of allowing screens to fail later.
   const rows = await sqlite.getAllAsync("SELECT name FROM sqlite_master WHERE type = 'table'");
   const existingTables = new Set<string>(rows.map((row: { name: string }) => row.name));
