@@ -403,4 +403,7 @@ export async function runMigrations(): Promise<void> {
       "Local database migration incomplete. Missing columns: " + missingColumns.join(", "),
     );
   }
-\n  // Mark the schema current only after every required table and column exists.\n  await sqlite.execAsync(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION};`);\n}
+
+  // Mark the schema current only after every required table and column exists.
+  await sqlite.execAsync(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION};`);
+}
