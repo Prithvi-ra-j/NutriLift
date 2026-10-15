@@ -470,7 +470,12 @@ export async function repeatMeal(id: string, date: string): Promise<void> {
     quantity_g: item.quantity_g, calories: item.calories, protein_g: item.protein_g,
     carbs_g: item.carbs_g, fat_g: item.fat_g, fiber_g: item.fiber_g ?? null,
     sugar_g: item.sugar_g ?? null, sodium_mg: item.sodium_mg ?? null,
-    source: "repeat", raw_input: `Repeated meal template: ${template.name}`, created_at: createdAt,
+    source: item.source ?? "repeat", raw_input: `Repeated meal template: ${template.name}`,
+    provenance_type: item.provenance_type ?? (item.source === "ai" || item.source === "voice" ? "ai_estimated" : "legacy_unknown"),
+    provenance_json: item.provenance_json ?? JSON.stringify({ source: item.source ?? "repeat", templateId: template.id }),
+    estimate_confidence: item.estimate_confidence ?? null,
+    estimate_reviewed: item.estimate_reviewed ?? 0,
+    created_at: createdAt,
   }));
   await insertFoodLogs(logs);
 }
