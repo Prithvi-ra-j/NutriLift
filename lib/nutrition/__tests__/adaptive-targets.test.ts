@@ -64,7 +64,7 @@ describe("estimateAdaptiveTarget", () => {
     const input = sampleInput();
     input.weights = input.weights.map((item, index) => ({
       ...item,
-      date: `2026-01-${String(1 + index).padStart(2, "0")}`,
+      date: `2026-01-${String(1 + (index % 3)).padStart(2, "0")}`,
     }));
     expect(estimateAdaptiveTarget(input).status).toBe("insufficient-data");
   });
