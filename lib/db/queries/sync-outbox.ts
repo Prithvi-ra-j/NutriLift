@@ -1,3 +1,4 @@
+import { and, eq } from "drizzle-orm";
 import { syncQueue, syncTombstones, type BodyStat, type DailyNutrition } from "../schema";
 import { mapBodyStat, mapDailyNutrition, mapTombstone } from "../../integrations/life-os/recordMappers";
 import type { SyncRecord } from "../../integrations/life-os/exportSchema";
@@ -23,11 +24,20 @@ export async function enqueueSyncRecord(tx: any, record: SyncRecord): Promise<vo
 }
 
 export async function enqueueBodyStat(tx: any, row: BodyStat): Promise<void> {
+  await tx.delete(syncTombstones).where(and(
+    eq(syncTombstones.entity_type, "body_stat"),
+    eq(syncTombstones.entity_id, row.id),
+  ));
   await enqueueSyncRecord(tx, mapBodyStat(row as any));
 }
 
 export async function enqueueDailyNutrition(tx: any, row: DailyNutrition): Promise<void> {
-  await enqueueSyncRecord(tx, mapDailyNutrition(row as unknown as Record<string, unknown>));
+  // A live row supersedes an older tombstone for the same stable external ID.
+  await tx.delete(syncTombstones).where(and(
+    eq(syncTombstones.entity_type, "daily_nutrition"),
+    eq(syncTombstones.entity_id, row.date),
+  ));
+  await enqueueSyncRecord(tx, mapDailyNutrition(row as unknown as Parameters<typeof mapDailyNutrition>[0]));
 }
 
 /** Persist a tombstone and its outbound record in the same domain transaction. */
