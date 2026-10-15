@@ -231,3 +231,11 @@ After every small implementation unit, update this file with the commit/PR, file
 
 
 - [x] Correct recent recovery history windows: `days=7` now means today plus the six preceding calendar dates, and invalid/oversized window lengths are rejected (`84b0adabfbe00cb69886a386c3b5141b905a026c`).
+
+### 2026-10-15 — Explicit nutrition completion and adaptive-target integration
+- [x] Add persisted daily completion state with additive migration; existing logs migrate as incomplete, never as implicitly reviewed.
+- [x] Add an explicit Nutrition-screen action that marks a logged day reviewed only after user confirmation; every food insert/edit/delete resets that day to incomplete.
+- [x] Wire the advisory calorie estimator to saved daily summaries and recorded weights; only explicitly completed days qualify as reviewed intake.
+- [x] Add a review/apply flow in More/Settings. Applying rechecks saved targets and recomputes the estimator before writing; suggestions remain advisory and are never auto-applied.
+- [x] Recompute target comparisons for already-logged days from the effective date forward inside the target-save transaction, without changing actual intake totals.
+- [ ] Run strict TypeScript, full Jest, Expo config/assets, and migration tests on the latest branch head; no phase is considered validated until CI evidence is captured.
