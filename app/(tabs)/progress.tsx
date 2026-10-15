@@ -26,14 +26,14 @@ import { M3 } from "../../design-system/tokens";
 import { addCalendarDays, fromLocalDateKey, getMondayWeekRange, toLocalDateKey } from "../../lib/utils/local-date";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
+const PROGRESS_SECTIONS: ProgressSection[] = ["strength", "body", "nutrition", "recovery"];
 
 export default function ProgressScreen() {
   const params = useLocalSearchParams<{ section?: string; date?: string }>();
   const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date;
   const requestedSection = Array.isArray(params.section) ? params.section[0] : params.section;
-  const validSections: ProgressSection[] = ["strength", "body", "nutrition", "recovery"];
   const [activeSection, setActiveSection] = useState<ProgressSection>(() =>
-    validSections.includes(requestedSection as ProgressSection) ? requestedSection as ProgressSection : "body"
+    PROGRESS_SECTIONS.includes(requestedSection as ProgressSection) ? requestedSection as ProgressSection : "body"
   );
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
