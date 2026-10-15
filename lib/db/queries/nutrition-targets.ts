@@ -29,9 +29,9 @@ function isValidDateKey(date: string): boolean {
   return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === date;
 }
 
-export async function getNutritionTargets(): Promise<NutritionTargets> {
+export async function getNutritionTargets(executor: any = db): Promise<NutritionTargets> {
   try {
-    const rows = await db.select().from(nutritionProfile).where(eq(nutritionProfile.id, 1)).limit(1);
+    const rows = await executor.select().from(nutritionProfile).where(eq(nutritionProfile.id, 1)).limit(1);
     const row = rows[0];
     if (!row) return DEFAULT_NUTRITION_TARGETS;
     const targets: NutritionTargets = {
@@ -137,16 +137,16 @@ export async function saveNutritionTargets(
   });
 }
 
-export async function getNutritionTargetsForDate(date: string): Promise<NutritionTargets> {
+export async function getNutritionTargetsForDate(date: string, executor: any = db): Promise<NutritionTargets> {
   if (!isValidDateKey(date)) throw new Error("Date must be a real calendar date (YYYY-MM-DD).");
   try {
-    const rows = await db.select().from(nutritionTargetHistory)
+    const rows = await executor.select().from(nutritionTargetHistory)
       .where(lte(nutritionTargetHistory.effective_date, date))
       .orderBy(desc(nutritionTargetHistory.effective_date), desc(nutritionTargetHistory.created_at))
       .limit(1);
     const row = rows[0];
     if (row) {
-      const active = await getNutritionTargets();
+      const active = await getNutritionTargets(executor);
       return {
         calories: row.calorie_target_kcal,
         protein_g: row.protein_target_g,
@@ -157,7 +157,8 @@ export async function getNutritionTargetsForDate(date: string): Promise<Nutritio
       };
     }
   } catch {
-    return DEFAULT_NUTRITION_TARGETS;
+    return getNutritionTargets(executor);
   }
-  return DEFAULT_NUTRITION_TARGETS;
+  // Older installs may have a current profile but no history row yet.
+  return getNutritionTargets(executor);
 }
