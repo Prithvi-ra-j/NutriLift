@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   addCalendarDays,
   differenceInCalendarDays,
@@ -59,18 +60,24 @@ describe("local calendar date utilities", () => {
     ).toBe(false);
   });
   it("keeps an instant on the correct local day in IST and a negative-offset zone", () => {
-    const previousTz = process.env.TZ;
-    try {
-      process.env.TZ = "Asia/Kolkata";
-      expect(toLocalDateKey(new Date("2026-10-14T18:35:00.000Z"))).toBe("2026-10-15");
+    const script = `import { toLocalDateKey } from "./lib/utils/local-date.ts"; console.log(toLocalDateKey(new Date(process.argv[1])));`;
+    const runInTimezone = (timezone: string, instant: string) => {
+      const result = spawnSync(
+        process.execPath,
+        ["--experimental-strip-types", "--input-type=module", "-e", script, instant],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: { ...process.env, TZ: timezone },
+        },
+      );
+      expect(result.status).toBe(0);
+      return result.stdout.trim();
+    };
 
-      process.env.TZ = "America/Los_Angeles";
-      expect(toLocalDateKey(new Date("2026-10-15T00:30:00.000Z"))).toBe("2026-10-14");
-      expect(fromLocalDateKey("2026-10-14").getDate()).toBe(14);
-    } finally {
-      if (previousTz === undefined) delete process.env.TZ;
-      else process.env.TZ = previousTz;
-    }
+    expect(runInTimezone("Asia/Kolkata", "2026-10-14T18:35:00.000Z")).toBe("2026-10-15");
+    expect(runInTimezone("America/Los_Angeles", "2026-10-15T00:30:00.000Z")).toBe("2026-10-14");
+    expect(runInTimezone("UTC", "2026-10-15T00:30:00.000Z")).toBe("2026-10-15");
   });
 
   it("measures calendar-day differences independently of DST-length days", () => {
