@@ -21,12 +21,14 @@ export interface FoodParseResult {
   parse_notes: string | null;
   unresolved_items?: string[];
   source?: "local" | "ai";
+  local_date?: string;
+  locale?: string;
 }
 
 /**
  * Parse food text into structured nutrition data using Groq LLaMA
  */
-export async function parseFoodFromText(text: string): Promise<FoodParseResult> {
+export async function parseFoodFromText(text: string, options: { locale?: string } = {}): Promise<FoodParseResult> {
   const input = text.trim();
   if (!input) {
     throw new Error("Enter the foods you ate before parsing.");
@@ -91,7 +93,7 @@ Rules:
         },
         {
           role: "user",
-          content: input,
+          content: options.locale ? "Locale: " + options.locale + "\nFood description: " + input : input,
         },
       ],
       temperature: 0.1, // Low temperature for consistent parsing
