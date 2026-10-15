@@ -123,12 +123,6 @@ export async function getExercisesForSession(sessionId: string): Promise<Exercis
     .orderBy(exerciseLogs.order_in_session);
 }
 
-async function assertExerciseWritable(exerciseLogId: string): Promise<void> {
-  const rows = await db.select().from(exerciseLogs).where(eq(exerciseLogs.id, exerciseLogId)).limit(1);
-  if (!rows[0]) throw new Error("Exercise log not found.");
-  await assertSessionWritable(rows[0].session_id);
-}
-
 async function assertSessionWritableInTransaction(tx: any, sessionId: string): Promise<WorkoutSession> {
   const rows = await tx.select().from(workoutSessions).where(eq(workoutSessions.id, sessionId)).limit(1);
   const session = rows[0] as WorkoutSession | undefined;
@@ -161,6 +155,9 @@ export async function updateExerciseLog(
     if (mutableUpdates.exercise_name && mutableUpdates.exercise_name !== existing.exercise_name) {
       await recomputePersonalRecord(tx, existing.exercise_name);
       await recomputePersonalRecord(tx, mutableUpdates.exercise_name);
+    }
+    if (mutableUpdates.exercise_type) {
+      await updateSessionVolumeForSession(tx, existing.session_id);
     }
   });
 }
