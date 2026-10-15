@@ -1,0 +1,133 @@
+/**
+ * Runtime migration integration tests against a real in-memory SQLite database.
+ * Node 22 provides node:sqlite; CI uses Node 22. No native Expo runtime is required.
+ */
+jest.mock("react-native", () => ({ Platform: { OS: "android" } }));
+jest.mock("expo-sqlite", () => ({
+  openDatabaseSync: () => (global as any).__nutriLiftSqliteAdapter,
+}));
+jest.mock("drizzle-orm/expo-sqlite", () => ({ drizzle: () => ({}) }));
+
+const { DatabaseSync } = require("node:sqlite");
+import { REQUIRED_CORE_TABLES } from "../migration-contract";
+
+type SQLiteAdapter = {
+  execAsync: (sql: string) => Promise<void>;
+  getAllAsync: (sql: string) => Promise<any[]>;
+};
+
+function installDatabase(database: any): SQLiteAdapter {
+  const adapter: SQLiteAdapter = {
+    execAsync: async (sql) => database.exec(sql),
+    getAllAsync: async (sql) => database.prepare(sql).all(),
+  };
+  (global as any).__nutriLiftSqliteAdapter = adapter;
+  return adapter;
+}
+
+async function loadMigrations() {
+  jest.resetModules();
+  return require("../client").runMigrations as () => Promise<void>;
+}
+
+describe("runtime SQLite migrations", () => {
+  afterEach(() => {
+    delete (global as any).__nutriLiftSqliteAdapter;
+    jest.resetModules();
+  });
+
+  it("creates every required core table on an empty database", async () => {
+    const database = new DatabaseSync(":memory:");
+    try {
+      installDatabase(database);
+      const runMigrations = await loadMigrations();
+
+      await runMigrations();
+
+      const tables = new Set<string>(
+        database
+          .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+          .all()
+          .map((row: { name: string }) => row.name),
+      );
+      for (const table of REQUIRED_CORE_TABLES) {
+        expect(tables.has(table)).toBe(true);
+      }
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(2);
+    } finally {
+      database.close();
+    }
+  });
+
+  it("upgrades a legacy database and preserves existing food logs", async () => {
+    const database = new DatabaseSync(":memory:");
+    try {
+      // Representative pre-upgrade schema: core food tables exist, but the
+      // additive columns and custom exercise table have not been introduced.
+      database.exec(`
+        CREATE TABLE food_logs (
+          id TEXT PRIMARY KEY,
+          date TEXT NOT NULL,
+          meal TEXT NOT NULL,
+          name TEXT NOT NULL,
+          quantity_g REAL,
+          calories REAL NOT NULL,
+          protein_g REAL NOT NULL,
+          carbs_g REAL NOT NULL,
+          fat_g REAL NOT NULL,
+          source TEXT NOT NULL,
+          created_at INTEGER NOT NULL
+        );
+        INSERT INTO food_logs
+          (id, date, meal, name, calories, protein_g, carbs_g, fat_g, source, created_at)
+        VALUES ('kept-log', '2026-10-15', 'breakfast', 'Oats', 150, 5, 27, 3, 'manual', 123);
+        CREATE TABLE daily_nutrition (
+          date TEXT PRIMARY KEY,
+          total_calories REAL NOT NULL,
+          total_protein_g REAL NOT NULL,
+          total_carbs_g REAL NOT NULL,
+          total_fat_g REAL NOT NULL
+        );
+        INSERT INTO daily_nutrition
+          (date, total_calories, total_protein_g, total_carbs_g, total_fat_g)
+        VALUES ('2026-10-15', 150, 5, 27, 3);
+        PRAGMA user_version = 1;
+      `);
+
+      installDatabase(database);
+      const runMigrations = await loadMigrations();
+      await runMigrations();
+
+      const log = database.prepare("SELECT id, name, calories FROM food_logs WHERE id = ?").get("kept-log");
+      expect(log).toEqual({ id: "kept-log", name: "Oats", calories: 150 });
+      expect(
+        database.prepare("PRAGMA table_info(daily_nutrition)").all()
+          .some((column: { name: string }) => column.name === "updated_at"),
+      ).toBe(true);
+      expect(
+        database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'custom_exercises'").get(),
+      ).toBeDefined();
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(2);
+
+      // A second run must be safe and must not duplicate or remove saved data.
+      await runMigrations();
+      expect(database.prepare("SELECT COUNT(*) AS count FROM food_logs").get().count).toBe(1);
+    } finally {
+      database.close();
+    }
+  });
+
+  it("does not downgrade a database created by a newer app version", async () => {
+    const database = new DatabaseSync(":memory:");
+    try {
+      database.exec("PRAGMA user_version = 99;");
+      installDatabase(database);
+      const runMigrations = await loadMigrations();
+
+      await expect(runMigrations()).rejects.toThrow(/newer than this app supports/);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(99);
+    } finally {
+      database.close();
+    }
+  });
+});
