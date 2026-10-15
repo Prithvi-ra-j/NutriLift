@@ -19,6 +19,7 @@ export type SyncResult = {
   uploaded: number;
   queued: number;
   skipped: number;
+  needsAttention: number;
   cursor: string | null;
   error?: string;
 };
@@ -41,7 +42,7 @@ export function toSupabaseSyncRow(record: SyncRecord, userId: string): SupabaseS
 
 export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   if (Platform.OS === "web") {
-    return { uploaded: 0, queued: 0, skipped: 0, cursor: null, error: "Sync is available in the Android app. Web does not have the local SQLite database required for sync." };
+    return { uploaded: 0, queued: 0, skipped: 0, needsAttention: 0, cursor: null, error: "Sync is available in the Android app. Web does not have the local SQLite database required for sync." };
   }
 
   if (!isSupabaseConfigured) {
@@ -57,13 +58,32 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   await repository.recoverInterruptedSyncOperations();
   const cursor = await repository.getSyncCursor();
   const changedRecords = await repository.getChangedRecords(cursor);
-  const validChangedRecords = changedRecords.filter((record) => validateSyncRecord({ ...record, userId: user.id }).valid);
+  const classified = changedRecords.map((record) => ({
+    record,
+    validation: validateSyncRecord({ ...record, userId: user.id }),
+  }));
+  const validChangedRecords = classified.filter((item) => item.validation.valid).map((item) => item.record);
+  const needsAttentionRecords = classified
+    .filter((item) => !item.validation.valid)
+    .map((item) => ({ record: item.record, errors: item.validation.errors ?? ["Sync payload failed validation."] }));
+
+  // Persist every discovered change before moving the cursor. Invalid records are
+  // quarantined visibly so they cannot disappear when later valid records advance it.
   await repository.enqueueRecords(validChangedRecords);
+  await repository.enqueueNeedsAttentionRecords(needsAttentionRecords);
+  const needsAttention = needsAttentionRecords.length;
 
   const queuedRecords = await repository.getQueuedRecords(batchSize);
   if (queuedRecords.length === 0) {
-    await repository.saveSyncState({ cursor: cursor ?? undefined, success: true });
-    return { uploaded: 0, queued: validChangedRecords.length, skipped: changedRecords.length - validChangedRecords.length, cursor };
+    const nextCursor = repository.newestSourceTimestamp(changedRecords) ?? cursor;
+    await repository.saveSyncState({ cursor: nextCursor ?? undefined, success: true });
+    return {
+      uploaded: 0,
+      queued: validChangedRecords.length,
+      skipped: needsAttention,
+      needsAttention,
+      cursor: nextCursor,
+    };
   }
 
   const externalIds = queuedRecords.map((record) => record.externalId);
@@ -75,16 +95,17 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   if (error) {
     await repository.setQueueState(externalIds, "failed", error.message);
     await repository.saveSyncState({ error: error.message });
-    return { uploaded: 0, queued: validChangedRecords.length, skipped: changedRecords.length - validChangedRecords.length, cursor, error: error.message };
+    return { uploaded: 0, queued: validChangedRecords.length, skipped: needsAttention, needsAttention, cursor, error: error.message };
   }
 
   await repository.setQueueState(externalIds, "uploaded");
-  const nextCursor = repository.newestSourceTimestamp(queuedRecords) ?? cursor;
+  const nextCursor = repository.newestSourceTimestamp(changedRecords) ?? cursor;
   await repository.saveSyncState({ cursor: nextCursor ?? undefined, success: true });
   return {
     uploaded: queuedRecords.length,
     queued: validChangedRecords.length,
-    skipped: changedRecords.length - validChangedRecords.length,
+    skipped: needsAttention,
+    needsAttention,
     cursor: nextCursor,
   };
 }
