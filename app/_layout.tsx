@@ -13,6 +13,7 @@ import {
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
 import { runMigrations } from "../lib/db/client";
+import { processDerivedStateInvalidations } from "../lib/db/queries/derived-state-consumer";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
@@ -34,8 +35,10 @@ export default function RootLayout() {
   useEffect(() => {
     logger.info("App starting - initializing database");
     runMigrations()
-      .then(() => {
+      .then(async () => {
         logger.info("Database migrations completed successfully");
+        try { await processDerivedStateInvalidations(); }
+        catch (error) { logger.warn("Derived-state invalidation processing failed", { error: error instanceof Error ? error.message : "unknown" }); }
         setDbReady(true);
         if (Platform.OS === "web") return;
 
