@@ -4,7 +4,7 @@ import { redactSensitiveFields } from "../../observability/redaction";
 
 export type DomainEventType =
   | "nutrition.food.created" | "nutrition.food.updated" | "nutrition.food.deleted"
-  | "nutrition.targets.changed" | "nutrition.day.reviewed"
+  | "nutrition.targets.changed" | "nutrition.day.reviewed" | "nutrition.favorite.changed"
   | "workout.session.started" | "workout.session.updated" | "workout.session.completed" | "workout.session.cancelled"
   | "workout.set.recorded" | "workout.set.updated" | "workout.set.deleted"
   | "recovery.check-in.saved" | "recovery.supplement.updated"
@@ -26,6 +26,7 @@ const INVALIDATION_MAP: Readonly<Record<DomainEventType, readonly string[]>> = {
   "nutrition.food.deleted": ["nutrition.daily-summary", "nutrition.completeness", "nutrition.history", "coach.recommendations", "sync.food-logs"],
   "nutrition.targets.changed": ["nutrition.daily-summary", "nutrition.history", "coach.recommendations"],
   "nutrition.day.reviewed": ["nutrition.completeness", "nutrition.history", "coach.recommendations"],
+  "nutrition.favorite.changed": ["nutrition.favorites", "nutrition.quick-log"],
   "workout.session.started": ["workout.session-summary", "workout.history", "coach.recommendations", "sync.workouts"],
   "workout.session.updated": ["workout.session-summary", "workout.history", "workout.personal-records", "coach.recommendations", "sync.workouts"],
   "workout.session.completed": ["workout.session-summary", "workout.history", "workout.personal-records", "coach.recommendations", "sync.workouts"],
