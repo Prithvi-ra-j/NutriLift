@@ -10,7 +10,7 @@ import {
 
 describe("local database migration contract", () => {
   it("supports legacy and current schema versions but rejects future versions", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(6);
+    expect(CURRENT_SCHEMA_VERSION).toBe(7);
     expect(() => assertSupportedSchemaVersion(0)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(1)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();
@@ -33,7 +33,7 @@ describe("local database migration contract", () => {
       join(__dirname, "../../../drizzle/0000_wakeful_supernaut.sql"),
       "utf8",
     );
-    for (const table of ["sync_tombstones", "sync_queue", "sync_state"]) {
+    for (const table of ["sync_tombstones", "sync_queue", "sync_state", "recommendation_outcomes"]) {
       expect(migrationSql).toContain(`CREATE TABLE \`${table}\``);
     }
     expect(migrationSql).toContain("`updated_at` text");
@@ -41,6 +41,8 @@ describe("local database migration contract", () => {
     expect(migrationSql).toContain("`goal` text");
     expect(migrationSql).toContain("`is_complete` integer DEFAULT 0 NOT NULL");
     expect(migrationSql).toContain("`completed_at` text");
+    expect(migrationSql).toContain("`owner_user_id` text");
+    expect(migrationSql).toContain("`idx_recommendation_outcomes_date_id`");
   });
 
   it("accepts a database containing every required core table", () => {
@@ -82,6 +84,7 @@ describe("local database migration contract", () => {
       "recovery_logs.updated_at",
       "sync_tombstones.external_id",
       "nutrition_target_history.goal",
+      "sync_state.owner_user_id",
       "custom_exercises.exercise_type",
       "custom_exercises.created_at",
     ]);
