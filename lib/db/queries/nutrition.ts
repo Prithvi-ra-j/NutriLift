@@ -127,6 +127,12 @@ export async function insertFoodLog(log: NewFoodLog): Promise<void> {
   await insertFoodLogs([log]);
 }
 
+/** Canonical single-item food-log commit contract. */
+export async function commitFoodLog(input: NewFoodLog): Promise<{ id: string }> {
+  await insertFoodLog(input);
+  return { id: input.id };
+}
+
 export async function deleteFoodLog(id: string, date: string): Promise<void> {
   // Keep the source row and every potentially affected aggregate consistent.
   await db.transaction(async (tx: any) => {
@@ -173,6 +179,15 @@ export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, da
 }
 
 // ─── Daily Nutrition Queries ──────────────────────────────────────────────────
+
+/** Correct an existing log using its persisted original date for safe aggregate recomputation. */
+export async function correctFoodLogItem(input: { id: string; updates: Partial<NewFoodLog> }): Promise<void> {
+  if (!input.id.trim()) throw new Error("Food log id is required.");
+  const rows = await db.select().from(foodLogs).where(eq(foodLogs.id, input.id)).limit(1);
+  const existing = rows[0] as FoodLog | undefined;
+  if (!existing) throw new Error("Food log not found.");
+  await updateFoodLog(input.id, input.updates, existing.date);
+}
 
 export async function getDailyNutrition(date: string): Promise<DailyNutrition | null> {
   const result = await db
@@ -513,6 +528,13 @@ export async function getDailyNutritionRange(
     .from(dailyNutrition)
     .where(and(gte(dailyNutrition.date, startDate), lte(dailyNutrition.date, endDate)))
     .orderBy(dailyNutrition.date);
+}
+
+export async function getNutritionHistory(range: { startDate: string; endDate: string }): Promise<DailyNutrition[]> {
+  try { fromLocalDateKey(range.startDate); fromLocalDateKey(range.endDate); }
+  catch { throw new Error("Nutrition history requires real YYYY-MM-DD calendar dates."); }
+  if (range.startDate > range.endDate) throw new Error("Nutrition history start date must not be after its end date.");
+  return getDailyNutritionRange(range.startDate, range.endDate);
 }
 
 export async function getLast7DaysNutrition(): Promise<DailyNutrition[]> {
