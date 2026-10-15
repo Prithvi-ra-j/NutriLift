@@ -53,7 +53,8 @@ describe("runtime SQLite migrations", () => {
       );
       for (const table of [
         "food_logs", "daily_nutrition", "workout_sessions", "exercise_logs",
-        "set_logs", "custom_exercises", "sync_tombstones", "sync_queue", "sync_state",\n        "nutrition_profile", "nutrition_target_history",
+        "set_logs", "custom_exercises", "sync_tombstones", "sync_queue", "sync_state",
+        "nutrition_profile", "nutrition_target_history",
       ]) {
         expect(tables.has(table)).toBe(true);
       }
