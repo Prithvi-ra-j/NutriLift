@@ -2,6 +2,7 @@ import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { db } from "../client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
+import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
 
@@ -53,23 +54,13 @@ export async function getDailyNutritionRange(
 }
 
 export async function getLast7DaysNutrition(): Promise<DailyNutrition[]> {
-  const today = new Date();
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(today.getDate() - 6);
-  return getDailyNutritionRange(
-    sevenDaysAgo.toISOString().split("T")[0],
-    today.toISOString().split("T")[0]
-  );
+  const today = toLocalDateKey();
+  return getDailyNutritionRange(addCalendarDays(today, -6), today);
 }
 
 export async function getLast30DaysNutrition(): Promise<DailyNutrition[]> {
-  const today = new Date();
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(today.getDate() - 29);
-  return getDailyNutritionRange(
-    thirtyDaysAgo.toISOString().split("T")[0],
-    today.toISOString().split("T")[0]
-  );
+  const today = toLocalDateKey();
+  return getDailyNutritionRange(addCalendarDays(today, -29), today);
 }
 
 // ─── Recompute Daily Nutrition ────────────────────────────────────────────────
