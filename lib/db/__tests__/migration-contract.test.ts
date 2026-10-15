@@ -43,6 +43,8 @@ describe("local database migration contract", () => {
     expect(migrationSql).toContain("`completed_at` text");
     expect(migrationSql).toContain("`owner_user_id` text");
     expect(migrationSql).toContain("`idx_recommendation_outcomes_date_id`");
+    expect(migrationSql).toContain("`owner_user_id` text");
+    expect(migrationSql).toContain("`idx_recommendation_outcomes_date_id`");
   });
 
   it("accepts a database containing every required core table", () => {
