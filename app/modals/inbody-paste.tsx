@@ -17,13 +17,14 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 
 export default function InBodyPasteModal() {
   const [pasteText, setPasteText] = useState("");
   const [isParsing, setIsParsing] = useState(false);
   const [parsed, setParsed] = useState<InBodyParseResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [dateOverride, setDateOverride] = useState(new Date().toISOString().split("T")[0]);
+  const [dateOverride, setDateOverride] = useState(toLocalDateKey());
 
   const handleParse = async () => {
     if (!pasteText.trim()) return;
