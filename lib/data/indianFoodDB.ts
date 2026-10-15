@@ -42,7 +42,7 @@ export const INDIAN_FOOD_DB: IndianFood[] = [
   {
     id: 'roti_wheat_plain',
     name: 'Roti (Wheat)',
-    aliases: ['chapati', 'phulka', 'wheat roti'],
+    aliases: ['roti', 'rotis', 'chapati', 'phulka', 'wheat roti'],
     category: 'Staples',
     per100g: { calories: 297, protein: 9.0, carbs: 59.4, fat: 3.7, fiber: 1.9 },
     commonServings: [
