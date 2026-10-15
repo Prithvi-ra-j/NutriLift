@@ -21,17 +21,53 @@ export async function getFoodLogsByMeal(date: string, meal: string): Promise<Foo
 export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
   if (logs.length === 0) throw new Error("Add at least one food item.");
   logs.forEach(validateFoodLogInput);
-
-  const dates = [...new Set(logs.map((log) => log.date))];
-  // Persist a multi-item meal as one database transaction so a failed insert
-  // cannot leave only part of the meal in the log.
-  await db.transaction(async (tx: typeof db) => {
-    await tx.insert(foodLogs).values(logs);
-  });
-
-  for (const date of dates) {
-    await recomputeDailyNutrition(date);
+  if (new Set(logs.map((log) => log.id)).size !== logs.length) {
+    throw new Error("Food log contains duplicate item IDs.");
   }
+  if (new Set(logs.map((log) => log.date)).size !== 1) {
+    throw new Error("A meal batch must use one calendar date.");
+  }
+  if (new Set(logs.map((log) => log.meal)).size !== 1) {
+    throw new Error("A meal batch must use one meal type.");
+  }
+
+  // The food rows and their daily aggregate commit or roll back together.
+  await db.transaction(async (tx) => {
+    await tx.insert(foodLogs).values(logs);
+    const date = logs[0].date;
+    const rows = await tx.select().from(foodLogs).where(eq(foodLogs.date, date));
+    const totals = rows.reduce(
+      (acc, log) => ({
+        calories: acc.calories + log.calories,
+        protein_g: acc.protein_g + log.protein_g,
+        carbs_g: acc.carbs_g + log.carbs_g,
+        fat_g: acc.fat_g + log.fat_g,
+      }),
+      { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
+    );
+    const proteinTargetMet = totals.protein_g >= USER_PROFILE.targets.protein_g ? 1 : 0;
+    const calorieTargetMet =
+      totals.calories >= USER_PROFILE.targets.calories * 0.9 &&
+      totals.calories <= USER_PROFILE.targets.calories * 1.1 ? 1 : 0;
+    const proteinScore = Math.min(100, (totals.protein_g / USER_PROFILE.targets.protein_g) * 100);
+    const calorieScore = Math.max(0, 100 - Math.abs(totals.calories - USER_PROFILE.targets.calories) / USER_PROFILE.targets.calories * 100);
+    const summary = {
+      total_calories: totals.calories,
+      total_protein_g: totals.protein_g,
+      total_carbs_g: totals.carbs_g,
+      total_fat_g: totals.fat_g,
+      protein_target_met: proteinTargetMet,
+      calorie_target_met: calorieTargetMet,
+      adherence_score: proteinScore * 0.6 + calorieScore * 0.4,
+      updated_at: new Date().toISOString(),
+    };
+    const existing = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date));
+    if (existing.length > 0) {
+      await tx.update(dailyNutrition).set(summary).where(eq(dailyNutrition.date, date));
+    } else {
+      await tx.insert(dailyNutrition).values({ date, ...summary });
+    }
+  });
 }
 
 export async function insertFoodLog(log: NewFoodLog): Promise<void> {
