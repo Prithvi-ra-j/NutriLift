@@ -2,7 +2,7 @@ import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { db } from "../client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
 import { getNutritionTargetsForDate } from "./nutrition-targets";
-import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
+import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
 import { validateFoodLogInput, validateFoodLogsInput } from "../../data/food-log-validation";
 import { calculateTargetComparison } from "../../nutrition/target-validation";
 
@@ -46,6 +46,8 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
       total_carbs_g: totals.carbs_g,
       total_fat_g: totals.fat_g,
       ...comparison,
+      is_complete: 0,
+      completed_at: null,
       updated_at: new Date().toISOString(),
     };
     const existing = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date));
@@ -152,6 +154,8 @@ async function recomputeDailyNutritionInTransaction(tx: any, date: string): Prom
     total_carbs_g: totals.carbs_g,
     total_fat_g: totals.fat_g,
     ...comparison,
+    is_complete: 0,
+    completed_at: null,
     updated_at: new Date().toISOString(),
   };
   const existing = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
@@ -168,6 +172,28 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
   });
 }
 
+/** Mark a logged day reviewed only after the user explicitly confirms it is complete. */
+export async function setNutritionDayComplete(date: string, complete: boolean): Promise<void> {
+  try {
+    fromLocalDateKey(date);
+  } catch {
+    throw new Error("Nutrition completion date must be a real YYYY-MM-DD calendar date.");
+  }
+  await db.transaction(async (tx: any) => {
+    const summaries = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
+    if (!summaries[0]) {
+      if (complete) throw new Error("Log at least one food item before marking this day complete.");
+      return;
+    }
+    if (complete) {
+      const logs = await tx.select({ id: foodLogs.id }).from(foodLogs).where(eq(foodLogs.date, date)).limit(1);
+      if (logs.length === 0) throw new Error("Log at least one food item before marking this day complete.");
+    }
+    const now = new Date().toISOString();
+    await tx.update(dailyNutrition).set({ is_complete: complete ? 1 : 0, completed_at: complete ? now : null, updated_at: now })
+      .where(eq(dailyNutrition.date, date));
+  });
+}
 // ─── Analytics Helpers ────────────────────────────────────────────────────────
 
 export async function getProteinHitRate(days: number = 30): Promise<number> {
