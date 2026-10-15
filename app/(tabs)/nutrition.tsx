@@ -346,6 +346,50 @@ export default function NutritionScreen() {
           ))}
         </View>
 
+        <Card>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <View>
+              <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>Quick log</Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>Saved foods and reusable meals</Text>
+            </View>
+            <TouchableOpacity onPress={handleSaveMealTemplates} disabled={foodLogs.length === 0 || selectedDate > todayStr} style={{ paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, backgroundColor: M3.colors.surfaceVariant, opacity: foodLogs.length === 0 || selectedDate > todayStr ? 0.45 : 1 }}>
+              <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold" }}>Save day</Text>
+            </TouchableOpacity>
+          </View>
+          {favoriteFoods.length > 0 ? favoriteFoods.slice(0, 4).map((favorite) => (
+            <View key={favorite.id} style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7, borderTopWidth: 1, borderTopColor: M3.colors.outlineVariant }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>{favorite.name}</Text>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>{favorite.calories.toFixed(0)} kcal · {favorite.quantity_g ?? "—"} g · {favorite.meal}</Text>
+              </View>
+              <TouchableOpacity disabled={selectedDate > todayStr} onPress={() => void handleLogFavorite(favorite.id, favorite.name)} style={{ padding: 7, opacity: selectedDate > todayStr ? 0.4 : 1 }}>
+                <Feather name="plus-circle" size={18} color={M3.colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleRemoveFavorite(favorite.id, favorite.name)} style={{ padding: 7 }}>
+                <Feather name="x-circle" size={16} color={M3.colors.onSurfaceMuted} />
+              </TouchableOpacity>
+            </View>
+          )) : (
+            <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular", paddingVertical: 6 }}>Tap the star beside a logged food to save it here.</Text>
+          )}
+          {repeatableMeals.length > 0 && (
+            <View style={{ marginTop: 8 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_700Bold", letterSpacing: 0.5, marginBottom: 4 }}>REPEATABLE MEALS</Text>
+              {repeatableMeals.slice(0, 4).map((template) => (
+                <View key={template.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 6, gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>{template.name}</Text>
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }}>{template.itemCount} items · {template.meal}</Text>
+                  </View>
+                  <TouchableOpacity disabled={selectedDate > todayStr} onPress={() => void handleRepeatMeal(template.id, template.name)} style={{ padding: 7, opacity: selectedDate > todayStr ? 0.4 : 1 }}>
+                    <Feather name="repeat" size={17} color={M3.colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </Card>
+
         {/* ── Meal Accordion ── */}
         {mealGroups.map((group) => (
           <Card key={group.meal}>
@@ -413,7 +457,10 @@ export default function NutritionScreen() {
                           {item.calories.toFixed(0)} kcal · P:{item.protein_g.toFixed(0)}g · C:{item.carbs_g.toFixed(0)}g · F:{item.fat_g.toFixed(0)}g
                         </Text>
                       </View>
-                      <TouchableOpacity onPress={() => handleDeleteFood(item)}>
+                      <TouchableOpacity onPress={() => void handleAddFavorite(item)} style={{ padding: 4 }}>
+                        <Feather name="star" size={14} color={M3.colors.primary} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => handleDeleteFood(item)} style={{ padding: 4 }}>
                         <Feather name="trash-2" size={14} color={M3.colors.error} />
                       </TouchableOpacity>
                     </View>
