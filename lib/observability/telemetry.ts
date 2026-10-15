@@ -1,6 +1,6 @@
-import { desc, gte } from "drizzle-orm";
+import { desc, gte, isNull, lt } from "drizzle-orm";
 import { db } from "../db/client";
-import { appTelemetryEvents, syncQueue } from "../db/schema";
+import { appTelemetryEvents, derivedStateInvalidations, syncQueue } from "../db/schema";
 import { redactSensitiveFields } from "./redaction";
 
 export type TelemetrySeverity = "debug" | "info" | "warn" | "error";
@@ -124,6 +124,7 @@ export interface LocalHealthSummary {
   pendingSync: number;
   uploadingSync: number;
   needsAttentionSync: number;
+  pendingDerivedStateInvalidations: number;
   recentErrorCount: number;
   lastEventAt: string | null;
   recentIssues: Array<{ eventType: string; severity: TelemetrySeverity; occurredAt: string; correlationId: string | null }>;
@@ -132,12 +133,13 @@ export interface LocalHealthSummary {
 /** Summarize local operational health without returning raw payloads or health records. */
 export async function getLocalHealthSummary(): Promise<LocalHealthSummary> {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const [queueRows, events] = await Promise.all([
+  const [queueRows, events, invalidations] = await Promise.all([
     db.select().from(syncQueue),
     db.select().from(appTelemetryEvents)
       .where(gte(appTelemetryEvents.occurred_at, since))
       .orderBy(desc(appTelemetryEvents.occurred_at))
       .limit(100),
+    db.select().from(derivedStateInvalidations).where(isNull(derivedStateInvalidations.processed_at)),
   ]);
   const queue = queueRows as Array<{ state?: string | null }>;
   const telemetry = events as Array<{ event_type: string; severity: string; occurred_at: string; correlation_id: string | null }>;
@@ -154,8 +156,19 @@ export async function getLocalHealthSummary(): Promise<LocalHealthSummary> {
     pendingSync: queue.filter((item) => item.state === "pending" || item.state === "retry").length,
     uploadingSync: queue.filter((item) => item.state === "uploading").length,
     needsAttentionSync: queue.filter((item) => item.state === "needs_attention" || item.state === "failed").length,
+    pendingDerivedStateInvalidations: invalidations.length,
     recentErrorCount: telemetry.filter((event) => event.severity === "error").length,
     lastEventAt: telemetry[0]?.occurred_at ?? null,
     recentIssues,
   };
+}
+
+
+/** Keep the local telemetry database bounded; domain records are never pruned here. */
+export async function pruneOldTelemetryEvents(retentionDays = 30): Promise<void> {
+  if (!Number.isInteger(retentionDays) || retentionDays < 7 || retentionDays > 365) {
+    throw new Error("Telemetry retention must be an integer from 7 to 365 days.");
+  }
+  const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  await db.delete(appTelemetryEvents).where(lt(appTelemetryEvents.occurred_at, cutoff));
 }
