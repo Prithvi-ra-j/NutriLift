@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { domainEvents, derivedStateInvalidations } from "../schema";
 import { redactSensitiveFields } from "../../observability/redaction";
 
@@ -58,13 +58,29 @@ export async function appendDomainEvent(tx: any, input: AppendDomainEventInput):
   }
   const occurredAt = input.occurredAt ?? new Date().toISOString();
   if (!Number.isFinite(Date.parse(occurredAt))) throw new Error("Domain event occurredAt must be a valid timestamp.");
+
+  const existingRows = await tx.select().from(domainEvents).where(eq(domainEvents.id, input.id)).limit(1);
+  const existing = existingRows[0];
+  if (existing) {
+    if (existing.event_type !== input.eventType || existing.entity_type !== input.entityType || existing.entity_id !== input.entityId) {
+      throw new Error("Domain event idempotency conflict: the event id is already bound to a different change.");
+    }
+    await invalidateDerivedState(tx, { eventId: input.id, eventType: input.eventType, occurredAt: existing.occurred_at });
+    return;
+  }
+
+  const previousRows = await tx.select().from(domainEvents)
+    .where(and(eq(domainEvents.entity_type, input.entityType), eq(domainEvents.entity_id, input.entityId)))
+    .orderBy(desc(domainEvents.entity_version)).limit(1);
+  const previousVersion = Number(previousRows[0]?.entity_version ?? 0);
+  const entityVersion = Math.max(input.entityVersion, previousVersion + 1);
   const metadata = redactSensitiveFields(input.metadata ?? {});
   const event = {
     id: input.id,
     event_type: input.eventType,
     entity_type: input.entityType,
     entity_id: input.entityId,
-    entity_version: input.entityVersion,
+    entity_version: entityVersion,
     schema_version: 1,
     occurred_at: occurredAt,
     metadata_json: JSON.stringify(metadata),
@@ -72,9 +88,9 @@ export async function appendDomainEvent(tx: any, input: AppendDomainEventInput):
 
   await tx.insert(domainEvents).values(event).onConflictDoNothing();
   const persisted = await tx.select().from(domainEvents).where(eq(domainEvents.id, input.id)).limit(1);
-  const existing = persisted[0];
-  if (!existing || existing.event_type !== event.event_type || existing.entity_type !== event.entity_type ||
-      existing.entity_id !== event.entity_id || existing.entity_version !== event.entity_version) {
+  const stored = persisted[0];
+  if (!stored || stored.event_type !== event.event_type || stored.entity_type !== event.entity_type ||
+      stored.entity_id !== event.entity_id) {
     throw new Error("Domain event idempotency conflict: the event id is already bound to a different change.");
   }
   await invalidateDerivedState(tx, { eventId: input.id, eventType: input.eventType, occurredAt });
