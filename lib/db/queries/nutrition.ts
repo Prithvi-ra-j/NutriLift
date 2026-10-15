@@ -36,20 +36,16 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
       }),
       { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
     );
-    const proteinTargetMet = totals.protein_g >= targets.protein_g ? 1 : 0;
-    const calorieTargetMet =
-      totals.calories >= targets.calories * 0.9 &&
-      totals.calories <= targets.calories * 1.1 ? 1 : 0;
-    const proteinScore = Math.min(100, (totals.protein_g / targets.protein_g) * 100);
-    const calorieScore = calculateCalorieAdherenceScore(totals.calories, targets.calories);
+    const comparison = calculateTargetComparison({
+      total_calories: totals.calories,
+      total_protein_g: totals.protein_g,
+    }, targets);
     const summary = {
       total_calories: totals.calories,
       total_protein_g: totals.protein_g,
       total_carbs_g: totals.carbs_g,
       total_fat_g: totals.fat_g,
-      protein_target_met: proteinTargetMet,
-      calorie_target_met: calorieTargetMet,
-      adherence_score: proteinScore * 0.6 + calorieScore * 0.4,
+      ...comparison,
       updated_at: new Date().toISOString(),
     };
     const existing = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date));
