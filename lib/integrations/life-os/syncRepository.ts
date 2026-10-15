@@ -151,6 +151,43 @@ export async function getSyncQueueCounts(): Promise<Record<SyncQueueState, numbe
   return counts;
 }
 
+/** Atomically claim eligible work so concurrent sync workers cannot upload it twice. */
+export async function claimQueuedRecords(batchSize = 100): Promise<SyncRecord[]> {
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 500) {
+    throw new Error("Sync batch size must be an integer from 1 to 500.");
+  }
+  const database = requireNativeSqlite();
+  if (typeof database.withExclusiveTransactionAsync !== "function") {
+    throw new Error("This SQLite runtime does not support exclusive sync-queue transactions.");
+  }
+
+  const now = new Date().toISOString();
+  let claimed: Array<{ payload_json: string }> = [];
+  await database.withExclusiveTransactionAsync(async (transaction: any) => {
+    const candidates = await transaction.getAllAsync(
+      `SELECT external_id FROM sync_queue
+       WHERE state IN ('pending', 'failed')
+         AND (next_retry_at IS NULL OR next_retry_at <= ?)
+       ORDER BY updated_at ASC LIMIT ?`,
+      [now, batchSize],
+    );
+    if (candidates.length === 0) return;
+    const ids = candidates.map((row: { external_id: string }) => row.external_id);
+    const placeholders = ids.map(() => "?").join(", ");
+    await transaction.runAsync(
+      `UPDATE sync_queue SET state = 'uploading', updated_at = ?
+       WHERE state IN ('pending', 'failed') AND external_id IN (${placeholders})`,
+      [now, ...ids],
+    );
+    claimed = await transaction.getAllAsync(
+      `SELECT payload_json FROM sync_queue
+       WHERE state = 'uploading' AND external_id IN (${placeholders})`,
+      ids,
+    );
+  });
+  return claimed.map((row) => JSON.parse(row.payload_json) as SyncRecord);
+}
+
 export async function getQueuedRecords(batchSize = 100): Promise<SyncRecord[]> {
   const database = requireNativeSqlite();
   const now = new Date().toISOString();
@@ -195,14 +232,44 @@ export async function setQueueState(externalIds: string[], state: SyncQueueState
   if (externalIds.length === 0) return;
   const database = requireNativeSqlite();
   const now = new Date().toISOString();
-  const retryAt = state === "failed" ? new Date(Date.now() + 60_000).toISOString() : null;
-  const placeholders = externalIds.map(() => "?").join(", ");
-  await database.runAsync(
-    `UPDATE sync_queue SET state = ?, updated_at = ?, last_error = ?,
-       attempt_count = CASE WHEN ? = 'failed' THEN attempt_count + 1 ELSE attempt_count END,
-       next_retry_at = ? WHERE external_id IN (${placeholders})`,
-    [state, now, error ?? null, state, retryAt, ...externalIds]
-  );
+
+  if (state !== "failed") {
+    const placeholders = externalIds.map(() => "?").join(", ");
+    await database.runAsync(
+      `UPDATE sync_queue SET state = ?, updated_at = ?, last_error = ?,
+         next_retry_at = NULL WHERE external_id IN (${placeholders})`,
+      [state, now, error ?? null, ...externalIds],
+    );
+    return;
+  }
+
+  // Back off transient failures exponentially, cap the delay, and add jitter so
+  // multiple devices do not synchronize their retries into a request burst.
+  for (const externalId of externalIds) {
+    const rows = await database.getAllAsync(
+      "SELECT attempt_count FROM sync_queue WHERE external_id = ? LIMIT 1",
+      [externalId],
+    ) as Array<{ attempt_count: number }>;
+    const attempts = Math.max(0, Number(rows[0]?.attempt_count ?? 0));
+    if (attempts >= 8) {
+      await database.runAsync(
+        `UPDATE sync_queue SET state = 'needs_attention', updated_at = ?,
+           last_error = ?, next_retry_at = NULL, attempt_count = attempt_count + 1
+         WHERE external_id = ?`,
+        [now, error ?? "Sync retry limit reached; inspect this record.", externalId],
+      );
+      continue;
+    }
+    const baseDelayMs = Math.min(6 * 60 * 60 * 1000, 60_000 * (2 ** attempts));
+    const jitteredDelayMs = Math.round(baseDelayMs * (0.75 + Math.random() * 0.5));
+    const retryAt = new Date(Date.now() + jitteredDelayMs).toISOString();
+    await database.runAsync(
+      `UPDATE sync_queue SET state = 'failed', updated_at = ?, last_error = ?,
+         attempt_count = attempt_count + 1, next_retry_at = ?
+       WHERE external_id = ?`,
+      [now, error ?? null, retryAt, externalId],
+    );
+  }
 }
 
 export async function recordTombstone(entityType: string, entityId: string, externalId?: string): Promise<void> {
