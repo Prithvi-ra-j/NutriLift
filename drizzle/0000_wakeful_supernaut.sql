@@ -361,3 +361,34 @@ CREATE TABLE `app_telemetry_events` (
 CREATE INDEX `idx_app_telemetry_type_time` ON `app_telemetry_events` (`event_type`,`occurred_at`);
 --> statement-breakpoint
 CREATE INDEX `idx_app_telemetry_severity_time` ON `app_telemetry_events` (`severity`,`occurred_at`);
+--> statement-breakpoint
+CREATE TABLE `favorite_foods` (
+	`id` text PRIMARY KEY NOT NULL,
+	`normalized_name` text NOT NULL,
+	`name` text NOT NULL,
+	`meal` text NOT NULL,
+	`quantity_g` real,
+	`calories` real NOT NULL,
+	`protein_g` real NOT NULL,
+	`carbs_g` real NOT NULL,
+	`fat_g` real NOT NULL,
+	`fiber_g` real,
+	`sugar_g` real,
+	`sodium_mg` real,
+	`source` text NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_favorite_foods_normalized_name` ON `favorite_foods` (`normalized_name`);
+--> statement-breakpoint
+CREATE TABLE `repeatable_meals` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`meal` text NOT NULL,
+	`items_json` text NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `idx_repeatable_meals_name` ON `repeatable_meals` (`name`);
