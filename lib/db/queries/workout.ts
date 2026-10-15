@@ -106,7 +106,23 @@ export async function getExercisesForSession(sessionId: string): Promise<Exercis
     .orderBy(exerciseLogs.order_in_session);
 }
 
+async function assertExerciseWritable(exerciseLogId: string): Promise<void> {
+  const rows = await db.select().from(exerciseLogs).where(eq(exerciseLogs.id, exerciseLogId)).limit(1);
+  if (!rows[0]) throw new Error("Exercise log not found.");
+  await assertSessionWritable(rows[0].session_id);
+}
+
+async function assertSessionWritable(sessionId: string): Promise<void> {
+  const session = await getSessionById(sessionId);
+  if (!session) throw new Error("Workout session not found.");
+  const status = session.status ?? "planned";
+  if (status === "completed" || status === "cancelled") {
+    throw new Error("This workout is " + status + " and can no longer be edited.");
+  }
+}
+
 export async function insertExerciseLog(log: NewExerciseLog): Promise<void> {
+  await assertSessionWritable(log.session_id);
   await db.insert(exerciseLogs).values(log);
 }
 
@@ -114,10 +130,16 @@ export async function updateExerciseLog(
   id: string,
   updates: Partial<NewExerciseLog>
 ): Promise<void> {
+  const rows = await db.select().from(exerciseLogs).where(eq(exerciseLogs.id, id)).limit(1);
+  if (!rows[0]) throw new Error("Exercise log not found.");
+  await assertSessionWritable(rows[0].session_id);
   await db.update(exerciseLogs).set(updates).where(eq(exerciseLogs.id, id));
 }
 
 export async function deleteExerciseLog(id: string): Promise<void> {
+  const rows = await db.select().from(exerciseLogs).where(eq(exerciseLogs.id, id)).limit(1);
+  if (!rows[0]) return;
+  await assertSessionWritable(rows[0].session_id);
   // Delete sets first
   await db.delete(setLogs).where(eq(setLogs.exercise_log_id, id));
   await db.delete(exerciseLogs).where(eq(exerciseLogs.id, id));
@@ -135,6 +157,9 @@ export async function getSetsForExercise(exerciseLogId: string): Promise<SetLog[
 
 export async function insertSetLog(set: NewSetLog): Promise<{ isPR: boolean; duplicate?: boolean }> {
   validateWorkoutSetInput(set);
+  const exerciseRows = await db.select().from(exerciseLogs).where(eq(exerciseLogs.id, set.exercise_log_id)).limit(1);
+  if (!exerciseRows[0]) throw new Error("Exercise log not found.");
+  await assertSessionWritable(exerciseRows[0].session_id);
   const existing = await db.select().from(setLogs).where(eq(setLogs.id, set.id)).limit(1);
   if (existing[0]) return { isPR: Boolean(existing[0].is_pr), duplicate: true };
   // Check for PR before inserting
@@ -148,6 +173,7 @@ export async function insertSetLog(set: NewSetLog): Promise<{ isPR: boolean; dup
 }
 
 export async function deleteSetLog(id: string, exerciseLogId: string): Promise<void> {
+  await assertExerciseWritable(exerciseLogId);
   await db.delete(setLogs).where(eq(setLogs.id, id));
   await updateSessionVolume(exerciseLogId);
 }
@@ -157,6 +183,7 @@ export async function updateSetLog(
   updates: Partial<NewSetLog>,
   exerciseLogId: string
 ): Promise<void> {
+  await assertExerciseWritable(exerciseLogId);
   await db.update(setLogs).set(updates).where(eq(setLogs.id, id));
   await updateSessionVolume(exerciseLogId);
 }
