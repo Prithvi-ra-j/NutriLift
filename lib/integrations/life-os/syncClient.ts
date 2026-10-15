@@ -91,6 +91,7 @@ export async function processSyncQueue(batchSize = 100): Promise<SyncResult> {
   }
 
   if (Platform.OS === "web") {
+    await recordSyncAttemptSafely({ outcome: "permanent_failure", latencyMs: Date.now() - attemptStartedAt, retryCategory: "platform_unsupported", operationCount: 0 });
     return { uploaded: 0, queued: 0, skipped: 0, needsAttention: 0, cursor: null, error: "Sync is available in the Android app. Web does not have the local SQLite database required for sync." };
   }
 
