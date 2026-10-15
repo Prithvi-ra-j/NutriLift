@@ -125,7 +125,7 @@ export function generateCoachRecommendations(
         type: "recovery_check_in",
         title: "Consider a lighter recovery-focused day",
         explanation: `Current self-reported signals: ${signals.join(", ")}. Consider adjusting intensity based on how you feel; this is not a medical assessment.`,
-        priority: 80,
+        priority: 95,
         confidence: "medium",
         evidence: [{
           id: `recovery-signals:${snapshot.localDate}`,
