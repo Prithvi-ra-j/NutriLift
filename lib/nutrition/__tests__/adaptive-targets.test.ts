@@ -55,7 +55,7 @@ describe("estimateAdaptiveTarget", () => {
     input.currentTargetKcal = 0;
     expect(estimateAdaptiveTarget(input).status).toBe("invalid-data");
 
-    const invalidGoal = { ...sampleInput(), goal: "extreme" as "lose" };
+    const invalidGoal = { ...sampleInput(), goal: "extreme" as unknown as "lose" };
     expect(estimateAdaptiveTarget(invalidGoal).status).toBe("invalid-data");
   });
 
