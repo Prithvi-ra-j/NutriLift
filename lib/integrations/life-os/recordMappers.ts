@@ -43,6 +43,7 @@ export function mapWorkoutSession(row: SyncableRow): SyncRecord {
     sourceUpdatedAt(row),
     {
       dayType: row.day_type,
+      status: row.status ?? "planned",
       durationMin: row.duration_min,
       totalVolumeKg: row.total_volume_kg,
       rpe: row.rpe,
