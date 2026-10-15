@@ -203,6 +203,14 @@ export default function CoachScreen() {
           </View>
         )}
 
+        {error && (
+          <View accessibilityRole="alert" style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: 8, padding: 12 }}>
+            <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+              {error}
+            </Text>
+          </View>
+        )}
+
         {/* ── Messages ── */}
         <ScrollView
           ref={scrollRef}
