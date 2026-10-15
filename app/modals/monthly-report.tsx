@@ -22,7 +22,6 @@ import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
-import { toLocalDateKey } from "../../lib/utils/local-date";
 import uuid from "react-native-uuid";
 import type { MonthlyReport } from "../../lib/groq";
 
