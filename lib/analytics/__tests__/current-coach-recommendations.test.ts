@@ -3,7 +3,7 @@ jest.mock("../../db/queries/workout", () => ({ getSessionsForDateRange: jest.fn(
 jest.mock("../../db/queries/recovery", () => ({ getRecoveryLog: jest.fn() }));
 jest.mock("../../db/queries/nutrition-targets", () => ({ getNutritionTargetsForDate: jest.fn() }));
 import { buildUserStateSnapshot } from "../current-coach-recommendations";
-import { evaluateRecoveryReadiness, generateCoachRecommendations } from "../coach-recommendations";
+import { evaluateNutritionAdherence, evaluateRecoveryReadiness, generateCoachRecommendations } from "../coach-recommendations";
 import { DEFAULT_NUTRITION_TARGETS } from "../../nutrition/target-validation";
 
 describe("current coach state snapshot", () => {
@@ -27,6 +27,14 @@ describe("current coach state snapshot", () => {
     expect(generateCoachRecommendations(reviewed).some((item) => item.type === "protein_support")).toBe(true);
   });
 
+  it("distinguishes unlogged, provisional, and reviewed nutrition states", () => {
+    expect(evaluateNutritionAdherence(null).status).toBe("unlogged");
+    const provisional = evaluateNutritionAdherence({ calories: 1800, calorieTarget: 2200, proteinG: 70, proteinTargetG: 130, explicitlyMarkedComplete: false });
+    expect(provisional.status).toBe("provisional");
+    expect(provisional.proteinTargetMet).toBe(false);
+    const reviewed = evaluateNutritionAdherence({ calories: 2200, calorieTarget: 2200, proteinG: 130, proteinTargetG: 130, explicitlyMarkedComplete: true });
+    expect(reviewed).toMatchObject({ status: "reviewed", calorieGapKcal: 0, proteinGapG: 0, calorieTargetMet: true, proteinTargetMet: true });
+  });
   it("does not invent recovery signals when no manual check-in exists", () => {
     expect(evaluateRecoveryReadiness(null)).toEqual({ needsRecoveryFocus: false, signals: [] });
     expect(evaluateRecoveryReadiness({ sleepHours: 7, energy: 4, soreness: 2, stress: 2 })).toEqual({ needsRecoveryFocus: false, signals: [] });
