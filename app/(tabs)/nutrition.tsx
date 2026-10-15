@@ -62,8 +62,11 @@ export default function NutritionScreen() {
         getLast7DaysNutrition(),
         getNutritionTargets(),
       ]);
-      const completeMealGroups: MealGroup[] = MEALS.map((meal) => mealData.find((group) => group.meal === meal) ?? {
-        meal, items: [], totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0,
+      const completeMealGroups: MealGroup[] = MEALS.map((meal) => {
+        const existing = mealData.find((group) => group.meal === meal);
+        return existing
+          ? { ...existing, meal }
+          : { meal, items: [], totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0 };
       });
       setActiveTargets(targets);
       setNutrition(nutritionData);
