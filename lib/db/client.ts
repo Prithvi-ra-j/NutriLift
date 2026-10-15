@@ -336,6 +336,18 @@ export async function runMigrations(): Promise<void> {
       created_at TEXT NOT NULL,
       UNIQUE(entity_type, entity_id)
     );
+
+    CREATE TABLE IF NOT EXISTS recommendation_outcomes (
+      id TEXT PRIMARY KEY,
+      recommendation_id TEXT NOT NULL,
+      local_date TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      rule_version TEXT NOT NULL,
+      evidence_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(local_date, recommendation_id)
+    );
   `);
 
   // ─── Additive column migrations (safe to run on existing DBs) ───────────────
@@ -383,6 +395,7 @@ export async function runMigrations(): Promise<void> {
       last_synced_at TEXT,
       last_success_at TEXT,
       last_error TEXT,
+      owner_user_id TEXT,
       updated_at TEXT NOT NULL
     );
   `);
