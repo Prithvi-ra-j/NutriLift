@@ -1,4 +1,4 @@
-import { recordAIRequestMetrics, recordAppEvent, recordSyncAttempt } from "./telemetry";
+import { pruneOldTelemetryEvents, recordAIRequestMetrics, recordAppEvent, recordSyncAttempt } from "./telemetry";
 
 jest.mock("../db/client", () => ({ db: { insert: jest.fn(), select: jest.fn() } }));
 
@@ -11,6 +11,11 @@ describe("operational telemetry contracts", () => {
   it("rejects negative sync latency and invalid operation counts", async () => {
     await expect(recordSyncAttempt({ outcome: "success", latencyMs: -1 })).rejects.toThrow("latencyMs must be finite and non-negative");
     await expect(recordSyncAttempt({ outcome: "success", latencyMs: 10, operationCount: 1.5 })).rejects.toThrow("operationCount must be an integer");
+  });
+
+  it("bounds local telemetry retention to a safe operational window", async () => {
+    await expect(pruneOldTelemetryEvents(1)).rejects.toThrow("7 to 365 days");
+    await expect(pruneOldTelemetryEvents(400)).rejects.toThrow("7 to 365 days");
   });
 
   it("requires an AI provider and valid non-negative metrics", async () => {
