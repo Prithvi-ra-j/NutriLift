@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import * as schema from "./schema";
-import { assertSupportedSchemaVersion, CURRENT_SCHEMA_VERSION, findMissingRequiredColumns, findMissingRequiredTables, REQUIRED_CORE_COLUMNS } from "./migration-contract";
+import { ADDITIVE_COLUMN_MIGRATIONS, assertSupportedSchemaVersion, CURRENT_SCHEMA_VERSION, findMissingRequiredColumns, findMissingRequiredTables, REQUIRED_CORE_COLUMNS } from "./migration-contract";
 
 // Platform-specific imports and initialization
 let sqlite: any = null;
@@ -318,25 +318,18 @@ export async function runMigrations(): Promise<void> {
   `);
 
   // ─── Additive column migrations (safe to run on existing DBs) ───────────────
-  // SQLite doesn't support IF NOT EXISTS for ALTER TABLE ADD COLUMN, so we
-  // catch the "duplicate column" error and continue.
-  const addColumnIfMissing = async (table: string, column: string, type: string) => {
-    try {
-      await sqlite.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${type};`);
-    } catch {
-      // Column already exists — ignore
+  // Inspect table_info before ALTER instead of swallowing arbitrary SQLite errors.
+  for (const migration of ADDITIVE_COLUMN_MIGRATIONS) {
+    const columns = await sqlite.getAllAsync(`PRAGMA table_info(${migration.table})`);
+    const hasColumn = columns.some(
+      (column: { name: string }) => column.name === migration.column,
+    );
+    if (!hasColumn) {
+      await sqlite.execAsync(
+        `ALTER TABLE ${migration.table} ADD COLUMN ${migration.column} ${migration.type};`,
+      );
     }
-  };
-
-  await addColumnIfMissing("set_logs", "duration_sec", "INTEGER");
-  await addColumnIfMissing("set_logs", "distance_km", "REAL");
-  await addColumnIfMissing("exercise_logs", "exercise_type", "TEXT");
-  await addColumnIfMissing("daily_nutrition", "updated_at", "TEXT");
-  await addColumnIfMissing("workout_sessions", "updated_at", "TEXT");
-  await addColumnIfMissing("personal_records", "updated_at", "TEXT");
-  await addColumnIfMissing("body_stats", "updated_at", "TEXT");
-  await addColumnIfMissing("recovery_logs", "updated_at", "TEXT");
-  await addColumnIfMissing("sync_tombstones", "external_id", "TEXT");
+  }
 
   const migrationTimestamp = new Date().toISOString();
   await sqlite.execAsync(`
