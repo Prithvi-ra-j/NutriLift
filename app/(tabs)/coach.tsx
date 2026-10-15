@@ -237,6 +237,29 @@ export default function CoachScreen() {
           contentContainerStyle={{ padding: 20, paddingTop: messages.length === 0 ? 24 : 0, gap: 20, paddingBottom: 16, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
         >
+          {recommendations.length > 0 && (
+            <View style={{ gap: 10 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_700Bold", letterSpacing: 0.7 }}>BASED ON YOUR LOGGED DATA</Text>
+              {recommendations.map((recommendation) => (
+                <Card key={recommendation.id}>
+                  <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+                    <Feather name="activity" size={16} color={M3.colors.primary} style={{ marginTop: 2 }} />
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>{recommendation.title}</Text>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18 }}>{recommendation.explanation}</Text>
+                      <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10 }}>Confidence: {recommendation.confidence} · Rule {recommendation.ruleVersion}</Text>
+                      {recommendation.evidence.map((item) => (
+                        <Text key={item.id} style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, lineHeight: 16 }}>Evidence: {item.summary}</Text>
+                      ))}
+                      <TouchableOpacity disabled={isGenerating} onPress={() => sendMessage("Help me assess this recommendation: " + recommendation.title + ". " + recommendation.explanation + " Evidence: " + recommendation.evidence.map((item) => item.summary).join("; "))} style={{ alignSelf: "flex-start", paddingVertical: 6, opacity: isGenerating ? 0.5 : 1 }}>
+                        <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>Discuss with Coach →</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Card>
+              ))}
+            </View>
+          )}
           {messages.length === 0 && (
             <View style={{ flex: 1, justifyContent: "center", gap: 28 }}>
               <View style={{ alignItems: "center", gap: 14 }}>
