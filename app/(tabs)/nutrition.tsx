@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useTodayStore } from "../../lib/stores/today.store";
 import {
   getDailyNutrition,
@@ -52,7 +52,16 @@ const MEAL_ICONS: Record<MealType, React.ComponentProps<typeof Feather>["name"]>
 
 export default function NutritionScreen() {
   const todayStr = toLocalDateKey();
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const params = useLocalSearchParams<{ date?: string }>();
+  const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date;
+  const [selectedDate, setSelectedDate] = useState(() => {
+    try { if (requestedDate) fromLocalDateKey(requestedDate); return requestedDate || todayStr; }
+    catch { return todayStr; }
+  });
+  useEffect(() => {
+    if (!requestedDate) return;
+    try { fromLocalDateKey(requestedDate); setSelectedDate(requestedDate); } catch { /* Ignore unsupported deep-link dates. */ }
+  }, [requestedDate]);
   const { nutrition, foodLogs, setNutrition, setFoodLogs } = useTodayStore();
 
   const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(new Set());
