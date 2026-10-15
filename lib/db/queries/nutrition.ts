@@ -184,6 +184,9 @@ export interface NutritionCompleteness {
   isComplete: boolean;
   completedAt: string | null;
   sourceCounts: Record<string, number>;
+  unreviewedEstimateCount: number;
+  lowConfidenceEstimateCount: number;
+  unknownProvenanceCount: number;
 }
 
 /** Return explicit coverage and review state; never infer that missing entries were eaten. */
@@ -201,6 +204,9 @@ export async function getNutritionCompleteness(date: string): Promise<NutritionC
     isComplete: summary?.is_complete === 1,
     completedAt: summary?.completed_at ?? null,
     sourceCounts,
+    unreviewedEstimateCount: logs.filter((log) => log.provenance_type === "ai_estimated" && log.estimate_reviewed !== 1).length,
+    lowConfidenceEstimateCount: logs.filter((log) => log.provenance_type === "ai_estimated" && log.estimate_confidence != null && log.estimate_confidence < 0.6).length,
+    unknownProvenanceCount: logs.filter((log) => !log.provenance_type || log.provenance_type === "legacy_unknown").length,
   };
 }
 
@@ -555,8 +561,12 @@ export async function setNutritionDayComplete(date: string, complete: boolean): 
       return;
     }
     if (complete) {
-      const logs = await tx.select({ id: foodLogs.id }).from(foodLogs).where(eq(foodLogs.date, date)).limit(1);
+      const logs = await tx.select().from(foodLogs).where(eq(foodLogs.date, date)) as FoodLog[];
       if (logs.length === 0) throw new Error("Log at least one food item before marking this day complete.");
+      const unreviewedEstimates = logs.filter((log) => log.provenance_type === "ai_estimated" && log.estimate_reviewed !== 1);
+      if (unreviewedEstimates.length > 0) {
+        throw new Error("Review every AI-estimated food item before marking this day complete.");
+      }
     }
     const now = new Date().toISOString();
     await tx.update(dailyNutrition).set({ is_complete: complete ? 1 : 0, completed_at: complete ? now : null, updated_at: now })
@@ -567,6 +577,30 @@ export async function setNutritionDayComplete(date: string, complete: boolean): 
     await appendDomainEvent(tx, { id: `nutrition-day-review:${date}:${now}`, eventType: "nutrition.day.reviewed", entityType: "daily_nutrition", entityId: date, entityVersion: eventVersion, occurredAt: now, metadata: { date, complete } });
   });
 }
+/** Explicitly acknowledge an AI-estimated food after reviewing its quantity and nutrients. */
+export async function setFoodEstimateReviewed(id: string, reviewed: boolean): Promise<void> {
+  if (!id.trim()) throw new Error("Food log id is required.");
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(foodLogs).where(eq(foodLogs.id, id)).limit(1);
+    const food = rows[0] as FoodLog | undefined;
+    if (!food) throw new Error("Food log not found.");
+    if (food.provenance_type !== "ai_estimated") throw new Error("Only AI-estimated food entries need estimate review.");
+    await tx.update(foodLogs).set({ estimate_reviewed: reviewed ? 1 : 0 }).where(eq(foodLogs.id, id));
+    await recomputeDailyNutritionInTransaction(tx, food.date);
+    const eventVersion = Date.now();
+    const now = new Date().toISOString();
+    await appendDomainEvent(tx, {
+      id: `food-log:${id}:estimate-review:${reviewed ? "confirmed" : "reopened"}:${now}`,
+      eventType: "nutrition.food.updated",
+      entityType: "food_log",
+      entityId: id,
+      entityVersion: eventVersion,
+      occurredAt: now,
+      metadata: { date: food.date, source: food.source, estimateReviewed: reviewed },
+    });
+  });
+}
+
 // ─── Analytics Helpers ────────────────────────────────────────────────────────
 
 export async function getProteinHitRate(days: number = 30): Promise<number> {
