@@ -92,7 +92,7 @@ export default function NutritionCardModal() {
         sodium_mg: null,
         source: source === "barcode" ? "barcode" : "manual",
         raw_input: barcode || null,
-        created_at: Date.now(),
+        created_at: Math.floor(Date.now() / 1000),
       });
 
       logger.info("Food logged", {
