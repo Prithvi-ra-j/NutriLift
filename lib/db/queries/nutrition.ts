@@ -4,7 +4,7 @@ import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutr
 import { getNutritionTargetsForDate } from "./nutrition-targets";
 import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 import { validateFoodLogInput, validateFoodLogsInput } from "../../data/food-log-validation";
-import { calculateCalorieAdherenceScore } from "../../data/nutrition-scores";
+import { calculateTargetComparison } from "../../nutrition/target-validation";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
 
@@ -21,12 +21,11 @@ export async function getFoodLogsByMeal(date: string, meal: string): Promise<Foo
 
 export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
   validateFoodLogsInput(logs);
-  const targets = await getNutritionTargetsForDate(logs[0].date);
-
   // The food rows and their daily aggregate commit or roll back together.
   await db.transaction(async (tx: any) => {
-    await tx.insert(foodLogs).values(logs);
     const date = logs[0].date;
+    const targets = await getNutritionTargetsForDate(date, tx);
+    await tx.insert(foodLogs).values(logs);
     const rows = await tx.select().from(foodLogs).where(eq(foodLogs.date, date));
     const totals = rows.reduce(
       (acc: { calories: number; protein_g: number; carbs_g: number; fat_g: number }, log: FoodLog) => ({
@@ -80,15 +79,16 @@ export async function deleteFoodLog(id: string, date: string): Promise<void> {
 }
 
 export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, date: string): Promise<void> {
-  // A caller may edit a meal's date, but must never be able to change its identity.
+  // Read, validate and mutate under one transaction so a concurrent edit cannot
+  // be overwritten by a stale pre-transaction snapshot.
   const { id: _ignoredId, ...mutableUpdates } = updates;
-  const existingRows = await db.select().from(foodLogs).where(eq(foodLogs.id, id)).limit(1);
-  const existing = existingRows[0] as FoodLog | undefined;
-  if (!existing) throw new Error("Food log not found.");
-  const next = { ...existing, ...mutableUpdates } as FoodLog;
-  validateFoodLogInput(next as NewFoodLog);
-  const affectedDates = Array.from(new Set([existing.date, next.date, date]));
   await db.transaction(async (tx: any) => {
+    const existingRows = await tx.select().from(foodLogs).where(eq(foodLogs.id, id)).limit(1);
+    const existing = existingRows[0] as FoodLog | undefined;
+    if (!existing) throw new Error("Food log not found.");
+    const next = { ...existing, ...mutableUpdates } as FoodLog;
+    validateFoodLogInput(next as NewFoodLog);
+    const affectedDates = Array.from(new Set([existing.date, next.date, date]));
     await tx.update(foodLogs).set(mutableUpdates).where(eq(foodLogs.id, id));
     for (const affectedDate of affectedDates) {
       await recomputeDailyNutritionInTransaction(tx, affectedDate);
@@ -146,17 +146,16 @@ async function recomputeDailyNutritionInTransaction(tx: any, date: string): Prom
     }),
     { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
   );
-  const proteinTargetMet = totals.protein_g >= targets.protein_g ? 1 : 0;
-  const calorieTargetMet = totals.calories >= targets.calories * 0.9 && totals.calories <= targets.calories * 1.1 ? 1 : 0;
-  const proteinScore = targets.protein_g > 0 ? Math.min(100, (totals.protein_g / targets.protein_g) * 100) : 0;
+  const comparison = calculateTargetComparison({
+    total_calories: totals.calories,
+    total_protein_g: totals.protein_g,
+  }, targets);
   const summary = {
     total_calories: totals.calories,
     total_protein_g: totals.protein_g,
     total_carbs_g: totals.carbs_g,
     total_fat_g: totals.fat_g,
-    protein_target_met: proteinTargetMet,
-    calorie_target_met: calorieTargetMet,
-    adherence_score: proteinScore * 0.6 + calculateCalorieAdherenceScore(totals.calories, targets.calories) * 0.4,
+    ...comparison,
     updated_at: new Date().toISOString(),
   };
   const existing = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
@@ -168,66 +167,9 @@ async function recomputeDailyNutritionInTransaction(tx: any, date: string): Prom
 }
 
 export async function recomputeDailyNutrition(date: string): Promise<void> {
-  const logs = await getFoodLogsForDate(date);
-
-  if (logs.length === 0) {
-    await db.delete(dailyNutrition).where(eq(dailyNutrition.date, date));
-    return;
-  }
-
-  const targets = await getNutritionTargetsForDate(date);
-  const totals = logs.reduce(
-    (acc, log) => ({
-      calories: acc.calories + log.calories,
-      protein_g: acc.protein_g + log.protein_g,
-      carbs_g: acc.carbs_g + log.carbs_g,
-      fat_g: acc.fat_g + log.fat_g,
-    }),
-    { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
-  );
-
-  const proteinTargetMet = totals.protein_g >= targets.protein_g ? 1 : 0;
-  const calorieTargetMet =
-    totals.calories >= targets.calories * 0.9 &&
-    totals.calories <= targets.calories * 1.1
-      ? 1
-      : 0;
-
-  // Adherence score: weighted average of protein (60%) + calories (40%)
-  const proteinScore = Math.min(100, (totals.protein_g / targets.protein_g) * 100);
-  const calorieScore = calculateCalorieAdherenceScore(totals.calories, targets.calories);
-  const adherenceScore = proteinScore * 0.6 + calorieScore * 0.4;
-
-  const existing = await getDailyNutrition(date);
-  const updatedAt = new Date().toISOString();
-
-  if (existing) {
-    await db
-      .update(dailyNutrition)
-      .set({
-        total_calories: totals.calories,
-        total_protein_g: totals.protein_g,
-        total_carbs_g: totals.carbs_g,
-        total_fat_g: totals.fat_g,
-        protein_target_met: proteinTargetMet,
-        calorie_target_met: calorieTargetMet,
-        adherence_score: adherenceScore,
-        updated_at: updatedAt,
-      })
-      .where(eq(dailyNutrition.date, date));
-  } else {
-    await db.insert(dailyNutrition).values({
-      date,
-      total_calories: totals.calories,
-      total_protein_g: totals.protein_g,
-      total_carbs_g: totals.carbs_g,
-      total_fat_g: totals.fat_g,
-      protein_target_met: proteinTargetMet,
-      calorie_target_met: calorieTargetMet,
-      adherence_score: adherenceScore,
-      updated_at: updatedAt,
-    });
-  }
+  await db.transaction(async (tx: any) => {
+    await recomputeDailyNutritionInTransaction(tx, date);
+  });
 }
 
 // ─── Analytics Helpers ────────────────────────────────────────────────────────
