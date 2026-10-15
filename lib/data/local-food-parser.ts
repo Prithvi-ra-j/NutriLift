@@ -26,7 +26,7 @@ function findFood(segment: string): { food: IndianFood; alias: string } | null {
   for (const candidate of candidates) {
     if (!candidate.normalizedAlias) continue;
     const escaped = candidate.normalizedAlias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (new RegExp(`(^|\\s)${escaped}(?=$|\\s)`, "i").test(normalized)) {
+    if (new RegExp(`(^|\s)${escaped}(?=$|\s)`, "i").test(normalized)) {
       return { food: candidate.food, alias: candidate.alias };
     }
   }
@@ -35,7 +35,7 @@ function findFood(segment: string): { food: IndianFood; alias: string } | null {
 
 function getQuantityGrams(segment: string, food: IndianFood): { grams: number; label: string } {
   const normalized = normalize(segment);
-  const amountMatch = normalized.match(/^(\\d+(?:\\.\\d+)?)\\s*(kg|g|grams?|ml|cups?|bowls?|servings?|scoops?|tbsp|tablespoons?|tsp|teaspoons?)?\\b/);
+  const amountMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*(kg|g|grams?|ml|cups?|bowls?|servings?|scoops?|tbsp|tablespoons?|tsp|teaspoons?)?\\b/);
   if (!amountMatch) {
     const serving = food.commonServings.find((item) => /medium|1 portion|1 cup|1 bowl/i.test(item.label)) ?? food.commonServings[0] ?? { label: "1 serving (100g)", grams: 100 };
     return { grams: serving.grams, label: serving.label };
