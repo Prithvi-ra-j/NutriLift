@@ -28,6 +28,7 @@ import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/
 import { M3 } from "../../design-system/tokens";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { toLocalDateKey } from "../../lib/utils/local-date";
+import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, saveNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
 
 type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "account" | "settings";
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
@@ -39,6 +40,9 @@ export default function MoreScreen() {
   // Body stats
   const [weightInput, setWeightInput] = useState("");
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
+  const [nutritionTargets, setNutritionTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
+  const [targetInputs, setTargetInputs] = useState({ calories: String(DEFAULT_NUTRITION_TARGETS.calories), protein: String(DEFAULT_NUTRITION_TARGETS.protein_g), carbs: String(DEFAULT_NUTRITION_TARGETS.carbs_g), fat: String(DEFAULT_NUTRITION_TARGETS.fat_g) });
+  const [targetsSaving, setTargetsSaving] = useState(false);
 
   // Supplements
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>([]);
@@ -93,6 +97,12 @@ export default function MoreScreen() {
 
   useEffect(() => {
     loadData();
+    getNutritionTargets().then((targets) => {
+      setNutritionTargets(targets);
+      setTargetInputs({ calories: String(targets.calories), protein: String(targets.protein_g), carbs: String(targets.carbs_g), fat: String(targets.fat_g) });
+    }).catch(() => {
+      Alert.alert("Targets unavailable", "Could not load saved nutrition targets. Default targets remain active.");
+    });
   }, [loadData]);
 
   useEffect(() => {
@@ -670,20 +680,55 @@ export default function MoreScreen() {
 
             <Card>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-                TARGETS
+                NUTRITION TARGETS
               </Text>
-              {[
-                { label: "Calories", value: `${USER_PROFILE.targets.calories} kcal` },
-                { label: "Protein", value: `${USER_PROFILE.targets.protein_g}g` },
-                { label: "Carbs", value: `${USER_PROFILE.targets.carbs_g}g` },
-                { label: "Fat", value: `${USER_PROFILE.targets.fat_g}g` },
-                { label: "BF% Goal (Dec 2026)", value: `${USER_PROFILE.targets.body_fat_pct_dec2026}%` },
-              ].map((item) => (
-                <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: M3.colors.outline }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
-                  <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{item.value}</Text>
+              {([
+                { key: "calories", label: "Calories (kcal)", value: targetInputs.calories },
+                { key: "protein", label: "Protein (g)", value: targetInputs.protein },
+                { key: "carbs", label: "Carbs (g)", value: targetInputs.carbs },
+                { key: "fat", label: "Fat (g)", value: targetInputs.fat },
+              ] as const).map((item) => (
+                <View key={item.key} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 7 }}>
+                  <Text style={{ flex: 1, color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
+                  <Input value={item.value} onChangeText={(value) => setTargetInputs((current) => ({ ...current, [item.key]: value }))} keyboardType="decimal-pad" style={{ width: 100, textAlign: "right" }} />
                 </View>
               ))}
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, marginTop: 8, marginBottom: 6 }}>Goal</Text>
+              <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+                {(["lose", "maintain", "gain"] as const).map((goal) => (
+                  <TouchableOpacity key={goal} accessibilityRole="button" accessibilityState={{ selected: nutritionTargets.goal === goal }} onPress={() => setNutritionTargets((current) => ({ ...current, goal }))} style={{ flex: 1, borderRadius: 10, paddingVertical: 9, alignItems: "center", backgroundColor: nutritionTargets.goal === goal ? M3.colors.primaryContainer : M3.colors.surfaceVariant }}>
+                    <Text style={{ color: nutritionTargets.goal === goal ? M3.colors.onPrimaryContainer : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>{goal}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, lineHeight: 16, marginBottom: 10 }}>
+                Targets are stored locally. Changes apply from today and previous target history is preserved.
+              </Text>
+              <Button
+                label={targetsSaving ? "Saving…" : "Save nutrition targets"}
+                loading={targetsSaving}
+                disabled={targetsSaving}
+                onPress={async () => {
+                  const targets: NutritionTargets = {
+                    calories: Number(targetInputs.calories),
+                    protein_g: Number(targetInputs.protein),
+                    carbs_g: Number(targetInputs.carbs),
+                    fat_g: Number(targetInputs.fat),
+                    goal: nutritionTargets.goal,
+                    mode: "manual",
+                  };
+                  setTargetsSaving(true);
+                  try {
+                    await saveNutritionTargets(targets, { source: "manual", effectiveDate: today });
+                    setNutritionTargets(targets);
+                    Alert.alert("Targets saved", "Your nutrition targets are saved and effective today.");
+                  } catch (error) {
+                    Alert.alert("Invalid targets", error instanceof Error ? error.message : "Check the values and try again.");
+                  } finally {
+                    setTargetsSaving(false);
+                  }
+                }}
+              />
             </Card>
 
             <Card>
