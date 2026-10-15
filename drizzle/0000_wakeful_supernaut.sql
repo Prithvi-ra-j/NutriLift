@@ -348,3 +348,16 @@ CREATE TABLE `derived_state_invalidations` (
 CREATE UNIQUE INDEX `idx_derived_invalidations_event_projection` ON `derived_state_invalidations` (`event_id`,`projection_key`);
 --> statement-breakpoint
 CREATE INDEX `idx_derived_invalidations_pending` ON `derived_state_invalidations` (`processed_at`,`invalidated_at`);
+--> statement-breakpoint
+CREATE TABLE `app_telemetry_events` (
+	`id` text PRIMARY KEY NOT NULL,
+	`event_type` text NOT NULL,
+	`severity` text NOT NULL,
+	`correlation_id` text,
+	`occurred_at` text NOT NULL,
+	`metadata_json` text NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `idx_app_telemetry_type_time` ON `app_telemetry_events` (`event_type`,`occurred_at`);
+--> statement-breakpoint
+CREATE INDEX `idx_app_telemetry_severity_time` ON `app_telemetry_events` (`severity`,`occurred_at`);
