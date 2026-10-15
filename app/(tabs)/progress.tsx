@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { getAllPRs } from "../../lib/db/queries/workout";
 import { getWeightHistory, getAllInBodyRecords } from "../../lib/db/queries/body";
 import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
@@ -28,13 +28,28 @@ import { addCalendarDays, fromLocalDateKey, getMondayWeekRange, toLocalDateKey }
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
 
 export default function ProgressScreen() {
-  const [activeSection, setActiveSection] = useState<ProgressSection>("body");
+  const params = useLocalSearchParams<{ section?: string; date?: string }>();
+  const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date;
+  const requestedSection = Array.isArray(params.section) ? params.section[0] : params.section;
+  const validSections: ProgressSection[] = ["strength", "body", "nutrition", "recovery"];
+  const [activeSection, setActiveSection] = useState<ProgressSection>(() =>
+    validSections.includes(requestedSection as ProgressSection) ? requestedSection as ProgressSection : "body"
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   // Week navigation state
   const todayStr = toLocalDateKey();
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    try { if (requestedDate) fromLocalDateKey(requestedDate); return requestedDate || todayStr; }
+    catch { return todayStr; }
+  });
+  useEffect(() => {
+    if (requestedDate) {
+      try { fromLocalDateKey(requestedDate); setSelectedDate(requestedDate); } catch { /* Ignore unsupported deep-link dates. */ }
+    }
+    if (validSections.includes(requestedSection as ProgressSection)) setActiveSection(requestedSection as ProgressSection);
+  }, [requestedDate, requestedSection]);
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
   const [weightHistory, setWeightHistory] = useState<BodyStat[]>([]);
