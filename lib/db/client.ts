@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import * as schema from "./schema";
-import { findMissingRequiredColumns, findMissingRequiredTables, REQUIRED_CORE_COLUMNS } from "./migration-contract";
+import { assertSupportedSchemaVersion, CURRENT_SCHEMA_VERSION, findMissingRequiredColumns, findMissingRequiredTables, REQUIRED_CORE_COLUMNS } from "./migration-contract";
 
 // Platform-specific imports and initialization
 let sqlite: any = null;
@@ -403,4 +403,4 @@ export async function runMigrations(): Promise<void> {
       "Local database migration incomplete. Missing columns: " + missingColumns.join(", "),
     );
   }
-}
+\n  // Mark the schema current only after every required table and column exists.\n  await sqlite.execAsync(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION};`);\n}
