@@ -4,6 +4,7 @@ import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, ty
 import { USER_PROFILE } from "../../constants/user-profile";
 import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
 import { validateRecoveryInput } from "../../recovery/validation";
+import { appendDomainEvent } from "./domain-events";
 
 // ─── Recovery Queries ─────────────────────────────────────────────────────────
 
@@ -30,23 +31,33 @@ export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
   validateRecoveryInput(log);
   const record = { ...log, updated_at: new Date().toISOString() };
 
-  // Recovery is keyed by date. A single SQLite upsert prevents two rapid saves
-  // from racing between a read and an insert on the same day.
-  await db.insert(recoveryLogs).values(record).onConflictDoUpdate({
-    target: recoveryLogs.date,
-    set: {
-      sleep_duration_hr: log.sleep_duration_hr ?? null,
-      sleep_quality: log.sleep_quality ?? null,
-      bedtime: log.bedtime ?? null,
-      wake_time: log.wake_time ?? null,
-      hrv: log.hrv ?? null,
-      resting_hr: log.resting_hr ?? null,
-      energy_level: log.energy_level ?? null,
-      muscle_soreness: log.muscle_soreness ?? null,
-      stress_level: log.stress_level ?? null,
-      notes: log.notes ?? null,
-      updated_at: record.updated_at,
-    },
+  // Canonical recovery row, event journal and invalidation queue commit together.
+  await db.transaction(async (tx: any) => {
+    await tx.insert(recoveryLogs).values(record).onConflictDoUpdate({
+      target: recoveryLogs.date,
+      set: {
+        sleep_duration_hr: log.sleep_duration_hr ?? null,
+        sleep_quality: log.sleep_quality ?? null,
+        bedtime: log.bedtime ?? null,
+        wake_time: log.wake_time ?? null,
+        hrv: log.hrv ?? null,
+        resting_hr: log.resting_hr ?? null,
+        energy_level: log.energy_level ?? null,
+        muscle_soreness: log.muscle_soreness ?? null,
+        stress_level: log.stress_level ?? null,
+        notes: log.notes ?? null,
+        updated_at: record.updated_at,
+      },
+    });
+    await appendDomainEvent(tx, {
+      id: `recovery-check-in:${log.date}:${record.updated_at}`,
+      eventType: "recovery.check-in.saved",
+      entityType: "recovery_log",
+      entityId: log.date,
+      entityVersion: Date.now(),
+      occurredAt: record.updated_at,
+      metadata: { date: log.date, hasSleepDuration: log.sleep_duration_hr != null },
+    });
   });
 }
 
@@ -115,20 +126,33 @@ export async function upsertSupplementLog(
       (s: SupplementLog) => s.supplement_name === supplementName
     );
 
+    let recordId: string;
     if (existingForSupplement) {
+      recordId = existingForSupplement.id;
       await tx
         .update(supplementLogs)
         .set({ taken: taken ? 1 : 0, logged_at: now })
         .where(eq(supplementLogs.id, existingForSupplement.id));
     } else {
+      recordId = uuid.v4() as string;
       await tx.insert(supplementLogs).values({
-        id: uuid.v4() as string,
+        id: recordId,
         date,
         supplement_name: supplementName,
         taken: taken ? 1 : 0,
         logged_at: now,
       });
     }
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, {
+      id: `supplement-log:${recordId}:${eventVersion}`,
+      eventType: "recovery.supplement.updated",
+      entityType: "supplement_log",
+      entityId: recordId,
+      entityVersion: eventVersion,
+      occurredAt: new Date(eventVersion).toISOString(),
+      metadata: { date, taken: Boolean(taken) },
+    });
   });
 }
 
