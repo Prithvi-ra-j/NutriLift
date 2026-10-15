@@ -3,20 +3,31 @@ import { eq, gte, lte, and, desc } from "drizzle-orm";
 import { db } from "../client";
 import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, type SupplementLog } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
-import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
+import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
 import { validateRecoveryInput } from "../../recovery/validation";
 
 // ─── Recovery Queries ─────────────────────────────────────────────────────────
 
+function assertCalendarDate(date: string): void {
+  try {
+    fromLocalDateKey(date);
+  } catch {
+    throw new Error("Recovery date must be a valid YYYY-MM-DD calendar date.");
+  }
+}
+
 export async function getRecoveryLog(date: string): Promise<RecoveryLog | null> {
+  assertCalendarDate(date);
   const result = await db
     .select()
     .from(recoveryLogs)
-    .where(eq(recoveryLogs.date, date));
+    .where(eq(recoveryLogs.date, date))
+    .limit(1);
   return result[0] ?? null;
 }
 
 export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
+  assertCalendarDate(log.date);
   validateRecoveryInput(log);
   const record = { ...log, updated_at: new Date().toISOString() };
 
@@ -54,6 +65,9 @@ export async function getRecoveryLogsForDateRange(
   startDate: string,
   endDate: string
 ): Promise<RecoveryLog[]> {
+  assertCalendarDate(startDate);
+  assertCalendarDate(endDate);
+  if (startDate > endDate) throw new Error("Recovery range start must not be after its end.");
   return db
     .select()
     .from(recoveryLogs)
@@ -80,34 +94,39 @@ export async function upsertSupplementLog(
   supplementName: string,
   taken: boolean
 ): Promise<void> {
-  const existing = await db
-    .select()
-    .from(supplementLogs)
-    .where(
-      eq(supplementLogs.date, date)
-    );
-
-  const existingForSupplement = existing.find(
-    (s) => s.supplement_name === supplementName
-  );
+  assertCalendarDate(date);
+  if (!supplementName.trim()) throw new Error("Supplement name is required.");
 
   const now = Math.floor(Date.now() / 1000);
+  const { default: uuid } = await import("react-native-uuid");
 
-  if (existingForSupplement) {
-    await db
-      .update(supplementLogs)
-      .set({ taken: taken ? 1 : 0, logged_at: now })
-      .where(eq(supplementLogs.id, existingForSupplement.id));
-  } else {
-    const { default: uuid } = await import("react-native-uuid");
-    await db.insert(supplementLogs).values({
-      id: uuid.v4() as string,
-      date,
-      supplement_name: supplementName,
-      taken: taken ? 1 : 0,
-      logged_at: now,
-    });
-  }
+  // Serialize the read/write pair so rapid repeated taps cannot create duplicate
+  // date/name records in the local database.
+  await db.transaction(async (tx: any) => {
+    const existing = await tx
+      .select()
+      .from(supplementLogs)
+      .where(eq(supplementLogs.date, date));
+
+    const existingForSupplement = existing.find(
+      (s: SupplementLog) => s.supplement_name === supplementName
+    );
+
+    if (existingForSupplement) {
+      await tx
+        .update(supplementLogs)
+        .set({ taken: taken ? 1 : 0, logged_at: now })
+        .where(eq(supplementLogs.id, existingForSupplement.id));
+    } else {
+      await tx.insert(supplementLogs).values({
+        id: uuid.v4() as string,
+        date,
+        supplement_name: supplementName,
+        taken: taken ? 1 : 0,
+        logged_at: now,
+      });
+    }
+  });
 }
 
 export async function getSupplementAdherence30d(): Promise<Record<string, number>> {
