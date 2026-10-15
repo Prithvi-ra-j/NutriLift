@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { domainEvents, derivedStateInvalidations } from "../schema";
 import { redactSensitiveFields } from "../../observability/redaction";
 
@@ -104,7 +104,7 @@ export async function invalidateDerivedState(
 export async function getPendingDerivedStateInvalidations(tx: any, limit = 100): Promise<Array<typeof derivedStateInvalidations.$inferSelect>> {
   if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error("Invalidation limit must be an integer from 1 to 500.");
   return tx.select().from(derivedStateInvalidations)
-    .where(eq(derivedStateInvalidations.processed_at, null))
+    .where(isNull(derivedStateInvalidations.processed_at))
     .orderBy(derivedStateInvalidations.invalidated_at)
     .limit(limit);
 }
@@ -114,5 +114,5 @@ export async function markDerivedStateInvalidationProcessed(tx: any, id: string,
   if (!id.trim() || !Number.isFinite(Date.parse(processedAt))) throw new Error("A valid invalidation id and timestamp are required.");
   await tx.update(derivedStateInvalidations)
     .set({ processed_at: processedAt })
-    .where(and(eq(derivedStateInvalidations.id, id), eq(derivedStateInvalidations.processed_at, null)));
+    .where(and(eq(derivedStateInvalidations.id, id), isNull(derivedStateInvalidations.processed_at)));
 }
