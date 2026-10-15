@@ -27,7 +27,7 @@ function findFood(segment: string): { food: IndianFood; alias: string } | null {
     if (!candidate.normalizedAlias) continue;
     // Aliases have already been normalized to letters, digits, and spaces, so
     // no regex escaping is needed. This keeps aliases with punctuation safe.
-    if (new RegExp(`(^|\\s)${candidate.normalizedAlias}(?=$|\\s)`, "i").test(normalized)) {
+    if ((` ${normalized} `).includes(` ${candidate.normalizedAlias} `)) {
       return { food: candidate.food, alias: candidate.alias };
     }
   }
