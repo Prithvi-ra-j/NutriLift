@@ -1,11 +1,11 @@
 import {
-  findMissingRequiredColumns,
+  assertSupportedSchemaVersion,\n  CURRENT_SCHEMA_VERSION,\n  findMissingRequiredColumns,
   findMissingRequiredTables,
   REQUIRED_CORE_COLUMNS,
   REQUIRED_CORE_TABLES,
 } from "../migration-contract";
 
-describe("local database migration contract", () => {
+describe("local database migration contract", () => {\n  it("supports legacy and current schema versions but rejects future versions", () => {\n    expect(CURRENT_SCHEMA_VERSION).toBe(2);\n    expect(() => assertSupportedSchemaVersion(0)).not.toThrow();\n    expect(() => assertSupportedSchemaVersion(1)).not.toThrow();\n    expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();\n    expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION + 1)).toThrow(/newer than this app supports/);\n    expect(() => assertSupportedSchemaVersion(-1)).toThrow(/Invalid local database schema version/);\n  });
   it("accepts a database containing every required core table", () => {
     expect(findMissingRequiredTables(new Set(REQUIRED_CORE_TABLES))).toEqual([]);
   });

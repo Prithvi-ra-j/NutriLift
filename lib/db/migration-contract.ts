@@ -1,3 +1,18 @@
+/** Increment when a forward-compatible local SQLite schema migration is introduced. */
+export const CURRENT_SCHEMA_VERSION = 2;
+
+/** Reject a database written by a newer app version. */
+export function assertSupportedSchemaVersion(databaseVersion: number): void {
+  if (!Number.isInteger(databaseVersion) || databaseVersion < 0) {
+    throw new Error(`Invalid local database schema version: ${databaseVersion}`);
+  }
+  if (databaseVersion > CURRENT_SCHEMA_VERSION) {
+    throw new Error(
+      `Local database schema version ${databaseVersion} is newer than this app supports (${CURRENT_SCHEMA_VERSION}). Update NutriLift before continuing.`,
+    );
+  }
+}
+
 /** Tables required for core local-first nutrition and workout flows. */
 export const REQUIRED_CORE_TABLES = [
   "food_logs",
