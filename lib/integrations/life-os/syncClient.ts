@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import { getCurrentUser } from "../../supabase/auth";
 import { isSupabaseConfigured, supabase } from "../../supabase/client";
 import { type SyncRecord, validateSyncRecord } from "./exportSchema";
+import { parseNutriLiftExternalId, resolveSourceEntity } from "./sourceResolver";
 import { recordSyncAttempt } from "../../observability/telemetry";
 
 async function recordSyncAttemptSafely(input: Parameters<typeof recordSyncAttempt>[0]): Promise<void> {
@@ -102,7 +103,13 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   await repository.recoverInterruptedSyncOperations();
   const cursor = await repository.getSyncCursor();
   const changedRecords = await repository.getChangedRecords(cursor);
-  const classified = changedRecords.map((record) => ({
+  const sourceCheckedRecords = await Promise.all(changedRecords.map(async (record) => {
+    if (record.deleted || !parseNutriLiftExternalId(record.externalId)) return record;
+    const source = await resolveSourceEntity(record.externalId);
+    if (!source?.exists || !source.current) return { ...record, payload: {}, deleted: true };
+    return record;
+  }));
+  const classified = sourceCheckedRecords.map((record) => ({
     record,
     validation: validateSyncRecord({ ...record, userId: user.id }),
   }));
