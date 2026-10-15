@@ -4,6 +4,7 @@ import {
   differenceInCalendarDays,
   fromLocalDateKey,
   getMondayWeekRange,
+  getSundayWeekRange,
   isSameLocalCalendarDay,
   toLocalDateKey,
 } from "../local-date";
@@ -90,6 +91,17 @@ describe("local calendar date utilities", () => {
       if (previousTz === undefined) delete process.env.TZ;
       else process.env.TZ = previousTz;
     }
+  });
+
+  it("uses a Sunday-to-Saturday range for weekly summary records", () => {
+    expect(getSundayWeekRange("2026-10-18")).toEqual({
+      start: "2026-10-18",
+      end: "2026-10-24",
+    });
+    expect(getSundayWeekRange("2026-10-19")).toEqual({
+      start: "2026-10-18",
+      end: "2026-10-24",
+    });
   });
 
 });
