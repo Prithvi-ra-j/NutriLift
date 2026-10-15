@@ -154,7 +154,10 @@ export async function getNutritionTargetsForDate(date: string): Promise<Nutritio
       };
     }
   } catch {
-    // If local persistence is unavailable (e.g. web), current defaults still work.
+    // If local persistence is unavailable (e.g. web), use the static baseline.
+    return DEFAULT_NUTRITION_TARGETS;
   }
-  return getNutritionTargets();
+  // No historical record means the original app defaults were in effect. Do not
+  // retroactively apply a target saved today to older food-log dates.
+  return DEFAULT_NUTRITION_TARGETS;
 }
