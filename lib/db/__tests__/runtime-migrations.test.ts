@@ -132,6 +132,15 @@ describe("runtime SQLite migrations", () => {
         INSERT INTO daily_nutrition
           (date, total_calories, total_protein_g, total_carbs_g, total_fat_g)
         VALUES ('2026-10-15', 150, 5, 27, 3);
+        CREATE TABLE workout_sessions (
+          id TEXT PRIMARY KEY, date TEXT NOT NULL, day_type TEXT NOT NULL,
+          started_at INTEGER, ended_at INTEGER, duration_min INTEGER,
+          total_volume_kg REAL, notes TEXT, rpe INTEGER
+        );
+        INSERT INTO workout_sessions (id, date, day_type, started_at, ended_at)
+        VALUES ('legacy-active', '2026-10-14', 'Push A', 1000, NULL);
+        INSERT INTO workout_sessions (id, date, day_type, started_at, ended_at)
+        VALUES ('legacy-finished', '2026-10-13', 'Pull A', 900, 1800);
         PRAGMA user_version = 1;
       `);
 
@@ -148,7 +157,10 @@ describe("runtime SQLite migrations", () => {
       expect(
         database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'custom_exercises'").get(),
       ).toBeDefined();
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(3);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(4);
+
+      expect(database.prepare("SELECT status FROM workout_sessions WHERE id = ?").get("legacy-active").status).toBe("in_progress");
+      expect(database.prepare("SELECT status FROM workout_sessions WHERE id = ?").get("legacy-finished").status).toBe("completed");
 
       // A second run must be safe and must not duplicate or remove saved data.
       await runMigrations();
