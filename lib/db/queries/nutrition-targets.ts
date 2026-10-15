@@ -93,6 +93,7 @@ export async function saveNutritionTargets(
       carbs_target_g: targets.carbs_g,
       fat_target_g: targets.fat_g,
       source,
+      goal: targets.goal,
       maintenance_estimate_kcal: options.maintenanceEstimateKcal ?? null,
       algorithm_version: options.algorithmVersion ?? null,
       explanation: options.explanation ?? null,
@@ -116,7 +117,7 @@ export async function getNutritionTargetsForDate(date: string): Promise<Nutritio
         protein_g: row.protein_target_g,
         carbs_g: row.carbs_target_g,
         fat_g: row.fat_target_g,
-        goal: active.goal,
+        goal: row.goal === "lose" || row.goal === "maintain" || row.goal === "gain" ? row.goal : active.goal,
         mode: row.source === "adaptive" ? "adaptive" : "manual",
       };
     }
