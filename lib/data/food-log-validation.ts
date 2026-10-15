@@ -2,7 +2,7 @@ import type { NewFoodLog } from "../db/schema";
 import { fromLocalDateKey } from "../utils/local-date";
 
 const VALID_MEALS = new Set(["breakfast", "lunch", "snack", "dinner"]);
-const VALID_SOURCES = new Set(["manual", "voice", "paste", "barcode", "ai", "local"]);
+const VALID_SOURCES = new Set(["manual", "voice", "paste", "barcode", "ai", "local", "repeat"]);
 
 export function validateFoodLogInput(log: NewFoodLog): void {
   if (!log.id?.trim()) throw new Error("Food log ID is required.");
