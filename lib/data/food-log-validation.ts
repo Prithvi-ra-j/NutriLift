@@ -1,11 +1,12 @@
 import type { NewFoodLog } from "../db/schema";
+import { fromLocalDateKey } from "../utils/local-date";
 
 const VALID_MEALS = new Set(["breakfast", "lunch", "snack", "dinner"]);
 const VALID_SOURCES = new Set(["manual", "voice", "paste", "barcode", "ai", "local"]);
 
 export function validateFoodLogInput(log: NewFoodLog): void {
   if (!log.id?.trim()) throw new Error("Food log ID is required.");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(log.date)) throw new Error("Food log date must be YYYY-MM-DD.");
+  try { fromLocalDateKey(log.date); } catch { throw new Error("Food log date must be a valid YYYY-MM-DD calendar date."); }
   if (!VALID_MEALS.has(log.meal)) throw new Error("Choose a valid meal.");
   if (!log.name?.trim()) throw new Error("Food name is required.");
   if (!VALID_SOURCES.has(log.source)) throw new Error("Food source is invalid.");
