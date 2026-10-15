@@ -17,6 +17,7 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import type { FoodResult } from "../../lib/services/barcodeScanner";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 
 export default function NutritionCardModal() {
   const params = useLocalSearchParams();
@@ -78,7 +79,7 @@ export default function NutritionCardModal() {
 
       await insertFoodLog({
         id: uuid.v4() as string,
-        date: new Date().toISOString().split("T")[0],
+        date: toLocalDateKey(),
         meal,
         name: name.trim(),
         quantity_g: qty,
