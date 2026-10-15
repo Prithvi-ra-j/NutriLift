@@ -22,6 +22,7 @@ import { MacroRing } from "../../components/ui/MacroRing";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -52,7 +53,7 @@ interface AdherenceDot {
 }
 
 export default function DashboardScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
   const { nutrition, session, setNutrition, setSession, setFoodLogs } = useTodayStore();
   const { coachInsight } = useUIStore();
 
