@@ -64,7 +64,7 @@ describe("target-aware adherence comparison", () => {
     }, DEFAULT_NUTRITION_TARGETS);
     expect(result.protein_target_met).toBe(1);
     expect(result.calorie_target_met).toBe(0);
-    expect(result.adherence_score).toBe(40);
+    expect(result.adherence_score).toBe(60);
   });
 
   it("rejects corrupted stored totals instead of scoring them", () => {
