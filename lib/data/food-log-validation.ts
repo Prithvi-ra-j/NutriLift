@@ -3,6 +3,7 @@ import { fromLocalDateKey } from "../utils/local-date";
 
 const VALID_MEALS = new Set(["breakfast", "lunch", "snack", "dinner"]);
 const VALID_SOURCES = new Set(["manual", "voice", "paste", "barcode", "ai", "local", "repeat"]);
+const VALID_PROVENANCE_TYPES = new Set(["user_entered", "verified_reference", "ai_estimated", "imported", "manual_override", "legacy_unknown"]);
 
 export function validateFoodLogInput(log: NewFoodLog): void {
   if (!log.id?.trim()) throw new Error("Food log ID is required.");
@@ -10,6 +11,22 @@ export function validateFoodLogInput(log: NewFoodLog): void {
   if (!VALID_MEALS.has(log.meal)) throw new Error("Choose a valid meal.");
   if (!log.name?.trim()) throw new Error("Food name is required.");
   if (!VALID_SOURCES.has(log.source)) throw new Error("Food source is invalid.");
+  if (log.provenance_type != null && !VALID_PROVENANCE_TYPES.has(log.provenance_type)) throw new Error("Food provenance type is invalid.");
+  if (log.estimate_confidence != null && (!Number.isFinite(log.estimate_confidence) || log.estimate_confidence < 0 || log.estimate_confidence > 1)) {
+    throw new Error("Food estimate confidence must be between 0 and 1.");
+  }
+  if (log.estimate_reviewed != null && log.estimate_reviewed !== 0 && log.estimate_reviewed !== 1) {
+    throw new Error("Food estimate review state is invalid.");
+  }
+  if (log.provenance_json != null) {
+    if (log.provenance_json.length > 10000) throw new Error("Food provenance metadata is too large.");
+    try {
+      const parsed: unknown = JSON.parse(log.provenance_json);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Metadata must be an object.");
+    } catch {
+      throw new Error("Food provenance metadata must be valid JSON object data.");
+    }
+  }
 
   for (const [field, value] of Object.entries({
     calories: log.calories,
