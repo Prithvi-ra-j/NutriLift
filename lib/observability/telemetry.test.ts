@@ -1,4 +1,4 @@
-import { pruneOldTelemetryEvents, recordAIRequestMetrics, recordAppEvent, recordSyncAttempt } from "./telemetry";
+import { pruneOldTelemetryEvents, recordAIRequestMetrics, recordAppEvent, recordSyncAttempt, sanitizeCorrelationId } from "./telemetry";
 
 jest.mock("../db/client", () => ({ db: { insert: jest.fn(), select: jest.fn() } }));
 
@@ -11,6 +11,13 @@ describe("operational telemetry contracts", () => {
   it("rejects negative sync latency and invalid operation counts", async () => {
     await expect(recordSyncAttempt({ outcome: "success", latencyMs: -1 })).rejects.toThrow("latencyMs must be finite and non-negative");
     await expect(recordSyncAttempt({ outcome: "success", latencyMs: 10, operationCount: 1.5 })).rejects.toThrow("operationCount must be an integer");
+  });
+
+  it("drops correlation values that resemble personal data or credentials", () => {
+    expect(sanitizeCorrelationId("user@example.com")).toBeNull();
+    expect(sanitizeCorrelationId("+1 (555) 123-4567")).toBeNull();
+    expect(sanitizeCorrelationId("Bearer secret.token.value")).toBeNull();
+    expect(sanitizeCorrelationId("7e5f0f6a-4a28-4e3f-9a30-0b8c7c2a1111")).toBe("7e5f0f6a-4a28-4e3f-9a30-0b8c7c2a1111");
   });
 
   it("bounds local telemetry retention to a safe operational window", async () => {
