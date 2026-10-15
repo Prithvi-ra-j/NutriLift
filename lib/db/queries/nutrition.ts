@@ -1,6 +1,6 @@
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { db } from "../client";
-import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
+import { foodLogs, dailyNutrition, favoriteFoods, repeatableMeals, type FoodLog, type NewFoodLog, type DailyNutrition, type FavoriteFood } from "../schema";
 import { getNutritionTargetsForDate } from "./nutrition-targets";
 import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
 import { validateFoodLogInput, validateFoodLogsInput } from "../../data/food-log-validation";
@@ -221,6 +221,185 @@ export async function getRecentFoods(query = "", limit = 12): Promise<RecentFood
   }
   return result;
 }
+export async function getFavoriteFoods(query = "", limit = 50): Promise<FavoriteFood[]> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Favorite food limit must be an integer from 1 to 100.");
+  const rows = await db.select().from(favoriteFoods).orderBy(desc(favoriteFoods.updated_at)).limit(500) as FavoriteFood[];
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  return rows.filter((row) => !normalizedQuery || row.name.toLocaleLowerCase().includes(normalizedQuery)).slice(0, limit);
+}
+
+export async function addFavoriteFoodFromLog(foodLogId: string): Promise<void> {
+  if (!foodLogId.trim()) throw new Error("Food log id is required.");
+  const { default: uuid } = await import("react-native-uuid");
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(foodLogs).where(eq(foodLogs.id, foodLogId)).limit(1);
+    const food = rows[0] as FoodLog | undefined;
+    if (!food) throw new Error("Food log not found.");
+    const normalizedName = food.name.trim().toLocaleLowerCase();
+    if (!normalizedName) throw new Error("A food needs a name before it can be saved as a favourite.");
+    const existingRows = await tx.select().from(favoriteFoods).where(eq(favoriteFoods.normalized_name, normalizedName)).limit(1);
+    const existing = existingRows[0] as FavoriteFood | undefined;
+    const now = new Date().toISOString();
+    const id = existing?.id ?? (uuid.v4() as string);
+    const favorite = {
+      id, normalized_name: normalizedName, name: food.name.trim(), meal: food.meal,
+      quantity_g: food.quantity_g ?? null, calories: food.calories, protein_g: food.protein_g,
+      carbs_g: food.carbs_g, fat_g: food.fat_g, fiber_g: food.fiber_g ?? null,
+      sugar_g: food.sugar_g ?? null, sodium_mg: food.sodium_mg ?? null,
+      source: food.source, created_at: existing?.created_at ?? now, updated_at: now,
+    };
+    await tx.insert(favoriteFoods).values(favorite).onConflictDoUpdate({
+      target: favoriteFoods.normalized_name,
+      set: { ...favorite, id: existing?.id ?? id, created_at: existing?.created_at ?? now },
+    });
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, {
+      id: `favorite-food:${id}:changed:${now}`, eventType: "nutrition.favorite.changed",
+      entityType: "favorite_food", entityId: id, entityVersion: eventVersion, occurredAt: now,
+      metadata: { action: "saved" },
+    });
+  });
+}
+
+export async function removeFavoriteFood(favoriteId: string): Promise<void> {
+  if (!favoriteId.trim()) throw new Error("Favorite food id is required.");
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(favoriteFoods).where(eq(favoriteFoods.id, favoriteId)).limit(1);
+    if (!rows[0]) return;
+    await tx.delete(favoriteFoods).where(eq(favoriteFoods.id, favoriteId));
+    const now = new Date().toISOString();
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, {
+      id: `favorite-food:${favoriteId}:removed:${now}`, eventType: "nutrition.favorite.changed",
+      entityType: "favorite_food", entityId: favoriteId, entityVersion: eventVersion, occurredAt: now,
+      metadata: { action: "removed" },
+    });
+  });
+}
+
+export interface RepeatableMealItem {
+  name: string;
+  quantity_g: number | null;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g?: number | null;
+  sugar_g?: number | null;
+  sodium_mg?: number | null;
+  source?: string;
+}
+
+export interface RepeatableMealWithItems {
+  id: string;
+  name: string;
+  meal: string;
+  items: RepeatableMealItem[];
+  created_at: string;
+  updated_at: string;
+}
+
+function validateRepeatableMealItems(items: RepeatableMealItem[]): void {
+  if (!Array.isArray(items) || items.length < 1 || items.length > 50) throw new Error("A repeatable meal must contain between 1 and 50 items.");
+  for (const item of items) {
+    if (!item.name?.trim()) throw new Error("Every repeatable meal item needs a name.");
+    for (const [label, value] of Object.entries({
+      quantity_g: item.quantity_g, calories: item.calories, protein_g: item.protein_g,
+      carbs_g: item.carbs_g, fat_g: item.fat_g, fiber_g: item.fiber_g ?? null,
+      sugar_g: item.sugar_g ?? null, sodium_mg: item.sodium_mg ?? null,
+    })) {
+      if (value != null && (!Number.isFinite(value) || value < 0)) throw new Error(`Repeatable meal ${label} must be finite and non-negative.`);
+    }
+  }
+}
+
+export async function saveRepeatableMeal(input: {
+  id?: string;
+  name: string;
+  meal: string;
+  items: RepeatableMealItem[];
+}): Promise<string> {
+  const name = input.name.trim();
+  const meal = input.meal.trim().toLocaleLowerCase();
+  if (!name || name.length > 100) throw new Error("Repeatable meal name must contain 1 to 100 characters.");
+  if (!["breakfast", "lunch", "snack", "dinner"].includes(meal)) throw new Error("Repeatable meal type is invalid.");
+  validateRepeatableMealItems(input.items);
+  const { default: uuid } = await import("react-native-uuid");
+  const id = input.id?.trim() || (uuid.v4() as string);
+  const now = new Date().toISOString();
+  const { id: _id, ...values } = { id, name, meal, items_json: JSON.stringify(input.items), created_at: now, updated_at: now };
+  await db.insert(repeatableMeals).values({ id, ...values }).onConflictDoUpdate({
+    target: repeatableMeals.id,
+    set: { name, meal, items_json: JSON.stringify(input.items), updated_at: now },
+  });
+  return id;
+}
+
+export async function getRepeatableMeal(id: string): Promise<RepeatableMealWithItems | null> {
+  if (!id.trim()) throw new Error("Repeatable meal id is required.");
+  const rows = await db.select().from(repeatableMeals).where(eq(repeatableMeals.id, id)).limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  let items: RepeatableMealItem[];
+  try {
+    const parsed: unknown = JSON.parse(row.items_json);
+    if (!Array.isArray(parsed)) throw new Error("Items must be an array.");
+    items = parsed as RepeatableMealItem[];
+    validateRepeatableMealItems(items);
+  } catch {
+    throw new Error("Saved repeatable meal is invalid. Edit or remove this template before using it.");
+  }
+  return { id: row.id, name: row.name, meal: row.meal, items, created_at: row.created_at, updated_at: row.updated_at };
+}
+
+export async function getRepeatableMeals(query = "", limit = 20): Promise<Array<Omit<RepeatableMealWithItems, "items"> & { itemCount: number }>> {
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new Error("Repeatable meal limit must be an integer from 1 to 100.");
+  const rows = await db.select().from(repeatableMeals).orderBy(desc(repeatableMeals.updated_at)).limit(500);
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  return rows.filter((row: any) => !normalizedQuery || row.name.toLocaleLowerCase().includes(normalizedQuery))
+    .slice(0, limit).map((row: any) => {
+      const meal = JSON.parse(row.items_json);
+      return { id: row.id, name: row.name, meal: row.meal, created_at: row.created_at, updated_at: row.updated_at, itemCount: Array.isArray(meal) ? meal.length : 0 };
+    });
+}
+
+export async function saveRepeatableMealFromLogs(name: string, meal: string, foodLogIds: string[]): Promise<string> {
+  if (!Array.isArray(foodLogIds) || foodLogIds.length < 1 || foodLogIds.length > 50) throw new Error("Select between 1 and 50 food log items.");
+  const logs = await Promise.all(foodLogIds.map(async (id) => {
+    const rows = await db.select().from(foodLogs).where(eq(foodLogs.id, id)).limit(1);
+    if (!rows[0]) throw new Error("One of the selected food logs no longer exists.");
+    return rows[0] as FoodLog;
+  }));
+  const items = logs.map((row) => ({
+    name: row.name, quantity_g: row.quantity_g ?? null, calories: row.calories,
+    protein_g: row.protein_g, carbs_g: row.carbs_g, fat_g: row.fat_g,
+    fiber_g: row.fiber_g ?? null, sugar_g: row.sugar_g ?? null, sodium_mg: row.sodium_mg ?? null,
+    source: row.source,
+  }));
+  return saveRepeatableMeal({ name, meal, items });
+}
+
+export async function repeatMeal(id: string, date: string): Promise<void> {
+  try { fromLocalDateKey(date); } catch { throw new Error("Repeat meal date must be a real YYYY-MM-DD calendar date."); }
+  const template = await getRepeatableMeal(id);
+  if (!template) throw new Error("Repeatable meal not found.");
+  const { default: uuid } = await import("react-native-uuid");
+  const createdAt = Math.floor(Date.now() / 1000);
+  const logs: NewFoodLog[] = template.items.map((item) => ({
+    id: uuid.v4() as string, date, meal: template.meal, name: item.name,
+    quantity_g: item.quantity_g, calories: item.calories, protein_g: item.protein_g,
+    carbs_g: item.carbs_g, fat_g: item.fat_g, fiber_g: item.fiber_g ?? null,
+    sugar_g: item.sugar_g ?? null, sodium_mg: item.sodium_mg ?? null,
+    source: "repeat", raw_input: `Repeated meal template: ${template.name}`, created_at: createdAt,
+  }));
+  await insertFoodLogs(logs);
+}
+
+export async function deleteRepeatableMeal(id: string): Promise<void> {
+  if (!id.trim()) throw new Error("Repeatable meal id is required.");
+  await db.delete(repeatableMeals).where(eq(repeatableMeals.id, id));
+}
+
 export async function getDailyNutritionRange(
   startDate: string,
   endDate: string
