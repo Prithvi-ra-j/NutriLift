@@ -3,6 +3,7 @@ import { db } from "../client";
 import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
 import { enqueueBodyStat, enqueueTombstone } from "./sync-outbox";
 import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
+import { appendDomainEvent } from "./domain-events";
 
 export async function insertBodyStat(stat: NewBodyStat): Promise<void> {
   await db.transaction(async (tx: any) => {
@@ -10,6 +11,8 @@ export async function insertBodyStat(stat: NewBodyStat): Promise<void> {
     await tx.insert(bodyStats).values(record);
     const rows = await tx.select().from(bodyStats).where(eq(bodyStats.id, stat.id)).limit(1);
     if (rows[0]) await enqueueBodyStat(tx, rows[0]);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `body-stat:${stat.id}:saved`, eventType: "body.measurement.saved", entityType: "body_stat", entityId: stat.id, entityVersion: eventVersion, occurredAt: record.updated_at, metadata: { date: stat.date, measurementType: stat.type } });
   });
 }
 
@@ -85,6 +88,8 @@ export async function deleteBodyStat(id: string): Promise<void> {
     const now = new Date().toISOString();
     await enqueueTombstone(tx, "body_stat", id, now, `nutrilift:body_stat:${id}`);
     await tx.delete(bodyStats).where(eq(bodyStats.id, id));
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `body-stat:${id}:deleted:${eventVersion}`, eventType: "body.measurement.deleted", entityType: "body_stat", entityId: id, entityVersion: eventVersion, occurredAt: now, metadata: { date: rows[0].date, measurementType: rows[0].type } });
   });
 }
 
