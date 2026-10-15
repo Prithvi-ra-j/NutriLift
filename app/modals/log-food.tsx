@@ -54,26 +54,15 @@ export default function LogFoodModal() {
         setSelectedMeal(result.meal_suggestion);
       }
     } catch (err) {
-      // Fallback: show raw input as editable
+      // Never create a saveable zero-calorie placeholder for an unparsed meal.
+      setParsedItems(null);
+      const message = err instanceof Error ? err.message : "Unknown parsing error";
+      setParseNotes("Could not estimate this meal. Your text is preserved; retry when the AI service is available or simplify the food description. " + message);
       Alert.alert(
         "Parse Failed",
-        "Could not parse food automatically. You can add items manually.",
+        "No nutrition values were estimated, so nothing can be saved yet. Your input is preserved for retry.",
         [{ text: "OK" }]
       );
-      // Create a basic item from the input
-      setParsedItems([
-        {
-          name: input,
-          quantity: "1 serving",
-          quantity_g: null,
-          calories: 0,
-          protein_g: 0,
-          carbs_g: 0,
-          fat_g: 0,
-          fiber_g: null,
-          confidence: "low",
-        },
-      ]);
     } finally {
       setIsParsing(false);
     }
@@ -228,7 +217,7 @@ export default function LogFoodModal() {
           </View>
 
           <Button
-            label={isParsing ? "Parsing..." : "Parse with AI"}
+            label={isParsing ? "Parsing..." : "Parse Meal"}
             icon="cpu"
             loading={isParsing}
             disabled={!input.trim()}
