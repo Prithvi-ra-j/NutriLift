@@ -29,6 +29,7 @@ import { M3 } from "../../design-system/tokens";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { toLocalDateKey } from "../../lib/utils/local-date";
 import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, saveNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
+import { getAdaptiveTargetSuggestion } from "../../lib/nutrition/adaptive-target-service";
 
 type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "account" | "settings";
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
@@ -43,6 +44,7 @@ export default function MoreScreen() {
   const [nutritionTargets, setNutritionTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
   const [targetInputs, setTargetInputs] = useState({ calories: String(DEFAULT_NUTRITION_TARGETS.calories), protein: String(DEFAULT_NUTRITION_TARGETS.protein_g), carbs: String(DEFAULT_NUTRITION_TARGETS.carbs_g), fat: String(DEFAULT_NUTRITION_TARGETS.fat_g) });
   const [targetsSaving, setTargetsSaving] = useState(false);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
 
   // Supplements
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>([]);
@@ -125,6 +127,51 @@ export default function MoreScreen() {
     });
   }, []);
 
+  const applyAdaptiveTargetSuggestion = async (originalTargets: NutritionTargets, suggestedCalories: number) => {
+    try {
+      const currentTargets = await getNutritionTargets();
+      if (JSON.stringify(currentTargets) !== JSON.stringify(originalTargets)) {
+        Alert.alert("Targets changed", "Saved targets changed after this suggestion was calculated. Review a fresh suggestion before applying it.");
+        return;
+      }
+      const fresh = await getAdaptiveTargetSuggestion();
+      if (fresh.status !== "ready" || fresh.suggestedTargetKcal === null || fresh.maintenanceKcal === null || fresh.suggestedTargetKcal !== suggestedCalories) {
+        Alert.alert("Suggestion changed", fresh.reason);
+        return;
+      }
+      const nextTargets: NutritionTargets = { ...currentTargets, calories: fresh.suggestedTargetKcal, mode: "adaptive" };
+      await saveNutritionTargets(nextTargets, { source: "adaptive", effectiveDate: today, maintenanceEstimateKcal: fresh.maintenanceKcal, algorithmVersion: fresh.algorithmVersion, explanation: fresh.reason });
+      setNutritionTargets(nextTargets);
+      setTargetInputs((current) => ({ ...current, calories: String(nextTargets.calories) }));
+      Alert.alert("Target updated", `Your calorie target is now ${nextTargets.calories} kcal. Other macro targets were left unchanged.`);
+    } catch (error) {
+      Alert.alert("Could not apply suggestion", error instanceof Error ? error.message : "The target was not changed.");
+    }
+  };
+
+  const handleReviewAdaptiveTarget = async () => {
+    setSuggestionLoading(true);
+    try {
+      const currentTargets = await getNutritionTargets();
+      const suggestion = await getAdaptiveTargetSuggestion();
+      if (suggestion.status !== "ready" || suggestion.suggestedTargetKcal === null || suggestion.maintenanceKcal === null) {
+        Alert.alert("More data needed", suggestion.reason);
+        return;
+      }
+      if (suggestion.suggestedTargetKcal === currentTargets.calories) {
+        Alert.alert("No change recommended", suggestion.reason);
+        return;
+      }
+      Alert.alert("Review adaptive target", `Current target: ${currentTargets.calories} kcal\nSuggested target: ${suggestion.suggestedTargetKcal} kcal\nEstimated maintenance: ${suggestion.maintenanceKcal} kcal\n\n${suggestion.reason}`, [
+        { text: "Keep current", style: "cancel" },
+        { text: "Apply suggestion", onPress: () => { void applyAdaptiveTargetSuggestion(currentTargets, suggestion.suggestedTargetKcal!); } },
+      ]);
+    } catch (error) {
+      Alert.alert("Could not calculate suggestion", error instanceof Error ? error.message : "The target suggestion could not be calculated.");
+    } finally {
+      setSuggestionLoading(false);
+    }
+  };
   const handleVerifyGroq = async () => {
     if (!groqKeyInput.trim()) {
       Alert.alert("Missing Key", "Enter a Groq API Key.");
@@ -704,6 +751,15 @@ export default function MoreScreen() {
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, lineHeight: 16, marginBottom: 10 }}>
                 Targets are stored locally. Changes apply from today and previous target history is preserved.
               </Text>
+              <Button
+                label={suggestionLoading ? "Reviewing history…" : "Review adaptive calorie suggestion"}
+                icon="activity"
+                variant="secondary"
+                loading={suggestionLoading}
+                disabled={suggestionLoading || targetsSaving}
+                onPress={handleReviewAdaptiveTarget}
+                style={{ marginBottom: 10 }}
+              />
               <Button
                 label={targetsSaving ? "Saving…" : "Save nutrition targets"}
                 loading={targetsSaving}
