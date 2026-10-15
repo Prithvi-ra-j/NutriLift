@@ -2,6 +2,11 @@ import { groq } from "./client";
 import { AI_MODELS } from "./model-config";
 import { safeGroqCall } from "./safeCall";
 import type { CoachContext } from "../ai/context-builder";
+import { recordAIRequestMetrics } from "../observability/telemetry";
+
+async function recordAIMetricsSafely(input: Parameters<typeof recordAIRequestMetrics>[0]): Promise<void> {
+  try { await recordAIRequestMetrics(input); } catch { /* Telemetry must never replace a real AI result or provider error. */ }
+}
 
 export type { CoachContext } from "../ai/context-builder";
 
@@ -85,15 +90,47 @@ ${JSON.stringify(context, null, 2)}`;
       ...messages,
     ];
 
-    const completion = await groq.chat.completions.create({
-      model: AI_MODELS.coach_chat,
-      messages: allMessages,
-      temperature: 0.3,
-      max_tokens: 1000,
-    });
+    const requestStartedAt = Date.now();
+    let completion: any;
+    try {
+      completion = await groq.chat.completions.create({
+        model: AI_MODELS.coach_chat,
+        messages: allMessages,
+        temperature: 0.3,
+        max_tokens: 1000,
+      });
+    } catch (error) {
+      await recordAIMetricsSafely({
+        provider: "groq",
+        model: AI_MODELS.coach_chat,
+        latencyMs: Date.now() - requestStartedAt,
+        outputValid: false,
+        failureCategory: "provider_request_failed",
+      });
+      throw error;
+    }
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
-    if (!content) throw new Error("Coach returned an empty response.");
+    if (!content) {
+      await recordAIMetricsSafely({
+        provider: "groq",
+        model: AI_MODELS.coach_chat,
+        latencyMs: Date.now() - requestStartedAt,
+        inputTokens: completion.usage?.prompt_tokens,
+        outputTokens: completion.usage?.completion_tokens,
+        outputValid: false,
+        failureCategory: "empty_output",
+      });
+      throw new Error("Coach returned an empty response.");
+    }
+    await recordAIMetricsSafely({
+      provider: "groq",
+      model: AI_MODELS.coach_chat,
+      latencyMs: Date.now() - requestStartedAt,
+      inputTokens: completion.usage?.prompt_tokens,
+      outputTokens: completion.usage?.completion_tokens,
+      outputValid: true,
+    });
     if (onChunk && content) onChunk(content);
     return content;
   }) as Promise<string>;
@@ -127,7 +164,9 @@ export async function generateDailyInsight(todayData: {
       max_tokens: 100,
     });
 
-    return completion.choices[0]?.message?.content || "Keep pushing!";
+    const content = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!content) throw new Error("Daily insight returned an empty response.");
+    return content;
   }) as Promise<string>;
 }
 
@@ -184,7 +223,9 @@ Be direct, reference actual numbers, and focus on actionable insights. This summ
       max_tokens: 200,
     });
 
-    return completion.choices[0]?.message?.content || "Week completed.";
+    const content = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!content) throw new Error("Weekly summary returned an empty response.");
+    return content;
   }) as Promise<string>;
 }
 
@@ -229,7 +270,9 @@ Be analytical, reference specific numbers, and tell the story of the month. This
       max_tokens: 500,
     });
 
-    return completion.choices[0]?.message?.content || "Month completed.";
+    const content = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!content) throw new Error("Monthly summary returned an empty response.");
+    return content;
   }) as Promise<string>;
 }
 
@@ -275,7 +318,9 @@ Be comprehensive, tell the 3-month story, and provide strategic analysis. This w
       max_tokens: 800,
     });
 
-    return completion.choices[0]?.message?.content || "Quarter completed.";
+    const content = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!content) throw new Error("Quarterly summary returned an empty response.");
+    return content;
   }) as Promise<string>;
 }
 
@@ -330,6 +375,8 @@ Be inspirational yet analytical. This is the user's annual transformation story.
       max_tokens: 1000,
     });
 
-    return completion.choices[0]?.message?.content || "Year completed.";
+    const content = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!content) throw new Error("Yearly summary returned an empty response.");
+    return content;
   }) as Promise<string>;
 }
