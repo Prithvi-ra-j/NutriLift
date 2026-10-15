@@ -1,5 +1,5 @@
 /** Increment when a forward-compatible local SQLite schema migration is introduced. */
-export const CURRENT_SCHEMA_VERSION = 10;
+export const CURRENT_SCHEMA_VERSION = 11;
 
 /** Reject a database written by a newer app version. */
 export function assertSupportedSchemaVersion(databaseVersion: number): void {
@@ -42,6 +42,10 @@ export const ADDITIVE_COLUMN_MIGRATIONS = [
   { table: "set_logs", column: "duration_sec", type: "INTEGER" },
   { table: "set_logs", column: "distance_km", type: "REAL" },
   { table: "exercise_logs", column: "exercise_type", type: "TEXT" },
+  { table: "food_logs", column: "provenance_type", type: "TEXT NOT NULL DEFAULT 'legacy_unknown'" },
+  { table: "food_logs", column: "provenance_json", type: "TEXT" },
+  { table: "food_logs", column: "estimate_confidence", type: "REAL" },
+  { table: "food_logs", column: "estimate_reviewed", type: "INTEGER NOT NULL DEFAULT 0" },
   { table: "daily_nutrition", column: "updated_at", type: "TEXT" },
   { table: "workout_sessions", column: "updated_at", type: "TEXT" },
   { table: "workout_sessions", column: "status", type: "TEXT" },
@@ -56,6 +60,7 @@ export const ADDITIVE_COLUMN_MIGRATIONS = [
 ] as const;
 
 export const REQUIRED_CORE_COLUMNS: Readonly<Record<string, readonly string[]>> = {
+  food_logs: ["provenance_type", "provenance_json", "estimate_confidence", "estimate_reviewed"],
   daily_nutrition: ["updated_at", "is_complete", "completed_at"],
   workout_sessions: ["updated_at", "status"],
   exercise_logs: ["exercise_type"],
