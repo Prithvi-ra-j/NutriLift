@@ -25,7 +25,7 @@ Working branch: `implementation/phase-0-baseline`
 | 3. Calendar dates/time zones | Complete (automated; device smoke pending) | Added `lib/utils/local-date.ts` for local date keys, strict date-only parsing, calendar-day arithmetic, DST-safe calendar-day differences, and explicit Monday–Sunday UI weeks versus Sunday–Saturday weekly-summary records. Migrated DateNavigator, dashboard/Nutrition/Workout/Progress/More screens and date-only display parsing; food/InBody entry flows; Today store; body/workout/recovery/nutrition queries; report ranges; weekly Coach context; monthly/quarterly summaries; logger filenames; progress exports; Life OS date-only fallback mapping; and demo-seed date generation. Fixed Sunday selected-week handling and body-goal projection date arithmetic. Latest CI run [#38686272529](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38686272529) passed on `a4d12bd71b5bf11a8091cdbb3884674a09b590c6`: TypeScript, Jest, and Expo config/assets all succeeded (38 suites / 284 tests). Regression tests cover invalid keys, month/year boundaries, IST/UTC/negative-offset local-day conversion, DST transitions, and both week conventions. Audit confirms remaining UTC use in the Supabase Edge Function is intentional for server-side quota accounting and ISO timestamps representing instants remain UTC. Physical-device smoke testing remains unverified. Developer-only delete-workout scripts were also migrated to local date keys in commits f3cde09 and cbe5df8; validation is tracked with the current branch CI. |
 | 4. Nutrition pipeline | In progress | Local catalogue (21 foods), deterministic parser, local-first/AI fallback, shared food-log validation, batch writes, and typed/voice save-path integration are implemented. Latest nutrition changes are undergoing CI; barcode confirmation uses the same validated repository write path. Device-level entry testing and final CI evidence remain pending. |
 | 5. Profile/targets | Not started | Effective-dated history; existing PR #7 must be reviewed first. |
-| 6. Workout/recovery | Not started | Existing app paths and real persistence tests must be mapped before changes. |
+| 6. Workout/recovery | In progress | First slice adds persisted session lifecycle status (schema v4), guarded/idempotent set writes, finish/cancel controls, and manual recovery validation. Automated CI for the latest changes is pending; session lifecycle UI/device checks and end-to-end workout/recovery persistence tests remain. |
 | 7. Coach/recommendations | Not started | Restrict context to approved fields; use validated evidence. |
 | 8. Offline sync / Life OS | Not started | Existing integration under `lib/integrations/life-os/`; do not replace without a migration plan. |
 | 9. UI/design system | Not started | Existing overlapping PRs #5 and #6; defer broad redesign until correctness foundations are stable. |
@@ -190,3 +190,13 @@ After every small implementation unit, update this file with the commit/PR, file
 - [x] Add validation regression cases for zero nutrition, negative/non-finite values, invalid dates/meals, missing names, and invalid quantities (`3715fd8`).
 - [ ] Confirm latest CI run [#38688938088](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38688938088) is green; fix any failures before marking this unit complete.
 - [ ] Finish barcode/manual confirmation-path review and confirm that all food-entry modes surface validation failures without silently saving zero-calorie estimates.
+
+
+### 2026-10-15 — Phase 6, unit 1: workout lifecycle and recovery validation
+- [x] Add a persisted workout session status (planned, in_progress, completed, cancelled) and increment local SQLite schema version to 4.
+- [x] Migrate older sessions using existing timestamps: ended sessions become completed; sessions with a start timestamp become in progress; otherwise planned.
+- [x] Add explicit forward-only lifecycle transitions and finish/cancel controls; cancellation retains logged sets.
+- [x] Validate workout set metrics before persistence, make repeated set IDs idempotent, and block mutation of completed/cancelled sessions in the query layer.
+- [x] Add manual recovery input validation and tests; wearable integrations remain out of scope.
+- [ ] Verify latest TypeScript/Jest/Expo CI and fix all failures.
+- [ ] Add end-to-end persistence coverage for session transitions and closed-session guards; device smoke remains unverified.
