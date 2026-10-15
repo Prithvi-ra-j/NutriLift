@@ -96,9 +96,7 @@ export async function upsertSupplementLog(
 }
 
 export async function getSupplementAdherence30d(): Promise<Record<string, number>> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 29);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = addCalendarDays(toLocalDateKey(), -29);
 
   const logs = await db
     .select()
