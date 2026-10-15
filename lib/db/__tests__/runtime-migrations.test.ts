@@ -61,6 +61,7 @@ describe("runtime SQLite migrations", () => {
       for (const [table, column] of [
         ["daily_nutrition", "updated_at"],
         ["workout_sessions", "updated_at"],
+        ["workout_sessions", "status"],
         ["personal_records", "updated_at"],
         ["body_stats", "updated_at"],
         ["recovery_logs", "updated_at"],
@@ -93,7 +94,7 @@ describe("runtime SQLite migrations", () => {
       for (const table of REQUIRED_CORE_TABLES) {
         expect(tables.has(table)).toBe(true);
       }
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(3);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(4);
     } finally {
       database.close();
     }
