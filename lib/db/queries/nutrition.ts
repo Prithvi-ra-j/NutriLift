@@ -4,6 +4,7 @@ import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutr
 import { getNutritionTargetsForDate } from "./nutrition-targets";
 import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 import { validateFoodLogInput, validateFoodLogsInput } from "../../data/food-log-validation";
+import { calculateCalorieAdherenceScore } from "../../data/nutrition-scores";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
 
@@ -41,7 +42,7 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
       totals.calories >= targets.calories * 0.9 &&
       totals.calories <= targets.calories * 1.1 ? 1 : 0;
     const proteinScore = Math.min(100, (totals.protein_g / targets.protein_g) * 100);
-    const calorieScore = Math.max(0, 100 - Math.abs(totals.calories - targets.calories) / targets.calories * 100);
+    const calorieScore = calculateCalorieAdherenceScore(totals.calories, targets.calories);
     const summary = {
       total_calories: totals.calories,
       total_protein_g: totals.protein_g,
@@ -136,10 +137,7 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
 
   // Adherence score: weighted average of protein (60%) + calories (40%)
   const proteinScore = Math.min(100, (totals.protein_g / targets.protein_g) * 100);
-  const calorieScore = Math.min(
-    100,
-    100 - Math.abs(totals.calories - targets.calories) / targets.calories * 100
-  );
+  const calorieScore = calculateCalorieAdherenceScore(totals.calories, targets.calories);
   const adherenceScore = proteinScore * 0.6 + calorieScore * 0.4;
 
   const existing = await getDailyNutrition(date);
