@@ -36,7 +36,10 @@ export async function getAllInBodyRecords(): Promise<BodyStat[]> {
 }
 
 export async function getWeightHistory(days: number = 30): Promise<BodyStat[]> {
-  const cutoffStr = addCalendarDays(toLocalDateKey(), -days);
+  if (!Number.isInteger(days) || days < 1 || days > 365) {
+    throw new Error("Weight history days must be an integer from 1 to 365.");
+  }
+  const cutoffStr = addCalendarDays(toLocalDateKey(), -(days - 1));
 
   return db
     .select()
