@@ -1,49 +1,42 @@
-import { USER_PROFILE } from "../constants/user-profile";
 import { getLast7DaysNutrition, getProteinHitRate } from "../db/queries/nutrition";
 import { getRecentSessions, getAllPRs } from "../db/queries/workout";
 import { getLatestInBody, getLatestWeight } from "../db/queries/body";
 import { getRecentRecoveryLogs, getSupplementAdherence30d } from "../db/queries/recovery";
 import { getPreviousWeeksAISummaries } from "./weekly-summary-service";
-import { getPreviousMonthsAISummaries } from "./monthly-summary-service";
-import { getPreviousQuartersAISummaries } from "./quarterly-summary-service";
-import { getPreviousYearsAISummaries } from "./yearly-summary-service";
-import type { DailyNutrition, WorkoutSession, PersonalRecord, BodyStat, RecoveryLog } from "../db/schema";
+import type { DailyNutrition, WorkoutSession } from "../db/schema";
+import {
+  approvedBodyStat,
+  approvedNutritionRows,
+  approvedPersonalRecords,
+  approvedRecoveryRows,
+  approvedSummaryRows,
+  approvedWorkoutRows,
+  buildApprovedCoachProfile,
+} from "./coach-context-policy";
 
 export interface CoachContext {
-  context_version: "1.0";
+  context_version: "2.0";
   generated_at: string;
   missing_data: string[];
-  user_profile: typeof USER_PROFILE;
-  last_7_days_nutrition: DailyNutrition[];
+  user_profile: ReturnType<typeof buildApprovedCoachProfile>;
+  last_7_days_nutrition: ReturnType<typeof approvedNutritionRows>;
   previous_weeks_ai_summaries: Array<{ week_start: string; week_end: string; summary: string }>;
-  previous_months_ai_summaries?: Array<{ month: string; summary: string }>;
-  previous_quarters_ai_summaries?: Array<{ quarter: string; summary: string }>;
-  previous_years_ai_summaries?: Array<{ year: string; summary: string }>;
-  last_30_days_adherence: {
-    protein_hit_rate: number;
-  };
-  recent_workouts: WorkoutSession[];
-  current_prs: PersonalRecord[];
-  latest_body_stats: BodyStat | null;
-  last_inbody: BodyStat | null;
+  last_30_days_adherence: { protein_hit_rate: number };
+  recent_workouts: ReturnType<typeof approvedWorkoutRows>;
+  current_prs: ReturnType<typeof approvedPersonalRecords>;
+  latest_body_stats: ReturnType<typeof approvedBodyStat>;
+  last_inbody: ReturnType<typeof approvedBodyStat>;
   supplement_adherence_30d: Record<string, number>;
-  last_recovery_logs: RecoveryLog[];
-  today_nutrition: DailyNutrition | null;
-  today_workout: WorkoutSession | null;
+  last_recovery_logs: ReturnType<typeof approvedRecoveryRows>;
+  today_nutrition: ReturnType<typeof approvedNutritionRows>[number] | null;
+  today_workout: ReturnType<typeof approvedWorkoutRows>[number] | null;
 }
 
 /**
- * Build coach context with intelligent time-based summarization
- * 
- * Context strategy:
- * - Last 7 days: Full detailed daily data (~2,500 tokens)
- * - Previous 3 weeks: AI-generated weekly summaries (~450 tokens)
- * - Previous 3 weeks: compact AI summaries for near-term continuity
- * 
- * Longer-horizon reviews must query deterministic metrics directly instead of
- * passing nested historical narratives into an interactive coach request.
+ * Build a least-privilege coaching context from approved, structured facts.
+ * Free-form notes and detailed supplement/structural-health profile fields are
+ * intentionally excluded. Missing data is represented explicitly, not inferred.
  */
-
 export async function buildCoachContext(
   todayNutrition: DailyNutrition | null,
   todayWorkout: WorkoutSession | null
@@ -60,7 +53,7 @@ export async function buildCoachContext(
     proteinHitRate,
   ] = await Promise.all([
     getLast7DaysNutrition(),
-    getPreviousWeeksAISummaries(), // Last 3 weeks
+    getPreviousWeeksAISummaries(),
     getRecentSessions(2),
     getAllPRs(),
     getLatestWeight(),
@@ -70,40 +63,39 @@ export async function buildCoachContext(
     getProteinHitRate(30),
   ]);
 
+  const approvedNutrition = approvedNutritionRows(last7DaysNutrition);
+  const approvedWorkouts = approvedWorkoutRows(recentWorkouts);
+  const approvedTodayNutrition = todayNutrition
+    ? approvedNutritionRows([todayNutrition])[0] ?? null
+    : null;
+  const approvedTodayWorkout = todayWorkout
+    ? approvedWorkoutRows([todayWorkout])[0] ?? null
+    : null;
+
   const missingData: string[] = [];
-  if (last7DaysNutrition.length < 7) {
-    missingData.push(`Nutrition is logged for ${last7DaysNutrition.length} of the last 7 days.`);
+  if (approvedNutrition.length < 7) {
+    missingData.push(`Nutrition is logged for ${approvedNutrition.length} of the last 7 days.`);
   }
-  if (recentWorkouts.length === 0) {
-    missingData.push("No recent workout is logged.");
-  }
-  if (recoveryLogs.length === 0) {
-    missingData.push("No recent recovery data is logged.");
-  }
-  if (!latestWeight) {
-    missingData.push("No bodyweight is logged.");
-  }
-  if (!todayNutrition) {
-    missingData.push("Today has no nutrition summary yet.");
-  }
+  if (approvedWorkouts.length === 0) missingData.push("No recent workout is logged.");
+  if (recoveryLogs.length === 0) missingData.push("No recent recovery data is logged.");
+  if (!latestWeight) missingData.push("No bodyweight is logged.");
+  if (!approvedTodayNutrition) missingData.push("Today has no nutrition summary yet.");
 
   return {
-    context_version: "1.0",
+    context_version: "2.0",
     generated_at: new Date().toISOString(),
     missing_data: missingData,
-    user_profile: USER_PROFILE,
-    last_7_days_nutrition: last7DaysNutrition,
-    previous_weeks_ai_summaries: previousWeeksAISummaries,
-    last_30_days_adherence: {
-      protein_hit_rate: proteinHitRate,
-    },
-    recent_workouts: recentWorkouts,
-    current_prs: currentPRs,
-    latest_body_stats: latestWeight,
-    last_inbody: lastInBody,
+    user_profile: buildApprovedCoachProfile(),
+    last_7_days_nutrition: approvedNutrition,
+    previous_weeks_ai_summaries: approvedSummaryRows(previousWeeksAISummaries, 3),
+    last_30_days_adherence: { protein_hit_rate: proteinHitRate },
+    recent_workouts: approvedWorkouts,
+    current_prs: approvedPersonalRecords(currentPRs),
+    latest_body_stats: approvedBodyStat(latestWeight),
+    last_inbody: approvedBodyStat(lastInBody),
     supplement_adherence_30d: supplementAdherence,
-    last_recovery_logs: recoveryLogs,
-    today_nutrition: todayNutrition,
-    today_workout: todayWorkout,
+    last_recovery_logs: approvedRecoveryRows(recoveryLogs),
+    today_nutrition: approvedTodayNutrition,
+    today_workout: approvedTodayWorkout,
   };
 }
