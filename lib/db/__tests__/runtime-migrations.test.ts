@@ -147,7 +147,7 @@ describe("runtime SQLite migrations", () => {
       expect(
         database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'custom_exercises'").get(),
       ).toBeDefined();
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(2);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(3);
 
       // A second run must be safe and must not duplicate or remove saved data.
       await runMigrations();
