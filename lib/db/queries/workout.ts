@@ -18,6 +18,7 @@ import {
 } from "../schema";
 import { toLocalDateKey } from "../../utils/local-date";
 import { appendDomainEvent } from "./domain-events";
+import { enqueueWorkoutSession } from "./sync-outbox";
 import { assertWorkoutStatusTransition, validateWorkoutSetInput, type WorkoutSessionStatus } from "../../workout/workout-validation";
 
 // ─── Epley 1RM Formula ────────────────────────────────────────────────────────
@@ -65,6 +66,7 @@ export async function insertSession(session: NewWorkoutSession): Promise<void> {
   await db.transaction(async (tx: any) => {
     const now = new Date().toISOString();
     await tx.insert(workoutSessions).values({ ...session, status, updated_at: now });
+    await touchAndEnqueueSession(tx, session.id);
     const eventVersion = Date.now();
     await appendDomainEvent(tx, { id: `workout-session:${session.id}:created`, eventType: status === "in_progress" ? "workout.session.started" : "workout.session.updated", entityType: "workout_session", entityId: session.id, entityVersion: eventVersion, occurredAt: now, metadata: { date: session.date, status } });
   });
@@ -87,6 +89,7 @@ export async function setSessionStatus(id: string, status: WorkoutSessionStatus)
       updates.duration_min = session.started_at == null ? 0 : Math.max(0, Math.round((now - session.started_at) / 60));
     }
     await tx.update(workoutSessions).set(updates).where(eq(workoutSessions.id, id));
+    await touchAndEnqueueSession(tx, id);
     const eventVersion = Date.now();
     const eventType = status === "completed" ? "workout.session.completed" : status === "cancelled" ? "workout.session.cancelled" : status === "in_progress" ? "workout.session.started" : "workout.session.updated";
     await appendDomainEvent(tx, { id: `workout-session:${id}:${status}:${eventVersion}`, eventType, entityType: "workout_session", entityId: id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: session.date, status } });
@@ -108,6 +111,7 @@ export async function updateSession(
     }
     const updatedAt = new Date().toISOString();
     await tx.update(workoutSessions).set({ ...mutableUpdates, updated_at: updatedAt }).where(eq(workoutSessions.id, id));
+    await touchAndEnqueueSession(tx, id);
     const eventVersion = Date.now();
     await appendDomainEvent(tx, { id: `workout-session:${id}:updated:${eventVersion}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: id, entityVersion: eventVersion, occurredAt: updatedAt, metadata: { date: session.date } });
   });
@@ -146,6 +150,7 @@ export async function insertExerciseLog(log: NewExerciseLog): Promise<void> {
   await db.transaction(async (tx: any) => {
     await assertSessionWritableInTransaction(tx, log.session_id);
     await tx.insert(exerciseLogs).values(log);
+    await touchAndEnqueueSession(tx, log.session_id);
     const eventVersion = Date.now();
     await appendDomainEvent(tx, { id: `workout-session:${log.session_id}:exercise-added:${log.id}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: log.session_id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: log.date } });
   });
@@ -182,6 +187,7 @@ export async function deleteExerciseLog(id: string): Promise<void> {
     await assertSessionWritableInTransaction(tx, existing.session_id);
     await tx.delete(setLogs).where(eq(setLogs.exercise_log_id, id));
     await tx.delete(exerciseLogs).where(eq(exerciseLogs.id, id));
+    await touchAndEnqueueSession(tx, existing.session_id);
     await recomputePersonalRecord(tx, existing.exercise_name);
     await updateSessionVolumeForSession(tx, existing.session_id);
     const eventVersion = Date.now();
@@ -216,6 +222,7 @@ export async function insertSetLog(set: NewSetLog): Promise<{ isPR: boolean; dup
     const isPR = await checkAndUpdatePR(set, tx);
     await tx.insert(setLogs).values({ ...set, is_pr: isPR ? 1 : 0 });
     await updateSessionVolumeForSession(tx, exercise.session_id);
+    await touchAndEnqueueSession(tx, exercise.session_id);
     const eventVersion = Date.now();
     await appendDomainEvent(tx, { id: `workout-set:${set.id}:recorded`, eventType: "workout.set.recorded", entityType: "workout_set", entityId: set.id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: exercise.date, sessionId: exercise.session_id } });
     return { isPR };
@@ -280,6 +287,13 @@ async function updateSessionVolumeForSession(tx: any, sessionId: string): Promis
   await tx.update(workoutSessions)
     .set({ total_volume_kg: totalVolume, updated_at: new Date().toISOString() })
     .where(eq(workoutSessions.id, sessionId));
+}
+
+async function touchAndEnqueueSession(tx: any, sessionId: string): Promise<void> {
+  const updatedAt = new Date().toISOString();
+  await tx.update(workoutSessions).set({ updated_at: updatedAt }).where(eq(workoutSessions.id, sessionId));
+  const rows = await tx.select().from(workoutSessions).where(eq(workoutSessions.id, sessionId)).limit(1);
+  if (rows[0]) await enqueueWorkoutSession(tx, rows[0] as WorkoutSession);
 }
 
 async function checkAndUpdatePR(set: NewSetLog, executor: any = db): Promise<boolean> {
