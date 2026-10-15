@@ -29,7 +29,7 @@ describe("Life OS goal evidence", () => {
   });
 
   it("rejects a numeric goal rule without a unit", () => {
-    expect(() => evaluateGoalEvidence({ ...goal, unit: null }, 60, [], "2026-10-15T12:00:00.000Z")).not.toThrow();
+    expect(() => evaluateGoalEvidence({ ...goal, unit: null }, 60, [], "2026-10-15T12:00:00.000Z")).toThrow("unit is required");
   });
 
   it("persists a derived snapshot using an idempotent goal key", async () => {
