@@ -4,6 +4,7 @@ import { toLocalDateKey } from "../../utils/local-date";
 import { db } from "../client";
 import { dailyNutrition, nutritionProfile, nutritionTargetHistory } from "../schema";
 import { calculateTargetComparison } from "../../nutrition/target-validation";
+import { enqueueDailyNutrition } from "./sync-outbox";
 
 import {
   DEFAULT_NUTRITION_TARGETS,
@@ -133,6 +134,9 @@ export async function saveNutritionTargets(
         ...comparison,
         updated_at: now,
       }).where(eq(dailyNutrition.date, day.date));
+      const persistedSummary = await tx.select().from(dailyNutrition)
+        .where(eq(dailyNutrition.date, day.date)).limit(1);
+      if (persistedSummary[0]) await enqueueDailyNutrition(tx, persistedSummary[0]);
     }
   });
 }
