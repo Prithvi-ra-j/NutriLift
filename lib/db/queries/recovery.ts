@@ -19,12 +19,25 @@ export async function getRecoveryLog(date: string): Promise<RecoveryLog | null> 
 export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
   validateRecoveryInput(log);
   const record = { ...log, updated_at: new Date().toISOString() };
-  const existing = await getRecoveryLog(log.date);
-  if (existing) {
-    await db.update(recoveryLogs).set(record).where(eq(recoveryLogs.date, log.date));
-  } else {
-    await db.insert(recoveryLogs).values(record);
-  }
+
+  // Recovery is keyed by date. A single SQLite upsert prevents two rapid saves
+  // from racing between a read and an insert on the same day.
+  await db.insert(recoveryLogs).values(record).onConflictDoUpdate({
+    target: recoveryLogs.date,
+    set: {
+      sleep_duration_hr: log.sleep_duration_hr ?? null,
+      sleep_quality: log.sleep_quality ?? null,
+      bedtime: log.bedtime ?? null,
+      wake_time: log.wake_time ?? null,
+      hrv: log.hrv ?? null,
+      resting_hr: log.resting_hr ?? null,
+      energy_level: log.energy_level ?? null,
+      muscle_soreness: log.muscle_soreness ?? null,
+      stress_level: log.stress_level ?? null,
+      notes: log.notes ?? null,
+      updated_at: record.updated_at,
+    },
+  });
 }
 
 export async function getRecentRecoveryLogs(days: number = 7): Promise<RecoveryLog[]> {
