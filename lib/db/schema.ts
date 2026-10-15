@@ -414,3 +414,34 @@ export type NewSyncQueueEntry = typeof syncQueue.$inferInsert;
 
 export type SyncState = typeof syncState.$inferSelect;
 export type NewSyncState = typeof syncState.$inferInsert;
+
+
+// ─── Append-only domain events and durable derived-state invalidations ─────────
+export const domainEvents = sqliteTable("domain_events", {
+  id: text("id").primaryKey(),
+  event_type: text("event_type").notNull(),
+  entity_type: text("entity_type").notNull(),
+  entity_id: text("entity_id").notNull(),
+  entity_version: integer("entity_version").notNull(),
+  schema_version: integer("schema_version").notNull().default(1),
+  occurred_at: text("occurred_at").notNull(),
+  metadata_json: text("metadata_json").notNull(),
+}, (table) => ({
+  entityVersionUnique: uniqueIndex("idx_domain_events_entity_version").on(table.entity_type, table.entity_id, table.entity_version),
+}));
+
+export const derivedStateInvalidations = sqliteTable("derived_state_invalidations", {
+  id: text("id").primaryKey(),
+  event_id: text("event_id").notNull().references(() => domainEvents.id),
+  projection_key: text("projection_key").notNull(),
+  reason: text("reason").notNull(),
+  invalidated_at: text("invalidated_at").notNull(),
+  processed_at: text("processed_at"),
+}, (table) => ({
+  eventProjectionUnique: uniqueIndex("idx_derived_invalidations_event_projection").on(table.event_id, table.projection_key),
+}));
+
+export type DomainEvent = typeof domainEvents.$inferSelect;
+export type NewDomainEvent = typeof domainEvents.$inferInsert;
+export type DerivedStateInvalidation = typeof derivedStateInvalidations.$inferSelect;
+export type NewDerivedStateInvalidation = typeof derivedStateInvalidations.$inferInsert;
