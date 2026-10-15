@@ -14,6 +14,7 @@ import {
 } from "@expo-google-fonts/dm-sans";
 import { runMigrations } from "../lib/db/client";
 import { processDerivedStateInvalidations } from "../lib/db/queries/derived-state-consumer";
+import { pruneOldTelemetryEvents, recordCommandFailure } from "../lib/observability/telemetry";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
@@ -38,7 +39,11 @@ export default function RootLayout() {
       .then(async () => {
         logger.info("Database migrations completed successfully");
         try { await processDerivedStateInvalidations(); }
-        catch (error) { logger.warn("Derived-state invalidation processing failed", { error: error instanceof Error ? error.message : "unknown" }); }
+        catch (error) {
+          try { await recordCommandFailure({ commandName: "derived_state_invalidation", errorCategory: "processing_failed" }); } catch { /* Best effort during startup. */ }
+          logger.warn("Derived-state invalidation processing failed", { error: error instanceof Error ? error.message : "unknown" });
+        }
+        try { await pruneOldTelemetryEvents(30); } catch { /* Telemetry retention must not block app startup. */ }
         setDbReady(true);
         if (Platform.OS === "web") return;
 
@@ -51,6 +56,7 @@ export default function RootLayout() {
         });
       })
       .catch((err) => {
+        void recordCommandFailure({ commandName: "database_migration", errorCategory: "migration_failed" }).catch(() => undefined);
         logger.error("DB migration failed", {
           error: err.message,
           stack: err.stack,
