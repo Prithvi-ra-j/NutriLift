@@ -33,6 +33,32 @@ export const dailyNutrition = sqliteTable("daily_nutrition", {
   updated_at: text("updated_at"),
 });
 
+// ─── Persisted profile and effective-dated nutrition targets ──────────────────
+export const nutritionProfile = sqliteTable("nutrition_profile", {
+  id: integer("id").primaryKey(),
+  calorie_target_kcal: integer("calorie_target_kcal").notNull(),
+  protein_target_g: real("protein_target_g").notNull(),
+  carbs_target_g: real("carbs_target_g").notNull(),
+  fat_target_g: real("fat_target_g").notNull(),
+  goal: text("goal").notNull().default("lose"),
+  target_mode: text("target_mode").notNull().default("manual"),
+  updated_at: text("updated_at").notNull(),
+});
+
+export const nutritionTargetHistory = sqliteTable("nutrition_target_history", {
+  id: text("id").primaryKey(),
+  effective_date: text("effective_date").notNull(),
+  calorie_target_kcal: integer("calorie_target_kcal").notNull(),
+  protein_target_g: real("protein_target_g").notNull(),
+  carbs_target_g: real("carbs_target_g").notNull(),
+  fat_target_g: real("fat_target_g").notNull(),
+  source: text("source").notNull(), // manual | adaptive
+  maintenance_estimate_kcal: integer("maintenance_estimate_kcal"),
+  algorithm_version: integer("algorithm_version"),
+  explanation: text("explanation"),
+  created_at: text("created_at").notNull(),
+});
+
 // ─── Workout Sessions ─────────────────────────────────────────────────────────
 export const workoutSessions = sqliteTable("workout_sessions", {
   id: text("id").primaryKey(),
