@@ -54,7 +54,7 @@ describe("runtime SQLite migrations", () => {
       for (const table of [
         "food_logs", "daily_nutrition", "workout_sessions", "exercise_logs",
         "set_logs", "custom_exercises", "sync_tombstones", "sync_queue", "sync_state",
-        "nutrition_profile", "nutrition_target_history", "recommendation_outcomes",
+        "nutrition_profile", "nutrition_target_history", "recommendation_outcomes", "domain_events", "derived_state_invalidations",
       ]) {
         expect(tables.has(table)).toBe(true);
       }
@@ -98,7 +98,7 @@ describe("runtime SQLite migrations", () => {
       for (const table of REQUIRED_CORE_TABLES) {
         expect(tables.has(table)).toBe(true);
       }
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(7);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(8);
     } finally {
       database.close();
     }
