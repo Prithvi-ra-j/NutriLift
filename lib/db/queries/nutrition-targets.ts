@@ -5,6 +5,7 @@ import { db } from "../client";
 import { dailyNutrition, nutritionProfile, nutritionTargetHistory } from "../schema";
 import { calculateTargetComparison } from "../../nutrition/target-validation";
 import { enqueueDailyNutrition } from "./sync-outbox";
+import { appendDomainEvent } from "./domain-events";
 
 import {
   DEFAULT_NUTRITION_TARGETS,
@@ -100,6 +101,16 @@ export async function saveNutritionTargets(
       algorithm_version: options.algorithmVersion ?? null,
       explanation: options.explanation ?? null,
       created_at: now,
+    });
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, {
+      id: `nutrition-targets:1:${now}`,
+      eventType: "nutrition.targets.changed",
+      entityType: "nutrition_target_profile",
+      entityId: "1",
+      entityVersion: eventVersion,
+      occurredAt: now,
+      metadata: { effectiveDate, source },
     });
 
     // A target change affects comparisons from its effective date forward, but
