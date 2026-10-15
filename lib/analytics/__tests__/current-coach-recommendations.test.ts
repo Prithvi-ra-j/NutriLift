@@ -3,10 +3,17 @@ jest.mock("../../db/queries/workout", () => ({ getSessionsForDateRange: jest.fn(
 jest.mock("../../db/queries/recovery", () => ({ getRecoveryLog: jest.fn() }));
 jest.mock("../../db/queries/nutrition-targets", () => ({ getNutritionTargetsForDate: jest.fn() }));
 jest.mock("../../db/queries/recommendations", () => ({ getRecommendationOutcomesForDate: jest.fn() }));
-import { buildUserStateSnapshot } from "../current-coach-recommendations";
+import { buildUserStateSnapshot, filterActionedRecommendations } from "../current-coach-recommendations";
 import { evaluateNutritionAdherence, evaluateRecoveryReadiness, generateCoachRecommendations } from "../coach-recommendations";
 import { DEFAULT_NUTRITION_TARGETS } from "../../nutrition/target-validation";
 
+describe("recommendation outcomes", () => {
+  it("hides dismissed, completed, and corrected candidates but retains accepted ones", () => {
+    const candidates = ["a", "b", "c", "d"].map((id) => ({ id, title: id, explanation: "", type: "review_food_log", priority: 1, confidence: 1, ruleVersion: "1", evidence: [] }));
+    const visible = filterActionedRecommendations(candidates as any, { a: "accepted", b: "dismissed", c: "completed", d: "corrected" });
+    expect(visible.map((item) => item.id)).toEqual(["a"]);
+  });
+});
 describe("current coach state snapshot", () => {
   it("does not infer a missed workout from absent session records", () => {
     const snapshot = buildUserStateSnapshot("2026-10-15", null, [], null, DEFAULT_NUTRITION_TARGETS);
