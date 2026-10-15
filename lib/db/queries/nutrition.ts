@@ -6,6 +6,7 @@ import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/l
 import { validateFoodLogInput, validateFoodLogsInput } from "../../data/food-log-validation";
 import { calculateTargetComparison } from "../../nutrition/target-validation";
 import { enqueueDailyNutrition, enqueueTombstone } from "./sync-outbox";
+import { appendDomainEvent } from "./domain-events";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
 
@@ -93,6 +94,14 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
     }
     const persistedSummary = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
     if (persistedSummary[0]) await enqueueDailyNutrition(tx, persistedSummary[0]);
+    for (const log of logs) {
+      await appendDomainEvent(tx, {
+        id: `food-log:${log.id}:created`, eventType: "nutrition.food.created",
+        entityType: "food_log", entityId: log.id, entityVersion: Math.max(1, Math.floor(log.created_at)),
+        occurredAt: new Date(log.created_at * 1000).toISOString(),
+        metadata: { date: log.date, source: log.source },
+      });
+    }
   });
 }
 
@@ -107,6 +116,13 @@ export async function deleteFoodLog(id: string, date: string): Promise<void> {
     const existing = rows[0] as FoodLog | undefined;
     if (!existing) return;
     await tx.delete(foodLogs).where(eq(foodLogs.id, id));
+    const deletedAt = new Date().toISOString();
+    const deletedVersion = Date.now();
+    await appendDomainEvent(tx, {
+      id: `food-log:${id}:deleted:${deletedVersion}`, eventType: "nutrition.food.deleted",
+      entityType: "food_log", entityId: id, entityVersion: deletedVersion,
+      occurredAt: deletedAt, metadata: { date: existing.date, source: existing.source },
+    });
     for (const affectedDate of new Set([existing.date, date])) {
       await recomputeDailyNutritionInTransaction(tx, affectedDate);
     }
@@ -125,6 +141,13 @@ export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, da
     validateFoodLogInput(next as NewFoodLog);
     const affectedDates = Array.from(new Set([existing.date, next.date, date]));
     await tx.update(foodLogs).set(mutableUpdates).where(eq(foodLogs.id, id));
+    const updatedAt = new Date().toISOString();
+    const updatedVersion = Date.now();
+    await appendDomainEvent(tx, {
+      id: `food-log:${id}:updated:${updatedVersion}`, eventType: "nutrition.food.updated",
+      entityType: "food_log", entityId: id, entityVersion: updatedVersion,
+      occurredAt: updatedAt, metadata: { date: next.date, source: next.source },
+    });
     for (const affectedDate of affectedDates) {
       await recomputeDailyNutritionInTransaction(tx, affectedDate);
     }
