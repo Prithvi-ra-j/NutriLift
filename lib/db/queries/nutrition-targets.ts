@@ -1,22 +1,26 @@
 import { desc, eq, lte } from "drizzle-orm";
 import uuid from "react-native-uuid";
-import { USER_PROFILE } from "../../constants/user-profile";
 import { toLocalDateKey } from "../../utils/local-date";
 import { db } from "../client";
 import { nutritionProfile, nutritionTargetHistory } from "../schema";
 
-import { validateNutritionTargets, type NutritionGoal, type NutritionTargetMode, type NutritionTargets } from "../../nutrition/target-validation";
-export { validateNutritionTargets } from "../../nutrition/target-validation";
+import {
+  DEFAULT_NUTRITION_TARGETS,
+  validateNutritionTargets,
+  type NutritionGoal,
+  type NutritionTargetMode,
+  type NutritionTargets,
+} from "../../nutrition/target-validation";
+export { DEFAULT_NUTRITION_TARGETS, validateNutritionTargets } from "../../nutrition/target-validation";
 export type { NutritionGoal, NutritionTargetMode, NutritionTargets } from "../../nutrition/target-validation";
 
-export const DEFAULT_NUTRITION_TARGETS: NutritionTargets = {
-  calories: USER_PROFILE.targets.calories,
-  protein_g: USER_PROFILE.targets.protein_g,
-  carbs_g: USER_PROFILE.targets.carbs_g,
-  fat_g: USER_PROFILE.targets.fat_g,
-  goal: "lose",
-  mode: "manual",
-};
+export interface NutritionTargetSaveOptions {
+  effectiveDate?: string;
+  source?: "manual" | "adaptive" | "migration";
+  maintenanceEstimateKcal?: number | null;
+  algorithmVersion?: string | null;
+  explanation?: string | null;
+}
 
 function isValidDateKey(date: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
@@ -39,9 +43,8 @@ export async function getNutritionTargets(): Promise<NutritionTargets> {
     };
     validateNutritionTargets(targets);
     return targets;
-  } catch (error) {
-    // Web uses a no-op DB. On native, malformed persisted values should not leak
-    // into calculations; return the safe defaults and keep the screen usable.
+  } catch {
+    // Web uses a no-op DB. Malformed persisted values should never leak into calculations.
     return DEFAULT_NUTRITION_TARGETS;
   }
 }
@@ -53,11 +56,12 @@ export async function saveNutritionTargets(
   validateNutritionTargets(targets);
   const effectiveDate = options.effectiveDate ?? toLocalDateKey();
   if (!isValidDateKey(effectiveDate)) throw new Error("Effective date must be a real local calendar date (YYYY-MM-DD).");
+  if (options.maintenanceEstimateKcal != null && (!Number.isFinite(options.maintenanceEstimateKcal) || options.maintenanceEstimateKcal <= 0)) {
+    throw new Error("Maintenance estimate must be a positive finite number.");
+  }
 
   const now = new Date().toISOString();
   const source = options.source ?? targets.mode;
-  // Update active settings and append history together, so history never records
-  // a target change that failed to become the active target.
   await db.transaction(async (tx: any) => {
     await tx.insert(nutritionProfile).values({
       id: 1,
@@ -117,10 +121,7 @@ export async function getNutritionTargetsForDate(date: string): Promise<Nutritio
       };
     }
   } catch {
-    // If local persistence is unavailable (e.g. web), use the static baseline.
     return DEFAULT_NUTRITION_TARGETS;
   }
-  // No historical record means the original app defaults were in effect. Do not
-  // retroactively apply a target saved today to older food-log dates.
   return DEFAULT_NUTRITION_TARGETS;
 }
