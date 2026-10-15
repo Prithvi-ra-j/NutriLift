@@ -45,6 +45,26 @@ export function toSupabaseSyncRow(record: SyncRecord, userId: string): SupabaseS
   };
 }
 
+export async function upsertExternalFact(record: SyncRecord, userId: string) {
+  if (!userId.trim()) throw new Error("A signed-in user ID is required to upsert an external fact.");
+  const validation = validateSyncRecord({ ...record, userId });
+  if (!validation.valid) throw new Error("External fact failed validation: " + (validation.errors ?? []).join("; "));
+  if (record.deleted) throw new Error("Use retractExternalFact for a deleted source record.");
+  return supabase.from("sync_records").upsert([toSupabaseSyncRow(record, userId)], { onConflict: "user_id,external_id" });
+}
+
+export async function retractExternalFact(record: SyncRecord, userId: string) {
+  if (!record.externalId.trim()) throw new Error("External fact identity is required for retraction.");
+  return upsertDeletedFact({ ...record, payload: {}, deleted: true }, userId);
+}
+
+async function upsertDeletedFact(record: SyncRecord, userId: string) {
+  if (!userId.trim()) throw new Error("A signed-in user ID is required to retract an external fact.");
+  const validation = validateSyncRecord({ ...record, userId });
+  if (!validation.valid) throw new Error("External fact retraction failed validation: " + (validation.errors ?? []).join("; "));
+  return supabase.from("sync_records").upsert([toSupabaseSyncRow({ ...record, payload: {}, deleted: true }, userId)], { onConflict: "user_id,external_id" });
+}
+
 export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   const attemptStartedAt = Date.now();
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 500) {
@@ -114,9 +134,9 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   const uploadedIds: string[] = [];
   const failedItems: Array<{ externalId: string; message: string }> = [];
   const uploadOne = async (record: SyncRecord) => {
-    const result = await supabase
-      .from("sync_records")
-      .upsert([toSupabaseSyncRow(record, user.id)], { onConflict: "user_id,external_id" });
+    const result = record.deleted
+      ? await retractExternalFact(record, user.id)
+      : await upsertExternalFact(record, user.id);
     return result.error;
   };
 
