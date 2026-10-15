@@ -94,6 +94,63 @@ export async function enqueueRecords(records: SyncRecord[]): Promise<void> {
   }
 }
 
+/** Persist invalid source projections for inspection instead of silently dropping them. */
+export async function enqueueNeedsAttentionRecords(
+  entries: Array<{ record: SyncRecord; errors: string[] }>,
+): Promise<void> {
+  if (entries.length === 0) return;
+  const database = requireNativeSqlite();
+  const now = new Date().toISOString();
+
+  for (const [index, entry] of entries.entries()) {
+    const rawExternalId = typeof entry.record.externalId === "string"
+      ? entry.record.externalId.trim()
+      : "";
+    const externalId = rawExternalId || `needs-attention:${entry.record.recordType}:${entry.record.sourceUpdatedAt ?? entry.record.occurredAt}:${index}`;
+    const errors = entry.errors.length ? entry.errors.join("; ") : "Sync payload failed validation.";
+    await database.runAsync(
+      `INSERT INTO sync_queue
+        (id, external_id, payload_json, state, attempt_count, last_error, next_retry_at, created_at, updated_at)
+       VALUES (?, ?, ?, 'needs_attention', 0, ?, NULL, ?, ?)
+       ON CONFLICT(external_id) DO UPDATE SET
+         payload_json = excluded.payload_json,
+         state = 'needs_attention',
+         last_error = excluded.last_error,
+         next_retry_at = NULL,
+         updated_at = excluded.updated_at
+       WHERE sync_queue.payload_json != excluded.payload_json
+          OR sync_queue.state != 'needs_attention'
+          OR sync_queue.last_error != excluded.last_error`,
+      [
+        `needs-attention:${externalId}`,
+        externalId,
+        JSON.stringify(entry.record),
+        errors,
+        now,
+        now,
+      ],
+    );
+  }
+}
+
+export async function getSyncQueueCounts(): Promise<Record<SyncQueueState, number>> {
+  const database = requireNativeSqlite();
+  const rows = await database.getAllAsync(
+    "SELECT state, COUNT(*) AS count FROM sync_queue GROUP BY state",
+  );
+  const counts: Record<SyncQueueState, number> = {
+    pending: 0,
+    uploading: 0,
+    uploaded: 0,
+    failed: 0,
+    needs_attention: 0,
+  };
+  for (const row of rows as Array<{ state: string; count: number }>) {
+    if (row.state in counts) counts[row.state as SyncQueueState] = Number(row.count) || 0;
+  }
+  return counts;
+}
+
 export async function getQueuedRecords(batchSize = 100): Promise<SyncRecord[]> {
   const database = requireNativeSqlite();
   const now = new Date().toISOString();
