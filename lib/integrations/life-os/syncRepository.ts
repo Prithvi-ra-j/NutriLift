@@ -106,6 +106,34 @@ export async function getQueuedRecords(batchSize = 100): Promise<SyncRecord[]> {
   return rows.map((row: { payload_json: string }) => JSON.parse(row.payload_json) as SyncRecord);
 }
 
+/**
+ * Recover uploads left in-flight when the app was killed or the device lost power.
+ * Upserts are idempotent, so retrying an uncertain upload is safer than leaving it
+ * permanently stuck in the "uploading" state.
+ */
+export async function recoverInterruptedSyncOperations(
+  staleAfterMs = 5 * 60 * 1000,
+): Promise<number> {
+  if (!Number.isFinite(staleAfterMs) || staleAfterMs <= 0) {
+    throw new Error("staleAfterMs must be a positive finite number.");
+  }
+
+  const database = requireNativeSqlite();
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - staleAfterMs).toISOString();
+  const result = await database.runAsync(
+    `UPDATE sync_queue
+     SET state = 'pending',
+         next_retry_at = NULL,
+         last_error = COALESCE(last_error, 'Recovered after an interrupted upload.'),
+         updated_at = ?
+     WHERE state = 'uploading' AND updated_at < ?`,
+    [now.toISOString(), cutoff],
+  );
+
+  return typeof result?.changes === "number" ? result.changes : 0;
+}
+
 export async function setQueueState(externalIds: string[], state: SyncQueueState, error?: string): Promise<void> {
   if (externalIds.length === 0) return;
   const database = requireNativeSqlite();
