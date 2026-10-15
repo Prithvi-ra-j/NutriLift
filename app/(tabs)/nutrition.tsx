@@ -24,6 +24,7 @@ import {
   getRepeatableMeals,
   saveRepeatableMealFromLogs,
   repeatMeal,
+  setFoodEstimateReviewed,
 } from "../../lib/db/queries/nutrition";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
@@ -121,6 +122,20 @@ export default function NutritionScreen() {
       Alert.alert("Could not update day status", error instanceof Error ? error.message : "The nutrition day could not be updated.");
     }
   };
+  const handleReviewEstimate = (item: FoodLog) => {
+    Alert.alert(
+      "Review AI estimate",
+      item.name + "\n" + item.calories.toFixed(0) + " kcal · P " + item.protein_g.toFixed(1) + "g · C " + item.carbs_g.toFixed(1) + "g · F " + item.fat_g.toFixed(1) + "g\n\nConfirm only if the quantity and nutrient values look right.",
+      [
+        { text: "Not yet", style: "cancel" },
+        { text: "Confirm estimate", onPress: async () => {
+          try { await setFoodEstimateReviewed(item.id, true); await loadData(); }
+          catch (error) { Alert.alert("Could not review estimate", error instanceof Error ? error.message : "Try again."); }
+        } },
+      ],
+    );
+  };
+
   const handleAddFavorite = async (item: FoodLog) => {
     try {
       await addFavoriteFoodFromLog(item.id);
@@ -456,7 +471,17 @@ export default function NutritionScreen() {
                         <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 2 }}>
                           {item.calories.toFixed(0)} kcal · P:{item.protein_g.toFixed(0)}g · C:{item.carbs_g.toFixed(0)}g · F:{item.fat_g.toFixed(0)}g
                         </Text>
+                        {item.provenance_type === "ai_estimated" && (
+                          <Text style={{ color: item.estimate_reviewed === 1 ? M3.colors.success : M3.colors.warning, fontSize: 10, fontFamily: "DMSans_500Medium", marginTop: 3 }}>
+                            AI estimate{item.estimate_confidence != null ? " · " + Math.round(item.estimate_confidence * 100) + "% confidence" : " · confidence unavailable"}{item.estimate_reviewed === 1 ? " · reviewed" : " · review needed"}
+                          </Text>
+                        )}
                       </View>
+                      {item.provenance_type === "ai_estimated" && item.estimate_reviewed !== 1 && (
+                        <TouchableOpacity onPress={() => handleReviewEstimate(item)} style={{ padding: 4 }}>
+                          <Feather name="check-circle" size={15} color={M3.colors.warning} />
+                        </TouchableOpacity>
+                      )}
                       <TouchableOpacity onPress={() => void handleAddFavorite(item)} style={{ padding: 4 }}>
                         <Feather name="star" size={14} color={M3.colors.primary} />
                       </TouchableOpacity>
