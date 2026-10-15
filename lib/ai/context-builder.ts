@@ -1,4 +1,5 @@
 import { getLast7DaysNutrition, getProteinHitRate } from "../db/queries/nutrition";
+import { getNutritionTargets } from "../db/queries/nutrition-targets";
 import { getRecentSessions, getAllPRs } from "../db/queries/workout";
 import { getLatestInBody, getLatestWeight } from "../db/queries/body";
 import { getRecentRecoveryLogs, getSupplementAdherence30d } from "../db/queries/recovery";
@@ -51,6 +52,7 @@ export async function buildCoachContext(
     supplementAdherence,
     recoveryLogs,
     proteinHitRate,
+    currentTargets,
   ] = await Promise.all([
     getLast7DaysNutrition(),
     getPreviousWeeksAISummaries(),
@@ -61,6 +63,7 @@ export async function buildCoachContext(
     getSupplementAdherence30d(),
     getRecentRecoveryLogs(2),
     getProteinHitRate(30),
+    getNutritionTargets(),
   ]);
 
   const approvedNutrition = approvedNutritionRows(last7DaysNutrition);
@@ -85,7 +88,7 @@ export async function buildCoachContext(
     context_version: "2.0",
     generated_at: new Date().toISOString(),
     missing_data: missingData,
-    user_profile: buildApprovedCoachProfile(),
+    user_profile: buildApprovedCoachProfile(currentTargets),
     last_7_days_nutrition: approvedNutrition,
     previous_weeks_ai_summaries: approvedSummaryRows(previousWeeksAISummaries, 3),
     last_30_days_adherence: { protein_hit_rate: proteinHitRate },
