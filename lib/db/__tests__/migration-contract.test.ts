@@ -1,11 +1,21 @@
 import {
-  assertSupportedSchemaVersion,\n  CURRENT_SCHEMA_VERSION,\n  findMissingRequiredColumns,
+  assertSupportedSchemaVersion,
+  CURRENT_SCHEMA_VERSION,
+  findMissingRequiredColumns,
   findMissingRequiredTables,
   REQUIRED_CORE_COLUMNS,
   REQUIRED_CORE_TABLES,
 } from "../migration-contract";
 
-describe("local database migration contract", () => {\n  it("supports legacy and current schema versions but rejects future versions", () => {\n    expect(CURRENT_SCHEMA_VERSION).toBe(2);\n    expect(() => assertSupportedSchemaVersion(0)).not.toThrow();\n    expect(() => assertSupportedSchemaVersion(1)).not.toThrow();\n    expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();\n    expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION + 1)).toThrow(/newer than this app supports/);\n    expect(() => assertSupportedSchemaVersion(-1)).toThrow(/Invalid local database schema version/);\n  });
+describe("local database migration contract", () => {
+  it("supports legacy and current schema versions but rejects future versions", () => {
+    expect(CURRENT_SCHEMA_VERSION).toBe(2);
+    expect(() => assertSupportedSchemaVersion(0)).not.toThrow();
+    expect(() => assertSupportedSchemaVersion(1)).not.toThrow();
+    expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();
+    expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION + 1)).toThrow(/newer than this app supports/);
+    expect(() => assertSupportedSchemaVersion(-1)).toThrow(/Invalid local database schema version/);
+  });
   it("accepts a database containing every required core table", () => {
     expect(findMissingRequiredTables(new Set(REQUIRED_CORE_TABLES))).toEqual([]);
   });
