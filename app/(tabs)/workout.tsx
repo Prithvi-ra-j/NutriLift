@@ -44,7 +44,7 @@ import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
-import { fromLocalDateKey } from "../../lib/utils/local-date";
+import { fromLocalDateKey, toLocalDateKey } from "../../lib/utils/local-date";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -129,7 +129,7 @@ function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, e
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function WorkoutScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = toLocalDateKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const getDefaultDayType = (dateStr: string): DayType => {
