@@ -56,9 +56,27 @@ describe("parseFoodInput", () => {
   it("returns fully resolved catalogue results without calling AI", async () => {
     mockedLocalParser.mockReturnValue(localResult);
 
-    await expect(parseFoodInput("2 eggs for breakfast")).resolves.toEqual(localResult);
+    await expect(parseFoodInput("2 eggs for breakfast")).resolves.toMatchObject({ ...localResult, locale: "en-IN" });
 
     expect(mockedAiParser).not.toHaveBeenCalled();
+  });
+
+  it("accepts the full contextual input contract and applies the requested meal type", async () => {
+    mockedLocalParser.mockReturnValue(localResult);
+    const result = await parseFoodInput({
+      rawText: "2 eggs",
+      locale: "en-IN",
+      localDate: "2026-10-15",
+      mealType: "dinner",
+    });
+    expect(result.local_date).toBe("2026-10-15");
+    expect(result.locale).toBe("en-IN");
+    expect(result.meal_suggestion).toBe("dinner");
+  });
+
+  it("rejects an invalid local calendar date before parsing", async () => {
+    await expect(parseFoodInput({ rawText: "2 eggs", locale: "en-IN", localDate: "2026-02-30" })).rejects.toThrow();
+    expect(mockedLocalParser).not.toHaveBeenCalled();
   });
 
   it("uses AI for unresolved items and preserves local meal context", async () => {
@@ -70,7 +88,7 @@ describe("parseFoodInput", () => {
 
     const result = await parseFoodInput("2 eggs and homemade biryani for breakfast");
 
-    expect(mockedAiParser).toHaveBeenCalledWith("2 eggs and homemade biryani for breakfast");
+    expect(mockedAiParser).toHaveBeenCalledWith("2 eggs and homemade biryani for breakfast", { locale: "en-IN" });
     expect(result.items).toEqual(aiResult.items);
     expect(result.meal_suggestion).toBe("breakfast");
     expect(result.parse_notes).toContain("Recipe varies");
