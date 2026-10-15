@@ -9,6 +9,7 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useTodayStore } from "../../lib/stores/today.store";
 import {
@@ -131,7 +132,16 @@ function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, e
 
 export default function WorkoutScreen() {
   const todayStr = toLocalDateKey();
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const params = useLocalSearchParams<{ date?: string }>();
+  const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date;
+  const [selectedDate, setSelectedDate] = useState(() => {
+    try { if (requestedDate) fromLocalDateKey(requestedDate); return requestedDate || todayStr; }
+    catch { return todayStr; }
+  });
+  useEffect(() => {
+    if (!requestedDate) return;
+    try { fromLocalDateKey(requestedDate); setSelectedDate(requestedDate); } catch { /* Ignore unsupported deep-link dates. */ }
+  }, [requestedDate]);
 
   const getDefaultDayType = (dateStr: string): DayType => {
     const date = fromLocalDateKey(dateStr);
