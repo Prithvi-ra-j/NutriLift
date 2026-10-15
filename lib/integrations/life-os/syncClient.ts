@@ -41,17 +41,21 @@ export function toSupabaseSyncRow(record: SyncRecord, userId: string): SupabaseS
 }
 
 export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 500) {
+    throw new Error("Sync batch size must be an integer from 1 to 500.");
+  }
+
   if (Platform.OS === "web") {
     return { uploaded: 0, queued: 0, skipped: 0, needsAttention: 0, cursor: null, error: "Sync is available in the Android app. Web does not have the local SQLite database required for sync." };
   }
 
   if (!isSupabaseConfigured) {
-    return { uploaded: 0, queued: 0, skipped: 0, cursor: null, error: "Supabase is not configured." };
+    return { uploaded: 0, queued: 0, skipped: 0, needsAttention: 0, cursor: null, error: "Supabase is not configured." };
   }
 
   const { user, error: userError } = await getCurrentUser();
   if (userError || !user) {
-    return { uploaded: 0, queued: 0, skipped: 0, cursor: null, error: "Sign in before syncing NutriLift." };
+    return { uploaded: 0, queued: 0, skipped: 0, needsAttention: 0, cursor: null, error: "Sign in before syncing NutriLift." };
   }
 
   const repository = await import("./syncRepository");
