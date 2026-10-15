@@ -96,7 +96,8 @@ export default function DashboardScreen() {
           getSessionsForDate(today),
           getLast7DaysNutrition(),
           getRecoveryLog(today),
-        , getNutritionTargets()]);
+          getNutritionTargets(),
+        ]);
 
       setActiveTargets(targets);
       setNutrition(nutritionData);
