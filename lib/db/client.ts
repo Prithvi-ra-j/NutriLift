@@ -73,6 +73,10 @@ export async function runMigrations(): Promise<void> {
       sodium_mg REAL,
       source TEXT NOT NULL,
       raw_input TEXT,
+      provenance_type TEXT NOT NULL DEFAULT 'legacy_unknown',
+      provenance_json TEXT,
+      estimate_confidence REAL,
+      estimate_reviewed INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL
     );
 
