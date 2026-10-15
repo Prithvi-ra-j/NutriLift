@@ -1,6 +1,6 @@
 import type { BodyStat } from "../db/schema";
 import { USER_PROFILE } from "../constants/user-profile";
-import { fromLocalDateKey, toLocalDateKey } from "../utils/local-date";
+import { differenceInCalendarDays, toLocalDateKey } from "../utils/local-date";
 
 export interface BodyCompositionSummary {
   currentWeight: number | null;
@@ -32,10 +32,7 @@ export function computeBodySummary(
 
   // 7-day change
   const sevenDaysAgo = sorted.find((s) => {
-    const diff =
-      (fromLocalDateKey(latest.date).getTime() - fromLocalDateKey(s.date).getTime()) /
-      (1000 * 60 * 60 * 24);
-    return diff >= 6;
+    return differenceInCalendarDays(latest.date, s.date) >= 6;
   });
   const weightChange7d =
     sevenDaysAgo && currentWeight && sevenDaysAgo.weight_kg
