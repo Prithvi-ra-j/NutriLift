@@ -1,5 +1,5 @@
 /** Increment when a forward-compatible local SQLite schema migration is introduced. */
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 7;
 
 /** Reject a database written by a newer app version. */
 export function assertSupportedSchemaVersion(databaseVersion: number): void {
@@ -23,6 +23,10 @@ export const REQUIRED_CORE_TABLES = [
   "custom_exercises",
   "nutrition_profile",
   "nutrition_target_history",
+  "sync_queue",
+  "sync_state",
+  "sync_tombstones",
+  "recommendation_outcomes",
 ] as const;
 
 /**
@@ -43,6 +47,7 @@ export const ADDITIVE_COLUMN_MIGRATIONS = [
   { table: "nutrition_target_history", column: "goal", type: "TEXT" },
   { table: "daily_nutrition", column: "is_complete", type: "INTEGER NOT NULL DEFAULT 0" },
   { table: "daily_nutrition", column: "completed_at", type: "TEXT" },
+  { table: "sync_state", column: "owner_user_id", type: "TEXT" },
 ] as const;
 
 export const REQUIRED_CORE_COLUMNS: Readonly<Record<string, readonly string[]>> = {
@@ -55,6 +60,7 @@ export const REQUIRED_CORE_COLUMNS: Readonly<Record<string, readonly string[]>> 
   recovery_logs: ["updated_at"],
   sync_tombstones: ["external_id"],
   nutrition_target_history: ["goal"],
+  sync_state: ["owner_user_id"],
   custom_exercises: ["exercise_type", "created_at"],
 };
 
