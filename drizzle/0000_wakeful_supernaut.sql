@@ -224,6 +224,7 @@ CREATE TABLE `workout_sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`date` text NOT NULL,
 	`day_type` text NOT NULL,
+	`status` text DEFAULT 'planned' NOT NULL,
 	`started_at` integer,
 	`ended_at` integer,
 	`duration_min` integer,
