@@ -57,4 +57,19 @@ describe("local calendar date utilities", () => {
       isSameLocalCalendarDay(new Date(2026, 9, 15), new Date(2026, 9, 16)),
     ).toBe(false);
   });
+  it("keeps an instant on the correct local day in IST and a negative-offset zone", () => {
+    const previousTz = process.env.TZ;
+    try {
+      process.env.TZ = "Asia/Kolkata";
+      expect(toLocalDateKey(new Date("2026-10-14T18:35:00.000Z"))).toBe("2026-10-15");
+
+      process.env.TZ = "America/Los_Angeles";
+      expect(toLocalDateKey(new Date("2026-10-15T00:30:00.000Z"))).toBe("2026-10-14");
+      expect(fromLocalDateKey("2026-10-14").getDate()).toBe(14);
+    } finally {
+      if (previousTz === undefined) delete process.env.TZ;
+      else process.env.TZ = previousTz;
+    }
+  });
+
 });
