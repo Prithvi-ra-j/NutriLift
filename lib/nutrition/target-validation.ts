@@ -1,3 +1,5 @@
+import { USER_PROFILE } from "../constants/user-profile";
+
 export type NutritionGoal = "lose" | "maintain" | "gain";
 export type NutritionTargetMode = "manual" | "adaptive";
 
@@ -9,6 +11,16 @@ export interface NutritionTargets {
   goal: NutritionGoal;
   mode: NutritionTargetMode;
 }
+
+/** Safe baseline shared by persistence and pure validation tests. */
+export const DEFAULT_NUTRITION_TARGETS: NutritionTargets = {
+  calories: USER_PROFILE.targets.calories,
+  protein_g: USER_PROFILE.targets.protein_g,
+  carbs_g: USER_PROFILE.targets.carbs_g,
+  fat_g: USER_PROFILE.targets.fat_g,
+  goal: "lose",
+  mode: "manual",
+};
 
 export function validateNutritionTargets(targets: NutritionTargets): void {
   if (!Number.isInteger(targets.calories) || targets.calories < 1200 || targets.calories > 6000) {
