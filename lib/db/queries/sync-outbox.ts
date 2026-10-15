@@ -1,0 +1,51 @@
+import { syncQueue, syncTombstones, type DailyNutrition } from "../schema";
+import { mapDailyNutrition, mapTombstone } from "../../integrations/life-os/recordMappers";
+import type { SyncRecord } from "../../integrations/life-os/exportSchema";
+
+/** Durable local outbox write; callers pass their active domain transaction. */
+export async function enqueueSyncRecord(tx: any, record: SyncRecord): Promise<void> {
+  const now = new Date().toISOString();
+  const payload = JSON.stringify(record);
+  await tx.insert(syncQueue).values({
+    id: `outbox:${record.externalId}`,
+    external_id: record.externalId,
+    payload_json: payload,
+    state: "pending",
+    attempt_count: 0,
+    last_error: null,
+    next_retry_at: null,
+    created_at: now,
+    updated_at: now,
+  }).onConflictDoUpdate({
+    target: syncQueue.external_id,
+    set: { payload_json: payload, state: "pending", attempt_count: 0, last_error: null, next_retry_at: null, updated_at: now },
+  });
+}
+
+export async function enqueueDailyNutrition(tx: any, row: DailyNutrition): Promise<void> {
+  await enqueueSyncRecord(tx, mapDailyNutrition(row as unknown as Record<string, unknown>));
+}
+
+/** Persist a tombstone and its outbound record in the same domain transaction. */
+export async function enqueueTombstone(
+  tx: any,
+  entityType: string,
+  entityId: string,
+  deletedAt: string,
+  externalId?: string,
+): Promise<void> {
+  const record = mapTombstone(entityType, entityId, deletedAt, externalId);
+  if (!record) return;
+  await tx.insert(syncTombstones).values({
+    id: `tombstone:${entityType}:${entityId}`,
+    entity_type: entityType,
+    entity_id: entityId,
+    external_id: record.externalId,
+    deleted_at: deletedAt,
+    created_at: deletedAt,
+  }).onConflictDoUpdate({
+    target: [syncTombstones.entity_type, syncTombstones.entity_id],
+    set: { external_id: record.externalId, deleted_at: deletedAt },
+  });
+  await enqueueSyncRecord(tx, record);
+}
