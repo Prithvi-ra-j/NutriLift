@@ -11,6 +11,7 @@ import {
 import { Input } from "../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 import { useAIStore } from "../../lib/stores/ai.store";
 import { useTodayStore } from "../../lib/stores/today.store";
 import { generateCoachResponse, isGroqConfigured, type CoachMessage } from "../../lib/groq";
@@ -21,6 +22,8 @@ import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { AiConversation } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { getCurrentCoachRecommendations } from "../../lib/analytics/current-coach-recommendations";
+import type { CoachRecommendation } from "../../lib/analytics/coach-recommendations";
 
 // Suggested prompts for coach
 const COACH_SUGGESTED_PROMPTS = [
@@ -39,6 +42,7 @@ export default function CoachScreen() {
   const [input, setInput] = useState("");
   const [groqConfigured, setGroqConfigured] = useState<boolean | null>(null);
   const [requestCount, setRequestCount] = useState(0);
+  const [recommendations, setRecommendations] = useState<CoachRecommendation[]>([]);
   const scrollRef = useRef<ScrollView>(null);
 
   const checkConfiguration = useCallback(() => {
@@ -55,6 +59,19 @@ export default function CoachScreen() {
     checkConfiguration();
     loadHistory();
   }, [checkConfiguration, loadHistory]);
+
+  const loadRecommendations = useCallback(async () => {
+    try {
+      const current = await getCurrentCoachRecommendations();
+      setRecommendations(current);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load current recommendations.");
+    }
+  }, [setError]);
+
+  useFocusEffect(useCallback(() => {
+    void loadRecommendations();
+  }, [loadRecommendations]));
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -81,6 +98,7 @@ export default function CoachScreen() {
     try {
       // Build context
       const context = await buildCoachContext(nutrition, session);
+      setRecommendations(context.today_recommendations);
 
       // Build message history for Groq (limit to last 5 messages to stay under token limit)
       const conversationMessages: CoachMessage[] = messages.slice(-5).map((m) => ({
@@ -123,6 +141,7 @@ export default function CoachScreen() {
       // Reload messages to get the final state
       const history = await getConversationHistory(50);
       setMessages(history);
+      void loadRecommendations();
     } catch (err) {
       // A provider/database failure is UI state, not an assistant answer. Remove
       // the transient placeholder by reloading persisted conversation history.
