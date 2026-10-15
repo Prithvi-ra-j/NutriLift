@@ -33,6 +33,7 @@ import { fromLocalDateKey, toLocalDateKey } from "../../lib/utils/local-date";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
+type MealGroup = Omit<MealSummary, "meal"> & { meal: MealType };
 const MEAL_ICONS: Record<MealType, React.ComponentProps<typeof Feather>["name"]> = {
   breakfast: "sunrise",
   lunch: "sun",
@@ -51,7 +52,7 @@ export default function NutritionScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTargets, setActiveTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
-  const [mealGroups, setMealGroups] = useState<MealSummary[]>([]);
+  const [mealGroups, setMealGroups] = useState<MealGroup[]>([]);
 
   const loadData = useCallback(async () => {
     try {
@@ -61,7 +62,7 @@ export default function NutritionScreen() {
         getLast7DaysNutrition(),
         getNutritionTargets(),
       ]);
-      const completeMealGroups: MealSummary[] = MEALS.map((meal) => mealData.find((group) => group.meal === meal) ?? {
+      const completeMealGroups: MealGroup[] = MEALS.map((meal) => mealData.find((group) => group.meal === meal) ?? {
         meal, items: [], totalCalories: 0, totalProtein: 0, totalCarbs: 0, totalFat: 0,
       });
       setActiveTargets(targets);
