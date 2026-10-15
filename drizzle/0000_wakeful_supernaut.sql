@@ -380,6 +380,10 @@ CREATE TABLE `favorite_foods` (
 	`sugar_g` real,
 	`sodium_mg` real,
 	`source` text NOT NULL,
+	`provenance_type` text DEFAULT 'legacy_unknown' NOT NULL,
+	`provenance_json` text,
+	`estimate_confidence` real,
+	`estimate_reviewed` integer DEFAULT 0 NOT NULL,
 	`created_at` text NOT NULL,
 	`updated_at` text NOT NULL
 );
