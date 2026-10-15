@@ -18,7 +18,7 @@ import {
 } from "../schema";
 import { toLocalDateKey } from "../../utils/local-date";
 import { appendDomainEvent } from "./domain-events";
-import { enqueueWorkoutSession } from "./sync-outbox";
+import { enqueuePersonalRecord, enqueuePersonalRecordTombstone, enqueueWorkoutSession } from "./sync-outbox";
 import { assertWorkoutStatusTransition, validateWorkoutSetInput, type WorkoutSessionStatus } from "../../workout/workout-validation";
 
 // ─── Epley 1RM Formula ────────────────────────────────────────────────────────
@@ -297,6 +297,15 @@ async function touchAndEnqueueSession(tx: any, sessionId: string): Promise<void>
   await tx.update(workoutSessions).set({ updated_at: updatedAt }).where(eq(workoutSessions.id, sessionId));
   const rows = await tx.select().from(workoutSessions).where(eq(workoutSessions.id, sessionId)).limit(1);
   if (rows[0]) await enqueueWorkoutSession(tx, rows[0] as WorkoutSession);
+}
+
+async function enqueuePersonalRecordState(tx: any, exerciseName: string, previous?: PersonalRecord): Promise<void> {
+  const rows = await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, exerciseName)).limit(1);
+  const current = rows[0] as PersonalRecord | undefined;
+  if (previous && (!current || previous.achieved_date !== current.achieved_date)) {
+    await enqueuePersonalRecordTombstone(tx, previous, new Date().toISOString());
+  }
+  if (current) await enqueuePersonalRecord(tx, current);
 }
 
 async function checkAndUpdatePR(set: NewSetLog, executor: any = db): Promise<boolean> {
