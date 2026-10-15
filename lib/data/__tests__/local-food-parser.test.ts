@@ -1,4 +1,6 @@
 import { parseFoodLocally } from "../local-food-parser";
+import { validateFoodLogInput } from "../food-log-validation";
+import type { NewFoodLog } from "../../db/schema";
 
 describe("local food parser", () => {
   it("parses common Indian meal text without an AI call", () => {
@@ -59,5 +61,31 @@ describe("local food parser", () => {
       }
       expect(food.commonServings.length).toBeGreaterThan(0);
     }
+  });
+});
+
+
+describe("food log write validation", () => {
+  const validLog: NewFoodLog = {
+    id: "food-1", date: "2026-10-15", meal: "breakfast", name: "Egg",
+    quantity_g: 50, calories: 72, protein_g: 6.3, carbs_g: 0.4, fat_g: 4.8,
+    fiber_g: 0, sugar_g: null, sodium_mg: null, source: "manual",
+    raw_input: "1 egg", created_at: 1792022400,
+  };
+
+  it("accepts valid logs with individual zero-valued macros", () => {
+    expect(() => validateFoodLogInput(validLog)).not.toThrow();
+  });
+
+  it.each([
+    ["zero nutrition", { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }],
+    ["negative nutrition", { calories: -1 }],
+    ["non-finite nutrition", { protein_g: Number.POSITIVE_INFINITY }],
+    ["empty name", { name: " " }],
+    ["invalid meal", { meal: "brunch" }],
+    ["impossible date", { date: "2026-02-30" }],
+    ["zero quantity", { quantity_g: 0 }],
+  ])("rejects %s", (_label, overrides) => {
+    expect(() => validateFoodLogInput({ ...validLog, ...overrides } as NewFoodLog)).toThrow();
   });
 });
