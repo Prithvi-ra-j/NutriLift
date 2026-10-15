@@ -18,7 +18,7 @@ export const foodLogs = sqliteTable("food_logs", {
   raw_input: text("raw_input"), // original text that was parsed
   provenance_type: text("provenance_type").notNull().default("legacy_unknown"),
   provenance_json: text("provenance_json"),
-  estimate_confidence: real("estimate_confidence"), // 0..1, null when unavailable
+  estimate_confidence: real("estimate_confidence"), // heuristic score, not a calibrated probability
   estimate_reviewed: integer("estimate_reviewed").notNull().default(0),
   created_at: integer("created_at").notNull(), // unix timestamp
 });
