@@ -54,7 +54,7 @@ describe("runtime SQLite migrations", () => {
       for (const table of [
         "food_logs", "daily_nutrition", "workout_sessions", "exercise_logs",
         "set_logs", "custom_exercises", "sync_tombstones", "sync_queue", "sync_state",
-        "nutrition_profile", "nutrition_target_history", "recommendation_outcomes", "domain_events", "derived_state_invalidations", "app_telemetry_events", "favorite_foods", "repeatable_meals",
+        "nutrition_profile", "nutrition_target_history", "recommendation_outcomes", "domain_events", "derived_state_invalidations", "app_telemetry_events", "favorite_foods", "repeatable_meals", "life_os_goal_progress",
       ]) {
         expect(tables.has(table)).toBe(true);
       }
@@ -106,7 +106,7 @@ describe("runtime SQLite migrations", () => {
       for (const table of REQUIRED_CORE_TABLES) {
         expect(tables.has(table)).toBe(true);
       }
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(12);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(13);
     } finally {
       database.close();
     }
