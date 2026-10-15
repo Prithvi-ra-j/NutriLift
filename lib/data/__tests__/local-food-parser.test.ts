@@ -1,5 +1,5 @@
 import { parseFoodLocally } from "../local-food-parser";
-import { validateFoodLogInput } from "../food-log-validation";
+import { validateFoodLogInput, validateFoodLogsInput } from "../food-log-validation";
 import type { NewFoodLog } from "../../db/schema";
 
 describe("local food parser", () => {
@@ -87,5 +87,24 @@ describe("food log write validation", () => {
     ["zero quantity", { quantity_g: 0 }],
   ])("rejects %s", (_label, overrides) => {
     expect(() => validateFoodLogInput({ ...validLog, ...overrides } as NewFoodLog)).toThrow();
+  });
+});
+
+describe("food log batch validation", () => {
+  const base: NewFoodLog = {
+    id: "meal-1", date: "2026-10-15", meal: "breakfast", name: "Egg",
+    quantity_g: 50, calories: 72, protein_g: 6.3, carbs_g: 0.4, fat_g: 4.8,
+    fiber_g: 0, sugar_g: null, sodium_mg: null, source: "manual",
+    raw_input: "1 egg", created_at: 1792022400,
+  };
+
+  it("accepts a valid multi-item meal", () => {
+    expect(() => validateFoodLogsInput([base, { ...base, id: "meal-2", name: "Roti", calories: 80 }])).not.toThrow();
+  });
+  it("rejects empty batches, duplicate IDs, mixed dates, and mixed meals", () => {
+    expect(() => validateFoodLogsInput([])).toThrow(/at least one/);
+    expect(() => validateFoodLogsInput([base, base])).toThrow(/duplicate/);
+    expect(() => validateFoodLogsInput([base, { ...base, id: "meal-2", date: "2026-10-14" }])).toThrow(/one calendar date/);
+    expect(() => validateFoodLogsInput([base, { ...base, id: "meal-2", meal: "dinner" }])).toThrow(/one meal type/);
   });
 });
