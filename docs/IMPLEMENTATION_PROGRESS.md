@@ -21,7 +21,7 @@ Working branch: `implementation/phase-0-baseline`
 |---|---|---|
 | 0. Baseline and defect register | In progress | Tracker committed; overlapping PRs #1/#3/#4/#7 compared at metadata/diff level. No PR merged. |
 | 1. CI/build reproducibility | Complete | Validation run [#38618276698](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38618276698) succeeded on tracker/assets commit `390b31be`: locked dependency install, TypeScript, Jest, Expo local-asset validation, and public Expo config all passed. Earlier failed asset check is resolved. |
-| 2. Domain/persistence foundations | Not started | Inspect current Drizzle schema/migration ownership and live app imports before schema edits. |
+| 2. Domain/persistence foundations | In progress | First repair: manual runtime migrations omitted `custom_exercises` despite its presence in Drizzle schema and generated SQL. Added it to runtime initialization and added a core-table post-migration assertion plus unit tests. Awaiting CI before continuing to migration versioning/clean-install coverage. |
 | 3. Calendar dates/time zones | Not started | Blueprint calls this a cross-feature correctness priority; audit current production paths and tests before edits. |
 | 4. Nutrition pipeline | Not started | One shared validated command path is the target. |
 | 5. Profile/targets | Not started | Effective-dated history; existing PR #7 must be reviewed first. |
@@ -44,6 +44,13 @@ Working branch: `implementation/phase-0-baseline`
 9. Only one GitHub Actions workflow is present: `.github/workflows/build-apk.yml`.
 
 ## Progress log
+
+### 2026-10-15 — Phase 2, unit 1: runtime schema parity
+- [x] Confirmed `custom_exercises` exists in Drizzle schema and generated SQL but was missing from `runMigrations()` runtime SQL.
+- [x] Add idempotent `CREATE TABLE IF NOT EXISTS custom_exercises` to runtime initialization, matching schema columns and unique exercise name.
+- [x] Add a post-migration SQLite catalog assertion for core tables so incomplete initialization fails with an actionable error.
+- [x] Add unit tests for complete schema, missing custom-exercise table, and empty database cases.
+- [ ] CI validation and then inspect migration ownership/versioning before the next change.
 
 ### 2026-10-15 — Phase 1 validation follow-up
 - [x] Inspect the failed validation run and job logs rather than inferring the cause from the red status.
