@@ -124,19 +124,18 @@ export function mapRecoveryLog(row: SyncableRow): SyncRecord[] {
   const date = String(row.date);
   const updatedAt = sourceUpdatedAt(row);
 
-  return recoveryFields.flatMap(([recordType, sourceField, payloadField]) => {
+  return recoveryFields.map(([recordType, sourceField, payloadField]) => {
     const value = row[sourceField];
-    if (value === null || value === undefined) return [];
-
-    return [
-      createRecord(
-        recordType,
-        `nutrilift:recovery:${recordType.split(".").at(-1)}:${date}`,
-        dateToIso(date),
-        updatedAt,
-        { [payloadField]: value }
-      ),
-    ];
+    const record = createRecord(
+      recordType,
+      `nutrilift:recovery:${recordType.split(".").at(-1)}:${date}`,
+      dateToIso(date),
+      updatedAt,
+      value === null || value === undefined ? {} : { [payloadField]: value },
+    );
+    // Explicit tombstones retract an older value when a user clears a recovery
+    // metric; omission would leave stale facts in the remote Life OS.
+    return value === null || value === undefined ? { ...record, deleted: true } : record;
   });
 }
 
