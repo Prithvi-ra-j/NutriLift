@@ -48,7 +48,10 @@ export async function saveSyncState(values: { cursor?: string; error?: string | 
 export async function getChangedRecords(cursor: string | null): Promise<SyncRecord[]> {
   const database = requireNativeSqlite();
   const since = cursor ?? "1970-01-01T00:00:00.000Z";
-  const query = async (table: string) => database.getAllAsync(`SELECT * FROM ${table} WHERE updated_at > ?`, [since]);
+  // Inclusive replay is intentional: multiple records can share one updated_at
+  // timestamp. Queue upserts below suppress unchanged payloads, while this catches
+  // same-timestamp rows that a strict ">" cursor would silently miss.
+  const query = async (table: string) => database.getAllAsync(`SELECT * FROM ${table} WHERE updated_at >= ?`, [since]);
 
   const [nutrition, workouts, records, bodyStats, recoveryLogs, tombstones] = await Promise.all([
     query("daily_nutrition"),
@@ -56,7 +59,7 @@ export async function getChangedRecords(cursor: string | null): Promise<SyncReco
     query("personal_records"),
     query("body_stats"),
     query("recovery_logs"),
-    database.getAllAsync("SELECT * FROM sync_tombstones WHERE deleted_at > ?", [since]),
+    database.getAllAsync("SELECT * FROM sync_tombstones WHERE deleted_at >= ?", [since]),
   ]);
 
   return [
@@ -84,7 +87,8 @@ export async function enqueueRecords(records: SyncRecord[]): Promise<void> {
          state = 'pending',
          last_error = NULL,
          next_retry_at = NULL,
-         updated_at = excluded.updated_at`,
+         updated_at = excluded.updated_at
+       WHERE sync_queue.payload_json != excluded.payload_json`,
       [`sync:${record.externalId}`, record.externalId, JSON.stringify(record), now, now]
     );
   }
