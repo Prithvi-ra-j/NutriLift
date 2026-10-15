@@ -34,6 +34,51 @@ function findFood(segment: string): { food: IndianFood; alias: string } | null {
   return null;
 }
 
+export function resolveFoodDefinition(candidate: string): { food: IndianFood; alias: string } | null {
+  if (!candidate.trim()) return null;
+  return findFood(candidate);
+}
+
+export interface NormalizedServing {
+  grams: number;
+  label: string;
+  isEstimated: boolean;
+}
+
+export function normalizeServing(input: { food: IndianFood; quantity: number; unit?: string | null }): NormalizedServing {
+  const { food } = input;
+  const quantity = input.quantity;
+  const unit = (input.unit ?? "").toLowerCase().trim();
+  if (!Number.isFinite(quantity) || quantity <= 0) throw new Error("Serving quantity must be finite and greater than zero.");
+  if (unit === "kg") return { grams: quantity * 1000, label: quantity + " kg", isEstimated: false };
+  if (unit === "g" || unit === "gram" || unit === "grams") return { grams: quantity, label: quantity + " g", isEstimated: false };
+  if (unit === "ml") return { grams: quantity, label: quantity + " ml (estimated as grams)", isEstimated: true };
+  const serving = chooseServing(food, unit);
+  if (!unit) return { grams: quantity * serving.grams, label: quantity === 1 ? serving.label : quantity + " servings (" + Math.round(quantity * serving.grams) + "g)", isEstimated: true };
+  return {
+    grams: quantity * serving.grams,
+    label: quantity + " " + unit + (quantity === 1 ? "" : "s") + " (estimated)",
+    isEstimated: true,
+  };
+}
+
+export function calculateFoodNutrition(input: { food: IndianFood; normalizedServing: Pick<NormalizedServing, "grams"> }): {
+  calories: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number;
+} {
+  if (!Number.isFinite(input.normalizedServing.grams) || input.normalizedServing.grams <= 0) {
+    throw new Error("Normalized serving grams must be finite and greater than zero.");
+  }
+  const factor = input.normalizedServing.grams / 100;
+  const macros = input.food.per100g;
+  return {
+    calories: round(macros.calories * factor),
+    protein_g: round(macros.protein * factor),
+    carbs_g: round(macros.carbs * factor),
+    fat_g: round(macros.fat * factor),
+    fiber_g: round(macros.fiber * factor),
+  };
+}
+
 function chooseServing(food: IndianFood, unit = ""): { label: string; grams: number } {
   const servings = food.commonServings;
   const patterns: Record<string, RegExp> = {
@@ -64,29 +109,11 @@ function chooseServing(food: IndianFood, unit = ""): { label: string; grams: num
 
 function getQuantityGrams(segment: string, food: IndianFood): { grams: number; label: string } {
   const normalized = normalize(segment);
-  const amountMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*(kg|g|grams?|ml|cups?|bowls?|servings?|scoops?|tbsp|tablespoons?|tsp|teaspoons?)?\b/);
-  if (!amountMatch) {
-    const serving = chooseServing(food);
-    return { grams: serving.grams, label: serving.label };
-  }
-
-  const amount = Number(amountMatch[1]);
-  const unit = amountMatch[2] ?? "";
-  if (!Number.isFinite(amount) || amount <= 0) {
-    const serving = chooseServing(food);
-    return { grams: serving.grams, label: serving.label };
-  }
-
-  if (unit === "kg") return { grams: amount * 1000, label: amount + " kg" };
-  if (unit === "g" || unit.startsWith("gram")) return { grams: amount, label: amount + " g" };
-  if (unit === "ml") return { grams: amount, label: amount + " ml (estimated as grams)" };
-
-  const serving = chooseServing(food, unit);
-  const labelUnit = unit || "serving";
-  return {
-    grams: amount * serving.grams,
-    label: amount + " " + labelUnit + (amount === 1 ? "" : "s") + " (estimated)",
-  };
+  const amountMatch = normalized.match(/^(\\d+(?:\\.\\d+)?)\\s*(kg|g|grams?|ml|cups?|bowls?|servings?|scoops?|tbsp|tablespoons?|tsp|teaspoons?)?\\b/);
+  const amount = amountMatch ? Number(amountMatch[1]) : 1;
+  const unit = amountMatch?.[2] ?? "";
+  const serving = normalizeServing({ food, quantity: Number.isFinite(amount) && amount > 0 ? amount : 1, unit });
+  return { grams: serving.grams, label: serving.label };
 }
 
 function splitFoodSegments(input: string): string[] {
@@ -109,24 +136,23 @@ export function parseFoodLocally(input: string): LocalFoodParseResult {
   const unresolved_items: string[] = [];
 
   for (const segment of segments) {
-    const match = findFood(segment);
+    const match = resolveFoodDefinition(segment);
     if (!match) {
       unresolved_items.push(segment);
       continue;
     }
 
     const { grams, label } = getQuantityGrams(segment, match.food);
-    const factor = grams / 100;
-    const macros = match.food.per100g;
+    const nutrition = calculateFoodNutrition({ food: match.food, normalizedServing: { grams } });
     items.push({
       name: match.food.name,
       quantity: label,
       quantity_g: grams,
-      calories: round(macros.calories * factor),
-      protein_g: round(macros.protein * factor),
-      carbs_g: round(macros.carbs * factor),
-      fat_g: round(macros.fat * factor),
-      fiber_g: round(macros.fiber * factor),
+      calories: nutrition.calories,
+      protein_g: nutrition.protein_g,
+      carbs_g: nutrition.carbs_g,
+      fat_g: nutrition.fat_g,
+      fiber_g: nutrition.fiber_g,
       confidence: match.food.dataQuality === "verified" ? "high" : "medium",
     });
   }
