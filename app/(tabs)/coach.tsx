@@ -23,6 +23,7 @@ import type { AiConversation } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 import { getCurrentCoachRecommendations } from "../../lib/analytics/current-coach-recommendations";
+import { getRecommendationOutcomesForDate, recordRecommendationOutcome, type RecommendationOutcome } from "../../lib/db/queries/recommendations";
 import type { CoachRecommendation } from "../../lib/analytics/coach-recommendations";
 
 // Suggested prompts for coach
@@ -43,6 +44,7 @@ export default function CoachScreen() {
   const [groqConfigured, setGroqConfigured] = useState<boolean | null>(null);
   const [requestCount, setRequestCount] = useState(0);
   const [recommendations, setRecommendations] = useState<CoachRecommendation[]>([]);
+  const [recommendationOutcomes, setRecommendationOutcomes] = useState<Record<string, RecommendationOutcome>>({});
   const scrollRef = useRef<ScrollView>(null);
 
   const checkConfiguration = useCallback(() => {
@@ -62,8 +64,9 @@ export default function CoachScreen() {
 
   const loadRecommendations = useCallback(async () => {
     try {
-      const current = await getCurrentCoachRecommendations();
+      const [current, outcomes] = await Promise.all([getCurrentCoachRecommendations(), getRecommendationOutcomesForDate()]);
       setRecommendations(current);
+      setRecommendationOutcomes(outcomes);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load current recommendations.");
     }
@@ -154,6 +157,14 @@ export default function CoachScreen() {
     }
   };
 
+  const handleRecommendationOutcome = async (recommendation: CoachRecommendation, outcome: RecommendationOutcome) => {
+    try {
+      await recordRecommendationOutcome({ recommendationId: recommendation.id, outcome, ruleVersion: recommendation.ruleVersion, evidence: recommendation.evidence });
+      await loadRecommendations();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save recommendation feedback.");
+    }
+  };
   const handleClear = async () => {
     await clearConversationHistory();
     setMessages([]);
@@ -251,9 +262,18 @@ export default function CoachScreen() {
                       {recommendation.evidence.map((item) => (
                         <Text key={item.id} style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, lineHeight: 16 }}>Evidence: {item.summary}</Text>
                       ))}
+                      {recommendationOutcomes[recommendation.id] === "accepted" && (
+                        <Text style={{ color: M3.colors.success, fontSize: 11 }}>You marked this as something to try.</Text>
+                      )}
                       <TouchableOpacity disabled={isGenerating} onPress={() => sendMessage("Help me assess this recommendation: " + recommendation.title + ". " + recommendation.explanation + " Evidence: " + recommendation.evidence.map((item) => item.summary).join("; "))} style={{ alignSelf: "flex-start", paddingVertical: 6, opacity: isGenerating ? 0.5 : 1 }}>
                         <Text style={{ color: M3.colors.primary, fontSize: 12, fontFamily: "DMSans_700Bold" }}>Discuss with Coach →</Text>
                       </TouchableOpacity>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+                        <TouchableOpacity onPress={() => { void handleRecommendationOutcome(recommendation, "accepted"); }}><Text style={{ color: M3.colors.primary, fontSize: 11 }}>I’ll try this</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={() => { void handleRecommendationOutcome(recommendation, "completed"); }}><Text style={{ color: M3.colors.success, fontSize: 11 }}>Done</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={() => { void handleRecommendationOutcome(recommendation, "dismissed"); }}><Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11 }}>Dismiss</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={() => { void handleRecommendationOutcome(recommendation, "corrected"); }}><Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11 }}>Not accurate</Text></TouchableOpacity>
+                      </View>
                     </View>
                   </View>
                 </Card>
