@@ -104,6 +104,7 @@ export async function runMigrations(): Promise<void> {
       id TEXT PRIMARY KEY,
       date TEXT NOT NULL,
       day_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'planned',
       started_at INTEGER,
       ended_at INTEGER,
       duration_min INTEGER,
@@ -353,6 +354,7 @@ export async function runMigrations(): Promise<void> {
   await sqlite.execAsync(`
     UPDATE daily_nutrition SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
     UPDATE workout_sessions SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+    UPDATE workout_sessions SET status = CASE WHEN ended_at IS NOT NULL THEN 'completed' WHEN started_at IS NOT NULL THEN 'in_progress' ELSE 'planned' END WHERE status IS NULL OR status = '';
     UPDATE personal_records SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
     UPDATE body_stats SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
     UPDATE recovery_logs SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
