@@ -37,6 +37,7 @@ export default function LogFoodModal() {
   const [input, setInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
   const [parsedItems, setParsedItems] = useState<ParsedFoodItem[] | null>(null);
+  const [parseSource, setParseSource] = useState<"local" | "ai">("local");
   const [parseNotes, setParseNotes] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -48,6 +49,7 @@ export default function LogFoodModal() {
     setParsedItems(null);
     try {
       const result = await parseFoodInput(input);
+      setParseSource(result.source === "ai" ? "ai" : "local");
       setParsedItems(result.items);
       setParseNotes(result.parse_notes);
       if (result.meal_suggestion) {
@@ -104,8 +106,12 @@ export default function LogFoodModal() {
         fiber_g: item.fiber_g,
         sugar_g: null,
         sodium_mg: null,
-        source: mode === "paste" ? "paste" : "manual",
+        source: parseSource === "ai" ? "ai" : "local",
         raw_input: input,
+        provenance_type: parseSource === "ai" ? "ai_estimated" : "verified_reference",
+        provenance_json: JSON.stringify({ parserSource: parseSource, confidenceLabel: item.confidence, confidenceScoreBasis: "categorical_heuristic" }),
+        estimate_confidence: parseSource === "ai" ? (item.confidence === "high" ? 0.85 : item.confidence === "medium" ? 0.6 : 0.3) : null,
+        estimate_reviewed: parseSource === "ai" ? 0 : 1,
         created_at: now,
       })));
       router.back();
