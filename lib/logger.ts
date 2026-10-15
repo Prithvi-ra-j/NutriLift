@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
+import { toLocalDateKey } from "./utils/local-date";
 
 type LogLevel = "info" | "warn" | "error" | "debug";
 
@@ -40,7 +41,7 @@ class Logger {
 
       // Create log file with timestamp
       const now = new Date();
-      const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
+      const dateStr = toLocalDateKey(now); // YYYY-MM-DD
       const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "-"); // HH-MM-SS
       const fileName = `app-${dateStr}_${timeStr}.log`;
       
