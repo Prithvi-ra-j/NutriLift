@@ -123,8 +123,8 @@ After every small implementation unit, update this file with the commit/PR, file
 - [x] Add deterministic local parsing for food aliases, amounts, meal cues, confidence, and unresolved segments (`6b57b18`; quantity-regex follow-ups `8e9cc3c`, `6d2896d`, `7de6276`).
 - [x] Add regression tests for common meals, aliases, meal cues, unresolved inputs, and catalogue integrity (`80e7958`).
 - [x] Integrate local-first parsing in `parseFoodInput`; call the LLM only when the local parser cannot resolve the full input, and retain local matches if AI fallback fails (`ea2758b`).
-- [ ] Run TypeScript, Jest, and Expo validation on the latest branch head; fix any failures before extending the save path.
-- [ ] Complete atomic/validated nutrition writes and review voice/barcode/manual entry paths for consistent validation, date/meal/source semantics, and no silent zero-calorie saves.
+- [ ] Run TypeScript, Jest, and Expo validation on the latest branch head; fix any failures before exit review.
+- [x] Add a shared nutrition-log validation contract for real calendar dates, allowed meal/source values, finite non-negative macros, positive calories and positive quantities; add focused validation tests (commits `5cd0d2a`, `9ce386c`, `3a571e9`, `1a873f2`).\n- [x] Add atomic batch insert for multi-item meals and use it for typed/pasted and voice logs; map typed mode to `manual` and store voice timestamps in Unix seconds (commits `c155da7`, `c9f41dc`, `20d39a4`).\n- [ ] Review barcode/manual entry paths for consistent validation and run CI before exit review.
 - [ ] Confirm acceptance criteria and update tracker only with captured CI evidence.
 
 - [x] Add `lib/utils/local-date.ts` with local date-key formatting, strict parsing, calendar-day arithmetic, DST-safe calendar differences, and explicit Monday-start and Sunday-start week helpers.
