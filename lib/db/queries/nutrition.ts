@@ -451,6 +451,10 @@ export async function saveRepeatableMealFromLogs(name: string, meal: string, foo
     protein_g: row.protein_g, carbs_g: row.carbs_g, fat_g: row.fat_g,
     fiber_g: row.fiber_g ?? null, sugar_g: row.sugar_g ?? null, sodium_mg: row.sodium_mg ?? null,
     source: row.source,
+    provenance_type: row.provenance_type,
+    provenance_json: row.provenance_json ?? null,
+    estimate_confidence: row.estimate_confidence ?? null,
+    estimate_reviewed: row.estimate_reviewed ?? 0,
   }));
   return saveRepeatableMeal({ name, meal, items });
 }
