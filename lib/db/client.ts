@@ -317,6 +317,19 @@ export async function runMigrations(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_yearly_summaries_year ON yearly_summaries(year);
   `);
 
+  // Ensure the table exists before applying its additive column migration.
+  await sqlite.execAsync(`
+    CREATE TABLE IF NOT EXISTS sync_tombstones (
+      id TEXT PRIMARY KEY,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      external_id TEXT,
+      deleted_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE(entity_type, entity_id)
+    );
+  `);
+
   // ─── Additive column migrations (safe to run on existing DBs) ───────────────
   // Inspect table_info before ALTER instead of swallowing arbitrary SQLite errors.
   for (const migration of ADDITIVE_COLUMN_MIGRATIONS) {
@@ -338,16 +351,6 @@ export async function runMigrations(): Promise<void> {
     UPDATE personal_records SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
     UPDATE body_stats SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
     UPDATE recovery_logs SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
-
-    CREATE TABLE IF NOT EXISTS sync_tombstones (
-      id TEXT PRIMARY KEY,
-      entity_type TEXT NOT NULL,
-      entity_id TEXT NOT NULL,
-      external_id TEXT,
-      deleted_at TEXT NOT NULL,
-      created_at TEXT NOT NULL,
-      UNIQUE(entity_type, entity_id)
-    );
 
     CREATE TABLE IF NOT EXISTS sync_queue (
       id TEXT PRIMARY KEY,

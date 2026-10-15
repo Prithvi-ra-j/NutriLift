@@ -59,6 +59,7 @@ describe("local database migration contract", () => {
       "personal_records.updated_at",
       "body_stats.updated_at",
       "recovery_logs.updated_at",
+      "sync_tombstones.external_id",
       "custom_exercises.exercise_type",
       "custom_exercises.created_at",
     ]);
