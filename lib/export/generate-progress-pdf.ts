@@ -622,6 +622,6 @@ export async function exportCurrentMonth() {
 export async function exportAllData() {
   return generateProgressPDF({
     startDate: '2020-01-01', // Far back enough to get all data
-    endDate: new Date().toISOString().split("T")[0],
+    endDate: toLocalDateKey(),
   });
 }
