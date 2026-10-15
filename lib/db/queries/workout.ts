@@ -174,6 +174,7 @@ export async function updateExerciseLog(
     if (mutableUpdates.exercise_type) {
       await updateSessionVolumeForSession(tx, existing.session_id);
     }
+    await touchAndEnqueueSession(tx, existing.session_id);
     const eventVersion = Date.now();
     await appendDomainEvent(tx, { id: `workout-session:${existing.session_id}:exercise-updated:${id}:${eventVersion}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: existing.session_id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: existing.date } });
   });
@@ -187,9 +188,9 @@ export async function deleteExerciseLog(id: string): Promise<void> {
     await assertSessionWritableInTransaction(tx, existing.session_id);
     await tx.delete(setLogs).where(eq(setLogs.exercise_log_id, id));
     await tx.delete(exerciseLogs).where(eq(exerciseLogs.id, id));
-    await touchAndEnqueueSession(tx, existing.session_id);
     await recomputePersonalRecord(tx, existing.exercise_name);
     await updateSessionVolumeForSession(tx, existing.session_id);
+    await touchAndEnqueueSession(tx, existing.session_id);
     const eventVersion = Date.now();
     await appendDomainEvent(tx, { id: `workout-session:${existing.session_id}:exercise-deleted:${id}:${eventVersion}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: existing.session_id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: existing.date } });
   });
@@ -242,6 +243,7 @@ export async function deleteSetLog(id: string, exerciseLogId: string): Promise<v
     await tx.delete(setLogs).where(eq(setLogs.id, id));
     await recomputePersonalRecord(tx, exercise.exercise_name);
     await updateSessionVolumeForSession(tx, exercise.session_id);
+    await touchAndEnqueueSession(tx, exercise.session_id);
     const eventVersion = Date.now();
     await appendDomainEvent(tx, { id: `workout-set:${id}:deleted:${eventVersion}`, eventType: "workout.set.deleted", entityType: "workout_set", entityId: id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: exercise.date, sessionId: exercise.session_id } });
   });
