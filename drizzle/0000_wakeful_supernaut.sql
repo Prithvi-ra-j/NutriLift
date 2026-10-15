@@ -277,3 +277,30 @@ CREATE TABLE `sync_state` (
 	`last_error` text,
 	`updated_at` text NOT NULL
 );
+--> statement-breakpoint
+CREATE TABLE `nutrition_profile` (
+  `id` integer PRIMARY KEY NOT NULL,
+  `calorie_target_kcal` integer NOT NULL,
+  `protein_target_g` real NOT NULL,
+  `carbs_target_g` real NOT NULL,
+  `fat_target_g` real NOT NULL,
+  `goal` text DEFAULT 'lose' NOT NULL,
+  `target_mode` text DEFAULT 'manual' NOT NULL,
+  `updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `nutrition_target_history` (
+  `id` text PRIMARY KEY NOT NULL,
+  `effective_date` text NOT NULL,
+  `calorie_target_kcal` integer NOT NULL,
+  `protein_target_g` real NOT NULL,
+  `carbs_target_g` real NOT NULL,
+  `fat_target_g` real NOT NULL,
+  `source` text NOT NULL,
+  `maintenance_estimate_kcal` integer,
+  `algorithm_version` integer,
+  `explanation` text,
+  `created_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `idx_nutrition_target_history_effective_date` ON `nutrition_target_history` (`effective_date`, `created_at`);
