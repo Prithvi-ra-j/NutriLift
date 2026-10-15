@@ -49,6 +49,64 @@ export function validateFoodLogInput(log: NewFoodLog): void {
   }
 }
 
+export interface NutritionEstimateValidationInput {
+  name: string;
+  quantity_g?: number | null;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  provenance_type?: string | null;
+  estimate_confidence?: number | null;
+  estimate_reviewed?: number;
+  provenance_json?: string | null;
+}
+
+export interface NutritionEstimateValidationResult {
+  valid: boolean;
+  errors: string[];
+  requiresReview: boolean;
+  confidenceBand: "unknown" | "low" | "medium" | "high";
+}
+
+/** Validate a nutrition estimate without pretending heuristic confidence is a calibrated probability. */
+export function validateNutritionEstimate(input: NutritionEstimateValidationInput): NutritionEstimateValidationResult {
+  const errors: string[] = [];
+  if (!input.name.trim()) errors.push("Food name is required.");
+  for (const [field, value] of Object.entries({
+    quantity_g: input.quantity_g,
+    calories: input.calories,
+    protein_g: input.protein_g,
+    carbs_g: input.carbs_g,
+    fat_g: input.fat_g,
+  })) {
+    if (value != null && (!Number.isFinite(value) || value < 0)) errors.push(field + " must be finite and non-negative.");
+  }
+  if (!(input.calories > 0)) errors.push("Calories must be greater than zero.");
+  if (input.quantity_g != null && input.quantity_g <= 0) errors.push("Food quantity must be greater than zero.");
+  if (input.provenance_type != null && !VALID_PROVENANCE_TYPES.has(input.provenance_type)) errors.push("Food provenance type is invalid.");
+  if (input.estimate_confidence != null && (!Number.isFinite(input.estimate_confidence) || input.estimate_confidence < 0 || input.estimate_confidence > 1)) {
+    errors.push("Food estimate confidence must be between 0 and 1.");
+  }
+  if (input.estimate_reviewed != null && input.estimate_reviewed !== 0 && input.estimate_reviewed !== 1) errors.push("Food estimate review state is invalid.");
+  if (input.provenance_json != null) {
+    try {
+      const parsed: unknown = JSON.parse(input.provenance_json);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || input.provenance_json.length > 10000) throw new Error("invalid");
+    } catch {
+      errors.push("Food provenance metadata must be a valid JSON object under 10 KB.");
+    }
+  }
+  const confidence = input.estimate_confidence;
+  const confidenceBand = confidence == null ? "unknown" : confidence >= 0.8 ? "high" : confidence >= 0.6 ? "medium" : "low";
+  return {
+    valid: errors.length === 0,
+    errors,
+    requiresReview: input.provenance_type === "ai_estimated" && input.estimate_reviewed !== 1,
+    confidenceBand,
+  };
+}
+
 export function validateFoodLogsInput(logs: NewFoodLog[]): void {
   if (logs.length === 0) throw new Error("Add at least one food item.");
   logs.forEach(validateFoodLogInput);
