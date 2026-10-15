@@ -54,7 +54,7 @@ describe("runtime SQLite migrations", () => {
       for (const table of [
         "food_logs", "daily_nutrition", "workout_sessions", "exercise_logs",
         "set_logs", "custom_exercises", "sync_tombstones", "sync_queue", "sync_state",
-        "nutrition_profile", "nutrition_target_history",
+        "nutrition_profile", "nutrition_target_history", "recommendation_outcomes",
       ]) {
         expect(tables.has(table)).toBe(true);
       }
@@ -69,6 +69,7 @@ describe("runtime SQLite migrations", () => {
         ["recovery_logs", "updated_at"],
         ["sync_tombstones", "external_id"],
         ["nutrition_target_history", "goal"],
+        ["sync_state", "owner_user_id"],
       ]) {
         expect(
           database.prepare(`PRAGMA table_info(${table})`).all()
@@ -97,7 +98,7 @@ describe("runtime SQLite migrations", () => {
       for (const table of REQUIRED_CORE_TABLES) {
         expect(tables.has(table)).toBe(true);
       }
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(6);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(7);
     } finally {
       database.close();
     }
@@ -160,6 +161,10 @@ describe("runtime SQLite migrations", () => {
         INSERT INTO nutrition_target_history
           (id, effective_date, calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g, source, created_at)
         VALUES ('legacy-target', '2026-10-01', 2200, 130, 250, 70, 'manual', '2026-10-01T00:00:00.000Z');
+        CREATE TABLE sync_state (
+          source_app TEXT PRIMARY KEY, cursor TEXT, last_synced_at TEXT,
+          last_success_at TEXT, last_error TEXT, updated_at TEXT NOT NULL
+        );
         PRAGMA user_version = 1;
       `);
 
@@ -177,10 +182,11 @@ describe("runtime SQLite migrations", () => {
         .some((column: { name: string }) => column.name === "is_complete")).toBe(true);
       expect(database.prepare("PRAGMA table_info(daily_nutrition)").all()
         .some((column: { name: string }) => column.name === "completed_at")).toBe(true);
+      expect(database.prepare("PRAGMA table_info(sync_state)").all().some((column: { name: string }) => column.name === "owner_user_id")).toBe(true);
       expect(
         database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'custom_exercises'").get(),
       ).toBeDefined();
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(6);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(7);
 
       expect(database.prepare("SELECT status FROM workout_sessions WHERE id = ?").get("legacy-active").status).toBe("in_progress");
       expect(database.prepare("SELECT status FROM workout_sessions WHERE id = ?").get("legacy-finished").status).toBe("completed");
