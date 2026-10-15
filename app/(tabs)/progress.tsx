@@ -23,6 +23,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { addCalendarDays, fromLocalDateKey, getMondayWeekRange, toLocalDateKey } from "../../lib/utils/local-date";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
 
@@ -32,7 +33,7 @@ export default function ProgressScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   // Week navigation state
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = toLocalDateKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
@@ -41,22 +42,13 @@ export default function ProgressScreen() {
   const [nutritionHistory, setNutritionHistory] = useState<DailyNutrition[]>([]);
   const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>([]);
 
-  // Get week range for selected date
+  // Date-only keys are parsed as local calendar dates; week bounds are inclusive.
   const getWeekRange = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const dayOfWeek = date.getDay();
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust to Monday
-    const monday = new Date(date);
-    monday.setDate(date.getDate() + diff);
-    
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    
+    const range = getMondayWeekRange(dateStr);
     return {
-      start: monday.toISOString().split("T")[0],
-      end: sunday.toISOString().split("T")[0],
-      monday,
-      sunday,
+      ...range,
+      monday: fromLocalDateKey(range.start),
+      sunday: fromLocalDateKey(range.end),
     };
   };
 
@@ -111,15 +103,11 @@ export default function ProgressScreen() {
   const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
 
   const goToPreviousWeek = () => {
-    const prev = new Date(selectedDate);
-    prev.setDate(prev.getDate() - 7);
-    setSelectedDate(prev.toISOString().split("T")[0]);
+    setSelectedDate(addCalendarDays(selectedDate, -7));
   };
 
   const goToNextWeek = () => {
-    const next = new Date(selectedDate);
-    next.setDate(next.getDate() + 7);
-    setSelectedDate(next.toISOString().split("T")[0]);
+    setSelectedDate(addCalendarDays(selectedDate, 7));
   };
 
   const goToToday = () => {
