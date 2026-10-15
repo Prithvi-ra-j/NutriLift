@@ -2,6 +2,7 @@ import { eq, and, desc, lte, gte } from "drizzle-orm";
 import { db } from "../client";
 import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
 import { recordTombstone } from "../../integrations/life-os/syncRepository";
+import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 
 export async function insertBodyStat(stat: NewBodyStat): Promise<void> {
   await db.insert(bodyStats).values({ ...stat, updated_at: new Date().toISOString() });
@@ -36,9 +37,7 @@ export async function getAllInBodyRecords(): Promise<BodyStat[]> {
 }
 
 export async function getWeightHistory(days: number = 30): Promise<BodyStat[]> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = addCalendarDays(toLocalDateKey(), -days);
 
   return db
     .select()
