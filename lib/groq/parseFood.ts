@@ -1,6 +1,7 @@
 import { groq } from "./client";
 import { AI_MODELS } from "./model-config";
 import { safeGroqCall } from "./safeCall";
+import { parseFoodLocally } from "../data/local-food-parser";
 
 export interface ParsedFoodItem {
   name: string;
@@ -18,12 +19,26 @@ export interface FoodParseResult {
   items: ParsedFoodItem[];
   meal_suggestion: "breakfast" | "lunch" | "snack" | "dinner" | null;
   parse_notes: string | null;
+  unresolved_items?: string[];
+  source?: "local" | "ai";
 }
 
 /**
  * Parse food text into structured nutrition data using Groq LLaMA
  */
 export async function parseFoodFromText(text: string): Promise<FoodParseResult> {
+  const input = text.trim();
+  if (!input) {
+    throw new Error("Enter the foods you ate before parsing.");
+  }
+
+  // Prefer deterministic local nutrition for fully recognized items. This avoids
+  // spending AI quota for simple meals and keeps the numeric source inspectable.
+  const localResult = parseFoodLocally(input);
+  if (localResult.items.length > 0 && localResult.unresolved_items.length === 0) {
+    return { ...localResult, source: "local" };
+  }
+
   return safeGroqCall(async () => {
     const completion = await groq.chat.completions.create({
       model: AI_MODELS.food_parse,
@@ -76,7 +91,7 @@ Rules:
         },
         {
           role: "user",
-          content: text,
+          content: input,
         },
       ],
       temperature: 0.1, // Low temperature for consistent parsing
@@ -87,8 +102,14 @@ Rules:
     const raw = completion.choices[0]?.message?.content ?? "{}";
     
     // Parse and validate
-    const result = JSON.parse(raw) as FoodParseResult;
-    return validateFoodParseResult(result);
+    const result = validateFoodParseResult(JSON.parse(raw) as FoodParseResult);
+    return {
+      ...result,
+      meal_suggestion: result.meal_suggestion ?? localResult.meal_suggestion,
+      parse_notes: [result.parse_notes, localResult.unresolved_items.length ? `Local catalogue could not identify: ${localResult.unresolved_items.join(", ")}.` : null].filter(Boolean).join(" ") || null,
+      unresolved_items: localResult.unresolved_items,
+      source: "ai",
+    };
   }) as Promise<FoodParseResult>;
 }
 
@@ -102,18 +123,31 @@ function validateFoodParseResult(result: FoodParseResult): FoodParseResult {
 
   // Ensure all required fields exist with defaults
   result.items = result.items.map((item) => ({
-    name: item.name || "Unknown food",
-    quantity: item.quantity || "1 serving",
-    quantity_g: item.quantity_g ?? null,
-    calories: Math.max(0, item.calories || 0),
-    protein_g: Math.max(0, item.protein_g || 0),
-    carbs_g: Math.max(0, item.carbs_g || 0),
-    fat_g: Math.max(0, item.fat_g || 0),
-    fiber_g: item.fiber_g ?? null,
-    confidence: item.confidence || "medium",
+    name: typeof item.name === "string" && item.name.trim() ? item.name.trim().slice(0, 120) : "Unknown food",
+    quantity: typeof item.quantity === "string" && item.quantity.trim() ? item.quantity.trim().slice(0, 80) : "1 serving",
+    quantity_g: finiteNonNegative(item.quantity_g),
+    calories: finiteNonNegative(item.calories) ?? 0,
+    protein_g: finiteNonNegative(item.protein_g) ?? 0,
+    carbs_g: finiteNonNegative(item.carbs_g) ?? 0,
+    fat_g: finiteNonNegative(item.fat_g) ?? 0,
+    fiber_g: finiteNonNegative(item.fiber_g),
+    confidence: item.confidence === "high" || item.confidence === "low" ? item.confidence : "medium",
   }));
 
+  if (result.items.length > 30) {
+    throw new Error("Too many food items in one parse. Split the meal into smaller entries.");
+  }
+  const validMeals = ["breakfast", "lunch", "snack", "dinner"];
+  result.meal_suggestion = validMeals.includes(String(result.meal_suggestion))
+    ? result.meal_suggestion
+    : null;
+  result.parse_notes = typeof result.parse_notes === "string" ? result.parse_notes.slice(0, 500) : null;
   return result;
+}
+
+function finiteNonNegative(value: unknown): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
+  return Math.min(value, 1_000_000);
 }
 
 /**
