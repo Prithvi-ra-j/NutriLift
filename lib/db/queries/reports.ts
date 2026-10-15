@@ -1,5 +1,6 @@
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { db } from "../client";
+import { toLocalDateKey } from "../../utils/local-date";
 import { monthlyReports, aiConversations, weeklySummaries, quarterlySummaries, yearlySummaries, type MonthlyReport, type NewMonthlyReport, type AiConversation, type NewAiConversation, type WeeklySummary, type NewWeeklySummary, type QuarterlySummary, type NewQuarterlySummary, type YearlySummary, type NewYearlySummary } from "../schema";
 
 // ─── Monthly Report Queries ───────────────────────────────────────────────────
@@ -74,7 +75,7 @@ export async function getPreviousWeeklySummaries(limit: number = 3): Promise<Wee
     const weekStart = new Date(currentWeekStart);
     weekStart.setDate(currentWeekStart.getDate() - weekOffset * 7);
     
-    const summary = await getWeeklySummary(weekStart.toISOString().split("T")[0]);
+    const summary = await getWeeklySummary(toLocalDateKey(weekStart));
     if (summary) {
       summaries.push(summary);
     }
@@ -89,8 +90,8 @@ export async function getWeeklySummariesForMonth(month: string): Promise<WeeklyS
   const startDate = new Date(year, monthNum - 1, 1);
   const endDate = new Date(year, monthNum, 0); // Last day of month
   
-  const startStr = startDate.toISOString().split('T')[0];
-  const endStr = endDate.toISOString().split('T')[0];
+  const startStr = toLocalDateKey(startDate);
+  const endStr = toLocalDateKey(endDate);
   
   return db
     .select()
