@@ -1,3 +1,5 @@
+import { calculateCalorieAdherenceScore } from "../data/nutrition-scores";
+
 import { USER_PROFILE } from "../constants/user-profile";
 
 export type NutritionGoal = "lose" | "maintain" | "gain";
@@ -21,6 +23,37 @@ export const DEFAULT_NUTRITION_TARGETS: NutritionTargets = {
   goal: "lose",
   mode: "manual",
 };
+
+export interface TargetComparison {
+  protein_target_met: 0 | 1;
+  calorie_target_met: 0 | 1;
+  adherence_score: number;
+}
+
+/** Recompute target-derived fields without changing actual logged intake. */
+export function calculateTargetComparison(
+  totals: { total_calories: number; total_protein_g: number },
+  targets: NutritionTargets,
+): TargetComparison {
+  validateNutritionTargets(targets);
+  if (
+    !Number.isFinite(totals.total_calories) || totals.total_calories < 0 ||
+    !Number.isFinite(totals.total_protein_g) || totals.total_protein_g < 0
+  ) {
+    throw new Error("Nutrition totals must be finite, non-negative values.");
+  }
+  const proteinTargetMet: 0 | 1 = totals.total_protein_g >= targets.protein_g ? 1 : 0;
+  const calorieTargetMet: 0 | 1 =
+    totals.total_calories >= targets.calories * 0.9 &&
+    totals.total_calories <= targets.calories * 1.1 ? 1 : 0;
+  const proteinScore = Math.min(100, (totals.total_protein_g / targets.protein_g) * 100);
+  const calorieScore = calculateCalorieAdherenceScore(totals.total_calories, targets.calories);
+  return {
+    protein_target_met: proteinTargetMet,
+    calorie_target_met: calorieTargetMet,
+    adherence_score: proteinScore * 0.6 + calorieScore * 0.4,
+  };
+}
 
 export function validateNutritionTargets(targets: NutritionTargets): void {
   if (!Number.isInteger(targets.calories) || targets.calories < 1200 || targets.calories > 6000) {
