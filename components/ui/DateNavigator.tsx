@@ -186,7 +186,7 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
           style={{ flex: 1 }}
         >
           {days.map((date, index) => {
-            const dateStr = date.toISOString().split("T")[0];
+            const dateStr = toLocalDateKey(date);
             const selected = isSelected(date);
             const todayDate = isToday(date);
             const sunday = isSunday(date);
