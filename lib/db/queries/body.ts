@@ -1,7 +1,6 @@
 import { eq, and, desc, lte, gte } from "drizzle-orm";
 import { db } from "../client";
-import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
-import { recordTombstone } from "../../integrations/life-os/syncRepository";
+import { bodyStats, syncTombstones, type BodyStat, type NewBodyStat } from "../schema";
 import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 
 export async function insertBodyStat(stat: NewBodyStat): Promise<void> {
@@ -71,8 +70,24 @@ export async function getBodyStatForDate(date: string): Promise<BodyStat | null>
 }
 
 export async function deleteBodyStat(id: string): Promise<void> {
-  await db.delete(bodyStats).where(eq(bodyStats.id, id));
-  await recordTombstone("body_stat", id);
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(bodyStats).where(eq(bodyStats.id, id)).limit(1);
+    if (!rows[0]) return;
+    const now = new Date().toISOString();
+    const externalId = `nutrilift:body_stat:${id}`;
+    await tx.delete(bodyStats).where(eq(bodyStats.id, id));
+    await tx.insert(syncTombstones).values({
+      id: `tombstone:body_stat:${id}`,
+      entity_type: "body_stat",
+      entity_id: id,
+      external_id: externalId,
+      deleted_at: now,
+      created_at: now,
+    }).onConflictDoUpdate({
+      target: [syncTombstones.entity_type, syncTombstones.entity_id],
+      set: { external_id: externalId, deleted_at: now },
+    });
+  });
 }
 
 // ─── 7-day rolling average ────────────────────────────────────────────────────
