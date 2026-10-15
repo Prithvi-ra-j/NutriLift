@@ -10,7 +10,7 @@ import {
 
 describe("local database migration contract", () => {
   it("supports legacy and current schema versions but rejects future versions", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(10);
+    expect(CURRENT_SCHEMA_VERSION).toBe(11);
     expect(() => assertSupportedSchemaVersion(0)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(1)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();
@@ -42,6 +42,10 @@ describe("local database migration contract", () => {
     expect(migrationSql).toContain("`is_complete` integer DEFAULT 0 NOT NULL");
     expect(migrationSql).toContain("`completed_at` text");
     expect(migrationSql).toContain("`owner_user_id` text");
+    expect(migrationSql).toContain("provenance_type");
+    expect(migrationSql).toContain("provenance_json");
+    expect(migrationSql).toContain("estimate_confidence");
+    expect(migrationSql).toContain("estimate_reviewed");
     expect(migrationSql).toContain("`idx_recommendation_outcomes_date_id`");
   });
 
@@ -72,6 +76,10 @@ describe("local database migration contract", () => {
         exercise_logs: new Set(),
       }),
     ).toEqual([
+      "food_logs.provenance_type",
+      "food_logs.provenance_json",
+      "food_logs.estimate_confidence",
+      "food_logs.estimate_reviewed",
       "daily_nutrition.updated_at",
       "daily_nutrition.is_complete",
       "daily_nutrition.completed_at",
