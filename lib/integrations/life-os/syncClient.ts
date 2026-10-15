@@ -84,7 +84,7 @@ async function upsertDeletedFact(record: SyncRecord, userId: string) {
   return supabase.from("sync_records").upsert([toSupabaseSyncRow({ ...record, payload: {}, deleted: true }, userId)], { onConflict: "user_id,external_id" });
 }
 
-export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
+export async function processSyncQueue(batchSize = 100): Promise<SyncResult> {
   const attemptStartedAt = Date.now();
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 500) {
     throw new Error("Sync batch size must be an integer from 1 to 500.");
@@ -227,4 +227,10 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
 
 export async function retryFailedSync(): Promise<SyncResult> {
   return syncToSupabase();
+}
+
+
+/** Backwards-compatible public entry point; the orchestration contract is processSyncQueue. */
+export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
+  return processSyncQueue(batchSize);
 }
