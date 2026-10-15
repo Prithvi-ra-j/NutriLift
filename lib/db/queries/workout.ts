@@ -269,6 +269,7 @@ export async function updateSetLog(
     await tx.update(setLogs).set(mutableUpdates).where(eq(setLogs.id, id));
     await recomputePersonalRecord(tx, exercise.exercise_name);
     await updateSessionVolumeForSession(tx, exercise.session_id);
+    await touchAndEnqueueSession(tx, exercise.session_id);
     const eventVersion = Date.now();
     await appendDomainEvent(tx, { id: `workout-set:${id}:updated:${eventVersion}`, eventType: "workout.set.updated", entityType: "workout_set", entityId: id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: exercise.date, sessionId: exercise.session_id } });
   });
