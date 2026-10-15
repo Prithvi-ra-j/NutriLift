@@ -21,6 +21,7 @@ import {
 } from "../db/schema";
 import { desc, gte, sql } from "drizzle-orm";
 import { USER_PROFILE } from "../constants/user-profile";
+import { toLocalDateKey } from "../utils/local-date";
 
 interface ExportOptions {
   startDate?: string; // YYYY-MM-DD
@@ -46,7 +47,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
     includePRs = true,
   } = options;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
   const start = startDate || getDateDaysAgo(30); // Default 30 days
   const end = endDate || today;
 
