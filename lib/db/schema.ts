@@ -1,4 +1,4 @@
-import { sqliteTable, text, real, integer, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, real, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // ─── Food Logs ────────────────────────────────────────────────────────────────
 export const foodLogs = sqliteTable("food_logs", {
@@ -456,7 +456,8 @@ export const appTelemetryEvents = sqliteTable("app_telemetry_events", {
   occurred_at: text("occurred_at").notNull(),
   metadata_json: text("metadata_json").notNull(),
 }, (table) => ({
-  typeTimeIndex: uniqueIndex("idx_app_telemetry_event_id").on(table.id),
+  typeTimeIndex: index("idx_app_telemetry_type_time").on(table.event_type, table.occurred_at),
+  severityTimeIndex: index("idx_app_telemetry_severity_time").on(table.severity, table.occurred_at),
 }));
 export type AppTelemetryEvent = typeof appTelemetryEvents.$inferSelect;
 export type NewAppTelemetryEvent = typeof appTelemetryEvents.$inferInsert;
