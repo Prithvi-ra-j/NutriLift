@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { parseFoodInput, type ParsedFoodItem } from "../../lib/ai/parsers";
-import { insertFoodLog } from "../../lib/db/queries/nutrition";
+import { insertFoodLogs } from "../../lib/db/queries/nutrition";
 import { useUIStore } from "../../lib/stores/ui.store";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
@@ -91,25 +91,23 @@ export default function LogFoodModal() {
     setIsSaving(true);
     try {
       const now = Math.floor(Date.now() / 1000);
-      for (const item of parsedItems) {
-        await insertFoodLog({
-          id: uuid.v4() as string,
-          date: today,
-          meal: selectedMeal,
-          name: item.name,
-          quantity_g: item.quantity_g,
-          calories: item.calories,
-          protein_g: item.protein_g,
-          carbs_g: item.carbs_g,
-          fat_g: item.fat_g,
-          fiber_g: item.fiber_g,
-          sugar_g: null,
-          sodium_mg: null,
-          source: mode,
-          raw_input: input,
-          created_at: now,
-        });
-      }
+      await insertFoodLogs(parsedItems.map((item) => ({
+        id: uuid.v4() as string,
+        date: today,
+        meal: selectedMeal,
+        name: item.name,
+        quantity_g: item.quantity_g,
+        calories: item.calories,
+        protein_g: item.protein_g,
+        carbs_g: item.carbs_g,
+        fat_g: item.fat_g,
+        fiber_g: item.fiber_g,
+        sugar_g: null,
+        sodium_mg: null,
+        source: mode === "paste" ? "paste" : "manual",
+        raw_input: input,
+        created_at: now,
+      })));
       router.back();
     } catch (err) {
       Alert.alert("Save Failed", "Could not save food log. Please try again.");
