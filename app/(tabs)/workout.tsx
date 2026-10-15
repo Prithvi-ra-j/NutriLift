@@ -240,6 +240,30 @@ export default function WorkoutScreen() {
 
   // ─── Session ───────────────────────────────────────────────────────────────
 
+  const finishWorkout = async (status: "completed" | "cancelled") => {
+    if (!session) return;
+    const action = status === "completed" ? "finish" : "cancel";
+    const apply = async () => {
+      try {
+        await setSessionStatus(session.id, status);
+        await loadWorkout();
+      } catch (error) {
+        Alert.alert("Workout not updated", error instanceof Error ? error.message : "Please try again.");
+      }
+    };
+    if (status === "cancelled") {
+      Alert.alert("Cancel workout?", "Logged sets will be kept, but this session will be closed.", [
+        { text: "Keep workout", style: "cancel" },
+        { text: "Cancel session", style: "destructive", onPress: () => { void apply(); } },
+      ]);
+    } else {
+      Alert.alert("Finish workout?", "Your logged sets will be saved and this session will be marked complete.", [
+        { text: "Keep training", style: "cancel" },
+        { text: "Finish", onPress: () => { void apply(); } },
+      ]);
+    }
+  };
+
   const ensureSession = async (): Promise<string> => {
     if (session) return session.id;
     const sessionId = uuid.v4() as string;
@@ -264,6 +288,10 @@ export default function WorkoutScreen() {
   // ─── Add Exercise ──────────────────────────────────────────────────────────
 
   const addExercise = async (exerciseName: string, muscleGroup: string, equipment: string, exerciseType: ExerciseType) => {
+    if (session && (session.status === "completed" || session.status === "cancelled")) {
+      Alert.alert("Workout closed", "Start a new session on another date to log more sets.");
+      return;
+    }
     const sessionId = await ensureSession();
     const exerciseId = uuid.v4() as string;
     const newExercise: ExerciseLog = {
@@ -442,6 +470,10 @@ export default function WorkoutScreen() {
 
   const logSet = async () => {
     if (!addSetForm) return;
+    if (session && (session.status === "completed" || session.status === "cancelled")) {
+      Alert.alert("Workout closed", "This session no longer accepts set changes.");
+      return;
+    }
     const { exerciseType, weight: wStr, reps: rStr, durationSec: dSecStr, distanceKm: dKmStr, durationMin: dMinStr } = addSetForm;
 
     const validated = validateSetMetrics(exerciseType, wStr, rStr, dSecStr, dKmStr, dMinStr);
@@ -994,6 +1026,34 @@ export default function WorkoutScreen() {
                   ({(session.total_volume_kg ?? 0).toFixed(0)}kg)
                 </Text>
               </View>
+            </View>
+            <View style={{ marginTop: 14, gap: 8 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                STATUS: {(session.status ?? "planned").replace("_", " ").toUpperCase()}
+              </Text>
+              {session.status !== "completed" && session.status !== "cancelled" && (
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => finishWorkout("completed")}
+                    style={{ flex: 1, backgroundColor: M3.colors.primary, borderRadius: 10, padding: 12, alignItems: "center" }}
+                  >
+                    <Text style={{ color: M3.colors.onPrimary, fontFamily: "DMSans_700Bold" }}>Finish Workout</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => finishWorkout("cancelled")}
+                    style={{ borderWidth: 1, borderColor: M3.colors.outline, borderRadius: 10, padding: 12, alignItems: "center" }}
+                  >
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_700Bold" }}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {(session.status === "completed" || session.status === "cancelled") && (
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12 }}>
+                  Session closed. Logged sets remain saved.
+                </Text>
+              )}
             </View>
           </Card>
         )}
