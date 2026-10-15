@@ -1,5 +1,6 @@
 import type { BodyStat } from "../db/schema";
 import { USER_PROFILE } from "../constants/user-profile";
+import { fromLocalDateKey, toLocalDateKey } from "../utils/local-date";
 
 export interface BodyCompositionSummary {
   currentWeight: number | null;
@@ -32,7 +33,7 @@ export function computeBodySummary(
   // 7-day change
   const sevenDaysAgo = sorted.find((s) => {
     const diff =
-      (new Date(latest.date).getTime() - new Date(s.date).getTime()) /
+      (fromLocalDateKey(latest.date).getTime() - fromLocalDateKey(s.date).getTime()) /
       (1000 * 60 * 60 * 24);
     return diff >= 6;
   });
@@ -79,7 +80,7 @@ export function computeBodySummary(
       const weeksNeeded = (currentBF - targetBF) / weeklyFatLossPct;
       const projectedDate = new Date(today);
       projectedDate.setDate(today.getDate() + weeksNeeded * 7);
-      projectedBFDate = projectedDate.toISOString().split("T")[0];
+      projectedBFDate = toLocalDateKey(projectedDate);
       onTrackForGoal = projectedDate <= goalDate;
     }
   }
