@@ -25,6 +25,21 @@ describe("local database migration contract", () => {
     expect(declared.sort()).toEqual(required.sort());
   });
 
+
+  it("keeps the clean-install Drizzle SQL snapshot aligned with runtime-only schema fields", () => {
+    const { readFileSync } = require("node:fs");
+    const { join } = require("node:path");
+    const migrationSql = readFileSync(
+      join(__dirname, "../../../drizzle/0000_wakeful_supernaut.sql"),
+      "utf8",
+    );
+    for (const table of ["sync_tombstones", "sync_queue", "sync_state"]) {
+      expect(migrationSql).toContain(`CREATE TABLE \`${table}\``);
+    }
+    expect(migrationSql).toContain("`updated_at` text");
+    expect(migrationSql).toContain("`external_id` text");
+  });
+
   it("accepts a database containing every required core table", () => {
     expect(findMissingRequiredTables(new Set(REQUIRED_CORE_TABLES))).toEqual([]);
   });
