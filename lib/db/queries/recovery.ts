@@ -4,6 +4,7 @@ import { db } from "../client";
 import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, type SupplementLog } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
 import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
+import { validateRecoveryInput } from "../../recovery/validation";
 
 // ─── Recovery Queries ─────────────────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ export async function getRecoveryLog(date: string): Promise<RecoveryLog | null> 
 }
 
 export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
+  validateRecoveryInput(log);
   const record = { ...log, updated_at: new Date().toISOString() };
   const existing = await getRecoveryLog(log.date);
   if (existing) {
