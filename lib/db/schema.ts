@@ -507,3 +507,22 @@ export type FavoriteFood = typeof favoriteFoods.$inferSelect;
 export type NewFavoriteFood = typeof favoriteFoods.$inferInsert;
 export type RepeatableMeal = typeof repeatableMeals.$inferSelect;
 export type NewRepeatableMeal = typeof repeatableMeals.$inferInsert;
+
+
+// ─── Derived Life OS goal progress snapshots (external goals remain authoritative) ─
+export const lifeOsGoalProgress = sqliteTable("life_os_goal_progress", {
+  goal_id: text("goal_id").primaryKey(),
+  status: text("status").notNull(),
+  current_value: real("current_value"),
+  target_value: real("target_value").notNull(),
+  progress_percent: real("progress_percent"),
+  unit: text("unit"),
+  as_of: text("as_of").notNull(),
+  evidence_json: text("evidence_json").notNull(),
+  rule_version: text("rule_version").notNull(),
+  updated_at: text("updated_at").notNull(),
+}, (table) => ({
+  statusUpdatedIndex: index("idx_life_os_goal_progress_status_updated").on(table.status, table.updated_at),
+}));
+export type LifeOsGoalProgress = typeof lifeOsGoalProgress.$inferSelect;
+export type NewLifeOsGoalProgress = typeof lifeOsGoalProgress.$inferInsert;
