@@ -8,6 +8,7 @@ import {
 } from "../db/queries/reports";
 import { generateQuarterlySummary } from "../groq/generateCoachResponse";
 import type { QuarterlySummary } from "../db/schema";
+import { toLocalDateKey } from "../utils/local-date";
 
 /**
  * Generate or retrieve AI-powered quarterly summary
@@ -62,8 +63,8 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
     // Generate AI summary
     const aiSummary = await generateQuarterlySummary({
       quarter,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: toLocalDateKey(startDate),
+      end_date: toLocalDateKey(endDate),
       monthly_summaries: monthlySummaries
         .filter(m => m.ai_summary)
         .map(m => ({
