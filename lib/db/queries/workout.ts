@@ -166,10 +166,15 @@ export async function updateExerciseLog(
     const existing = rows[0] as ExerciseLog | undefined;
     if (!existing) throw new Error("Exercise log not found.");
     await assertSessionWritableInTransaction(tx, existing.session_id);
+    const exerciseNameChanged = Boolean(mutableUpdates.exercise_name && mutableUpdates.exercise_name !== existing.exercise_name);
+    const previousOldPRRows = exerciseNameChanged ? await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, existing.exercise_name)).limit(1) : [];
+    const previousNewPRRows = exerciseNameChanged ? await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, mutableUpdates.exercise_name!)).limit(1) : [];
     await tx.update(exerciseLogs).set(mutableUpdates).where(eq(exerciseLogs.id, id));
-    if (mutableUpdates.exercise_name && mutableUpdates.exercise_name !== existing.exercise_name) {
+    if (exerciseNameChanged) {
       await recomputePersonalRecord(tx, existing.exercise_name);
-      await recomputePersonalRecord(tx, mutableUpdates.exercise_name);
+      await recomputePersonalRecord(tx, mutableUpdates.exercise_name!);
+      await enqueuePersonalRecordState(tx, existing.exercise_name, previousOldPRRows[0] as PersonalRecord | undefined);
+      await enqueuePersonalRecordState(tx, mutableUpdates.exercise_name!, previousNewPRRows[0] as PersonalRecord | undefined);
     }
     if (mutableUpdates.exercise_type) {
       await updateSessionVolumeForSession(tx, existing.session_id);
@@ -186,9 +191,12 @@ export async function deleteExerciseLog(id: string): Promise<void> {
     const existing = rows[0] as ExerciseLog | undefined;
     if (!existing) return;
     await assertSessionWritableInTransaction(tx, existing.session_id);
+    const previousPRRows = await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, existing.exercise_name)).limit(1);
+    const previousPR = previousPRRows[0] as PersonalRecord | undefined;
     await tx.delete(setLogs).where(eq(setLogs.exercise_log_id, id));
     await tx.delete(exerciseLogs).where(eq(exerciseLogs.id, id));
     await recomputePersonalRecord(tx, existing.exercise_name);
+    await enqueuePersonalRecordState(tx, existing.exercise_name, previousPR);
     await updateSessionVolumeForSession(tx, existing.session_id);
     await touchAndEnqueueSession(tx, existing.session_id);
     const eventVersion = Date.now();
