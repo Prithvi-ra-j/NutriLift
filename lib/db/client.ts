@@ -420,6 +420,20 @@ export async function runMigrations(): Promise<void> {
       updated_at TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_repeatable_meals_name ON repeatable_meals(name);
+
+    CREATE TABLE IF NOT EXISTS life_os_goal_progress (
+      goal_id TEXT PRIMARY KEY,
+      status TEXT NOT NULL,
+      current_value REAL,
+      target_value REAL NOT NULL,
+      progress_percent REAL,
+      unit TEXT,
+      as_of TEXT NOT NULL,
+      evidence_json TEXT NOT NULL,
+      rule_version TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_life_os_goal_progress_status_updated ON life_os_goal_progress(status, updated_at);
   `);
 
   // ─── Additive column migrations (safe to run on existing DBs) ───────────────
