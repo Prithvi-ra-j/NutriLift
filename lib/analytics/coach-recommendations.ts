@@ -38,6 +38,29 @@ export interface CoachStateSnapshot {
   } | null;
 }
 
+export interface TrainingConsistencyEvaluation {
+  plannedToday: boolean;
+  completedToday: boolean;
+}
+
+/** Use explicit session statuses only; absence of a session is not a missed workout. */
+export function evaluateTrainingConsistency(sessions: Array<{ status?: string | null }>): TrainingConsistencyEvaluation {
+  return {
+    plannedToday: sessions.some((session) => session.status === "planned"),
+    completedToday: sessions.some((session) => session.status === "completed"),
+  };
+}
+
+export function evaluateRecoveryReadiness(recovery: CoachStateSnapshot["recovery"]): { needsRecoveryFocus: boolean; signals: string[] } {
+  if (!recovery) return { needsRecoveryFocus: false, signals: [] };
+  const signals = [
+    recovery.sleepHours != null && Number.isFinite(recovery.sleepHours) && recovery.sleepHours < 6 ? "sleep below 6 hours" : null,
+    recovery.energy != null && recovery.energy <= 2 ? "low self-reported energy" : null,
+    recovery.soreness != null && recovery.soreness >= 4 ? "high self-reported soreness" : null,
+    recovery.stress != null && recovery.stress >= 4 ? "high self-reported stress" : null,
+  ].filter((value): value is string => value !== null);
+  return { needsRecoveryFocus: signals.length > 0, signals };
+}
 /**
  * Deterministic candidate recommendations. This function never writes data and
  * deliberately avoids interpreting missing signals as negative evidence.
@@ -106,20 +129,9 @@ export function generateCoachRecommendations(
     });
   }
 
-  const recovery = snapshot.recovery;
-  if (recovery) {
-    const lowSleep = recovery.sleepHours != null && Number.isFinite(recovery.sleepHours) && recovery.sleepHours < 6;
-    const lowEnergy = recovery.energy != null && recovery.energy <= 2;
-    const highSoreness = recovery.soreness != null && recovery.soreness >= 4;
-    const highStress = recovery.stress != null && recovery.stress >= 4;
-
-    if (lowSleep || lowEnergy || highSoreness || highStress) {
-      const signals = [
-        lowSleep ? "sleep below 6 hours" : null,
-        lowEnergy ? "low self-reported energy" : null,
-        highSoreness ? "high self-reported soreness" : null,
-        highStress ? "high self-reported stress" : null,
-      ].filter((value): value is string => value !== null);
+  const recoveryEvaluation = evaluateRecoveryReadiness(snapshot.recovery);
+  if (recoveryEvaluation.needsRecoveryFocus) {
+      const signals = recoveryEvaluation.signals;
       candidates.push({
         id: `recovery-check-in:${snapshot.localDate}`,
         type: "recovery_check_in",
@@ -134,7 +146,6 @@ export function generateCoachRecommendations(
         }],
         ruleVersion: "1",
       });
-    }
   }
 
   return candidates
