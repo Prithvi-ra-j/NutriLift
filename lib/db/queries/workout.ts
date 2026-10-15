@@ -2,7 +2,6 @@
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { db } from "../client";
 import {
-import { toLocalDateKey } from "../../utils/local-date";
   workoutSessions,
   exerciseLogs,
   setLogs,
@@ -18,6 +17,7 @@ import { toLocalDateKey } from "../../utils/local-date";
   type CustomExercise,
   type NewCustomExercise,
 } from "../schema";
+import { toLocalDateKey } from "../../utils/local-date";
 
 // ─── Epley 1RM Formula ────────────────────────────────────────────────────────
 export function calculateEpley1RM(weight_kg: number, reps: number): number {
