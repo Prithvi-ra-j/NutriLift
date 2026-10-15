@@ -13,6 +13,16 @@ export interface AppEventInput {
   metadata?: Record<string, unknown>;
 }
 
+export function sanitizeCorrelationId(value?: string | null): string | null {
+  const candidate = value?.trim();
+  if (!candidate || candidate.length > 128) return null;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(candidate);
+  if (!isUuid && (/@/.test(candidate) || /bearer\s+|eyJ[A-Za-z0-9_-]{10,}\./i.test(candidate) || /\+?\d[\d\s().-]{7,}\d/.test(candidate))) {
+    return null;
+  }
+  return candidate;
+}
+
 function validateEventInput(input: AppEventInput): { occurredAt: string; metadataJson: string } {
   if (!/^[a-z][a-z0-9_.-]{1,79}$/.test(input.eventType)) throw new Error("Telemetry event type is invalid.");
   const severity = input.severity ?? "info";
@@ -37,7 +47,7 @@ export async function recordAppEvent(input: AppEventInput): Promise<void> {
     id: uuid.v4() as string,
     event_type: input.eventType,
     severity: input.severity ?? "info",
-    correlation_id: input.correlationId ?? null,
+    correlation_id: sanitizeCorrelationId(input.correlationId),
     occurred_at: occurredAt,
     metadata_json: metadataJson,
   });
@@ -48,7 +58,7 @@ export async function recordCommandFailure(input: {
   errorCategory: string;
   correlationId?: string | null;
 }): Promise<void> {
-  if (!input.commandName.trim() || !input.errorCategory.trim()) throw new Error("Command name and error category are required.");
+  if (!/^[a-z][a-z0-9_.-]{1,79}$/i.test(input.commandName) || !/^[a-z][a-z0-9_.-]{1,79}$/i.test(input.errorCategory)) throw new Error("Command name and error category must be safe category identifiers.");
   await recordAppEvent({
     eventType: "command.failure",
     severity: "error",
@@ -67,6 +77,7 @@ export async function recordSyncAttempt(input: {
   correlationId?: string | null;
 }): Promise<void> {
   assertNonNegativeMetric(input.latencyMs, "latencyMs");
+  if (input.retryCategory != null && !/^[a-z0-9_.-]{1,64}$/i.test(input.retryCategory)) throw new Error("Sync retry category must be a safe identifier.");
   for (const [label, value] of [["operationCount", input.operationCount], ["acceptedCount", input.acceptedCount], ["rejectedCount", input.rejectedCount]] as const) {
     assertNonNegativeMetric(value, label);
     if (value !== undefined && !Number.isInteger(value)) throw new Error(`Telemetry ${label} must be an integer.`);
@@ -98,7 +109,8 @@ export async function recordAIRequestMetrics(input: {
   failureCategory?: string | null;
   correlationId?: string | null;
 }): Promise<void> {
-  if (!input.provider.trim()) throw new Error("AI provider is required.");
+  if (!input.provider.trim() || input.provider.length > 80) throw new Error("AI provider is required and must be at most 80 characters.");
+  if (input.model != null && input.model.length > 120) throw new Error("AI model name must be at most 120 characters.");
   for (const [label, value] of [["latencyMs", input.latencyMs], ["inputTokens", input.inputTokens ?? undefined], ["outputTokens", input.outputTokens ?? undefined], ["costUsd", input.costUsd ?? undefined]] as const) {
     assertNonNegativeMetric(value, label);
     if (value !== undefined && label !== "costUsd" && !Number.isInteger(value)) throw new Error(`Telemetry ${label} must be an integer.`);
