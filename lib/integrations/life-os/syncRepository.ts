@@ -20,6 +20,25 @@ function requireNativeSqlite() {
   return sqlite;
 }
 
+export async function bindSyncOwner(userId: string): Promise<{ allowed: boolean; ownerUserId: string | null }> {
+  if (!userId.trim()) throw new Error("A signed-in user ID is required to bind local sync ownership.");
+  const database = requireNativeSqlite();
+  const rows = await database.getAllAsync(
+    "SELECT owner_user_id FROM sync_state WHERE source_app = ? LIMIT 1",
+    [SOURCE_APP],
+  ) as Array<{ owner_user_id: string | null }>;
+  const existingOwner = rows[0]?.owner_user_id ?? null;
+  if (existingOwner && existingOwner !== userId) return { allowed: false, ownerUserId: existingOwner };
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO sync_state (source_app, owner_user_id, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(source_app) DO UPDATE SET
+       owner_user_id = COALESCE(sync_state.owner_user_id, excluded.owner_user_id),
+       updated_at = excluded.updated_at`,
+    [SOURCE_APP, userId, now],
+  );
+  return { allowed: true, ownerUserId: userId };
+}
 export async function getSyncCursor(): Promise<string | null> {
   const database = requireNativeSqlite();
   const result = await database.getFirstAsync(
