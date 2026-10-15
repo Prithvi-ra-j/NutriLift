@@ -404,6 +404,7 @@ export async function runMigrations(): Promise<void> {
       carbs_target_g REAL NOT NULL,
       fat_target_g REAL NOT NULL,
       source TEXT NOT NULL,
+      goal TEXT,
       maintenance_estimate_kcal INTEGER,
       algorithm_version INTEGER,
       explanation TEXT,
