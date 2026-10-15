@@ -124,17 +124,12 @@ export default function CoachScreen() {
       const history = await getConversationHistory(50);
       setMessages(history);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Unknown error";
+      // A provider/database failure is UI state, not an assistant answer. Remove
+      // the transient placeholder by reloading persisted conversation history.
+      const errorMsg = err instanceof Error ? err.message : "Coach request failed.";
       setError(errorMsg);
-
-      const errMsg: AiConversation = {
-        id: uuid.v4() as string,
-        role: "assistant",
-        content: `Error: ${errorMsg}. Please check your Groq API configuration.`,
-        context_snapshot: null,
-        created_at: Math.floor(Date.now() / 1000),
-      };
-      addMessage(errMsg);
+      const history = await getConversationHistory(50);
+      setMessages(history);
     } finally {
       setGenerating(false);
     }
