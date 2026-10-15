@@ -48,7 +48,7 @@ export default function ProgressScreen() {
     if (requestedDate) {
       try { fromLocalDateKey(requestedDate); setSelectedDate(requestedDate); } catch { /* Ignore unsupported deep-link dates. */ }
     }
-    if (validSections.includes(requestedSection as ProgressSection)) setActiveSection(requestedSection as ProgressSection);
+    if (PROGRESS_SECTIONS.includes(requestedSection as ProgressSection)) setActiveSection(requestedSection as ProgressSection);
   }, [requestedDate, requestedSection]);
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
