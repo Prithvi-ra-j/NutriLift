@@ -1,8 +1,9 @@
-import { desc, eq, lte } from "drizzle-orm";
+import { desc, eq, gte, lte } from "drizzle-orm";
 import uuid from "react-native-uuid";
 import { toLocalDateKey } from "../../utils/local-date";
 import { db } from "../client";
-import { nutritionProfile, nutritionTargetHistory } from "../schema";
+import { dailyNutrition, nutritionProfile, nutritionTargetHistory } from "../schema";
+import { calculateTargetComparison } from "../../nutrition/target-validation";
 
 import {
   DEFAULT_NUTRITION_TARGETS,
@@ -99,6 +100,40 @@ export async function saveNutritionTargets(
       explanation: options.explanation ?? null,
       created_at: now,
     });
+
+    // A target change affects comparisons from its effective date forward, but
+    // never rewrites actual food totals. Refresh all already-logged affected days
+    // in the same transaction so the UI cannot observe half-applied target state.
+    const affectedDays = await tx.select().from(dailyNutrition)
+      .where(gte(dailyNutrition.date, effectiveDate))
+      .orderBy(dailyNutrition.date);
+
+    for (const day of affectedDays) {
+      const versions = await tx.select().from(nutritionTargetHistory)
+        .where(lte(nutritionTargetHistory.effective_date, day.date))
+        .orderBy(desc(nutritionTargetHistory.effective_date), desc(nutritionTargetHistory.created_at))
+        .limit(1);
+      const version = versions[0];
+      const effectiveTargets: NutritionTargets = version ? {
+        calories: version.calorie_target_kcal,
+        protein_g: version.protein_target_g,
+        carbs_g: version.carbs_target_g,
+        fat_g: version.fat_target_g,
+        goal: version.goal === "lose" || version.goal === "maintain" || version.goal === "gain"
+          ? version.goal
+          : targets.goal,
+        mode: version.source === "adaptive" ? "adaptive" : "manual",
+      } : targets;
+      const comparison = calculateTargetComparison({
+        total_calories: day.total_calories,
+        total_protein_g: day.total_protein_g,
+      }, effectiveTargets);
+
+      await tx.update(dailyNutrition).set({
+        ...comparison,
+        updated_at: now,
+      }).where(eq(dailyNutrition.date, day.date));
+    }
   });
 }
 
