@@ -30,6 +30,12 @@ describe("local food parser", () => {
     expect(result.unresolved_items).toEqual([]);
   });
 
+  it("uses matching catalogue serving sizes for cups, bowls and counted foods", () => {
+    const result = parseFoodLocally("1 cup dal, 2 rotis, 1 bowl rice");
+    expect(result.items.map((item) => item.quantity_g)).toEqual([180, 70, 200]);
+    expect(result.unresolved_items).toEqual([]);
+  });
+
   it("returns unresolved segments rather than silently inventing nutrition", () => {
     const result = parseFoodLocally("2 eggs, homemade biryani");
 
