@@ -48,6 +48,18 @@ describe("food log input validation", () => {
     expect(() => validateFoodLogInput(validLog({ fat_g: -0.1 }))).toThrow("non-negative");
     expect(() => validateFoodLogInput(validLog({ quantity_g: 0 }))).toThrow("quantity must be greater than zero");
   });
+  it("reports when a valid AI estimate still needs user review", () => {
+    const result = validateNutritionEstimate(validLog({
+      provenance_type: "ai_estimated",
+      estimate_confidence: 0.3,
+      estimate_reviewed: 0,
+      provenance_json: JSON.stringify({ parserSource: "ai", confidenceScoreBasis: "categorical_heuristic" }),
+    }));
+    expect(result.valid).toBe(true);
+    expect(result.requiresReview).toBe(true);
+    expect(result.confidenceBand).toBe("low");
+  });
+
   it("validates estimate provenance, confidence and review state", () => {
     expect(() => validateFoodLogInput(validLog({ provenance_type: "made_up" }))).toThrow("provenance type is invalid");
     expect(() => validateFoodLogInput(validLog({ estimate_confidence: 1.2 }))).toThrow("between 0 and 1");
