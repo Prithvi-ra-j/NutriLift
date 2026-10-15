@@ -1,6 +1,30 @@
-import { parseFoodLocally } from "../local-food-parser";
+import { calculateFoodNutrition, normalizeServing, parseFoodLocally, resolveFoodDefinition } from "../local-food-parser";
 import { validateFoodLogInput, validateFoodLogsInput } from "../food-log-validation";
 import type { NewFoodLog } from "../../db/schema";
+
+describe("nutrition pipeline contracts", () => {
+  it("resolves a catalogue-backed food definition", () => {
+    expect(resolveFoodDefinition("banana")?.food.name.toLowerCase()).toContain("banana");
+    expect(resolveFoodDefinition("unlisted food xyz")).toBeNull();
+  });
+
+  it("normalizes explicit mass units without treating them as serving estimates", () => {
+    const definition = resolveFoodDefinition("banana");
+    expect(definition).not.toBeNull();
+    const serving = normalizeServing({ food: definition!.food, quantity: 150, unit: "g" });
+    expect(serving.grams).toBe(150);
+    expect(serving.isEstimated).toBe(false);
+  });
+
+  it("calculates nutrients from the canonical per-100g basis", () => {
+    const definition = resolveFoodDefinition("banana");
+    expect(definition).not.toBeNull();
+    const nutrition = calculateFoodNutrition({ food: definition!.food, normalizedServing: { grams: 150 } });
+    expect(nutrition.calories).toBeGreaterThan(0);
+    expect(nutrition.protein_g).toBeGreaterThanOrEqual(0);
+    expect(nutrition.carbs_g).toBeGreaterThan(0);
+  });
+});
 
 describe("local food parser", () => {
   it("parses common Indian meal text without an AI call", () => {
