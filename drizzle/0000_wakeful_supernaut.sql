@@ -298,6 +298,7 @@ CREATE TABLE `nutrition_target_history` (
   `carbs_target_g` real NOT NULL,
   `fat_target_g` real NOT NULL,
   `source` text NOT NULL,
+  `goal` text,
   `maintenance_estimate_kcal` integer,
   `algorithm_version` integer,
   `explanation` text,
