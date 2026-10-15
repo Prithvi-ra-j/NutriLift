@@ -1,4 +1,4 @@
-import { generateCoachRecommendations, type CoachStateSnapshot } from "./coach-recommendations";
+import { explainRecommendation, generateCoachRecommendations, type CoachStateSnapshot } from "./coach-recommendations";
 
 const base: CoachStateSnapshot = {
   localDate: "2026-10-15",
@@ -93,5 +93,35 @@ describe("generateCoachRecommendations", () => {
     expect(first).toEqual(second);
     expect(first).toHaveLength(3);
     expect(first[0].type).toBe("recovery_check_in");
+  });
+});
+
+
+describe("explainRecommendation", () => {
+  it("returns only the validated recommendation and its recorded evidence", () => {
+    const recommendation = generateCoachRecommendations({
+      ...base,
+      nutrition: { calories: 900, calorieTarget: 2200, proteinG: 25, proteinTargetG: 120, explicitlyMarkedComplete: false },
+    })[0];
+    const explanation = explainRecommendation(recommendation);
+    expect(explanation.recommendationId).toBe(recommendation.id);
+    expect(explanation.explanation).toBe(recommendation.explanation);
+    expect(explanation.evidence).toEqual(recommendation.evidence);
+    expect(explanation.limitations[0]).toContain("does not infer unlogged behavior");
+    expect(recommendation.evidence).toHaveLength(1);
+  });
+
+  it("rejects recommendations without evidence rather than inventing a rationale", () => {
+    expect(() => explainRecommendation({
+      id: "unsupported", type: "review_food_log", title: "Review log", explanation: "Review it.",
+      priority: 50, confidence: "low", evidence: [], ruleVersion: "1",
+    })).toThrow("without supporting evidence");
+  });
+
+  it("rejects invalid priority values", () => {
+    expect(() => explainRecommendation({
+      id: "invalid-priority", type: "review_food_log", title: "Review log", explanation: "Review it.",
+      priority: 101, confidence: "low", evidence: [{ id: "e1", kind: "nutrition", summary: "Reviewed log missing" }], ruleVersion: "1",
+    })).toThrow("between 0 and 100");
   });
 });
