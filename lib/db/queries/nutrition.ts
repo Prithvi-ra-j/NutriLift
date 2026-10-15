@@ -5,6 +5,7 @@ import { getNutritionTargetsForDate } from "./nutrition-targets";
 import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
 import { validateFoodLogInput, validateFoodLogsInput } from "../../data/food-log-validation";
 import { calculateTargetComparison } from "../../nutrition/target-validation";
+import { enqueueDailyNutrition, enqueueTombstone } from "./sync-outbox";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
 
@@ -56,6 +57,8 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
     } else {
       await tx.insert(dailyNutrition).values({ date, ...summary });
     }
+    const persistedSummary = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
+    if (persistedSummary[0]) await enqueueDailyNutrition(tx, persistedSummary[0]);
   });
 }
 
@@ -130,11 +133,16 @@ export async function getLast30DaysNutrition(): Promise<DailyNutrition[]> {
 async function recomputeDailyNutritionInTransaction(tx: any, date: string): Promise<void> {
   const logs = await tx.select().from(foodLogs).where(eq(foodLogs.date, date));
   if (logs.length === 0) {
-    await tx.delete(dailyNutrition).where(eq(dailyNutrition.date, date));
+    const summaries = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
+    if (summaries[0]) {
+      const deletedAt = new Date().toISOString();
+      await enqueueTombstone(tx, "daily_nutrition", date, deletedAt, `nutrilift:daily_nutrition:${date}`);
+      await tx.delete(dailyNutrition).where(eq(dailyNutrition.date, date));
+    }
     return;
   }
 
-  const targets = await getNutritionTargetsForDate(date);
+  const targets = await getNutritionTargetsForDate(date, tx);
   const totals = logs.reduce(
     (acc: { calories: number; protein_g: number; carbs_g: number; fat_g: number }, log: FoodLog) => ({
       calories: acc.calories + log.calories,
@@ -164,6 +172,8 @@ async function recomputeDailyNutritionInTransaction(tx: any, date: string): Prom
   } else {
     await tx.insert(dailyNutrition).values({ date, ...summary });
   }
+  const persistedSummary = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
+  if (persistedSummary[0]) await enqueueDailyNutrition(tx, persistedSummary[0]);
 }
 
 export async function recomputeDailyNutrition(date: string): Promise<void> {
@@ -192,6 +202,8 @@ export async function setNutritionDayComplete(date: string, complete: boolean): 
     const now = new Date().toISOString();
     await tx.update(dailyNutrition).set({ is_complete: complete ? 1 : 0, completed_at: complete ? now : null, updated_at: now })
       .where(eq(dailyNutrition.date, date));
+    const persistedSummary = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
+    if (persistedSummary[0]) await enqueueDailyNutrition(tx, persistedSummary[0]);
   });
 }
 // ─── Analytics Helpers ────────────────────────────────────────────────────────
