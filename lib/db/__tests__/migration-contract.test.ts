@@ -69,6 +69,7 @@ describe("local database migration contract", () => {
     ).toEqual([
       "daily_nutrition.updated_at",
       "workout_sessions.updated_at",
+      "workout_sessions.status",
       "exercise_logs.exercise_type",
       "set_logs.distance_km",
       "personal_records.updated_at",
