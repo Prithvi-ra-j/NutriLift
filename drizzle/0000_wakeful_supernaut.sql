@@ -322,3 +322,29 @@ CREATE TABLE `nutrition_target_history` (
 );
 --> statement-breakpoint
 CREATE INDEX `idx_nutrition_target_history_effective_date` ON `nutrition_target_history` (`effective_date`, `created_at`);
+--> statement-breakpoint
+CREATE TABLE `domain_events` (
+	`id` text PRIMARY KEY NOT NULL,
+	`event_type` text NOT NULL,
+	`entity_type` text NOT NULL,
+	`entity_id` text NOT NULL,
+	`entity_version` integer NOT NULL,
+	`schema_version` integer DEFAULT 1 NOT NULL,
+	`occurred_at` text NOT NULL,
+	`metadata_json` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_domain_events_entity_version` ON `domain_events` (`entity_type`,`entity_id`,`entity_version`);
+--> statement-breakpoint
+CREATE TABLE `derived_state_invalidations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`event_id` text NOT NULL REFERENCES `domain_events`(`id`),
+	`projection_key` text NOT NULL,
+	`reason` text NOT NULL,
+	`invalidated_at` text NOT NULL,
+	`processed_at` text
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_derived_invalidations_event_projection` ON `derived_state_invalidations` (`event_id`,`projection_key`);
+--> statement-breakpoint
+CREATE INDEX `idx_derived_invalidations_pending` ON `derived_state_invalidations` (`processed_at`,`invalidated_at`);
