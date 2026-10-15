@@ -17,6 +17,7 @@ import {
   type NewCustomExercise,
 } from "../schema";
 import { toLocalDateKey } from "../../utils/local-date";
+import { appendDomainEvent } from "./domain-events";
 import { assertWorkoutStatusTransition, validateWorkoutSetInput, type WorkoutSessionStatus } from "../../workout/workout-validation";
 
 // ─── Epley 1RM Formula ────────────────────────────────────────────────────────
@@ -61,7 +62,12 @@ export const getSessionsForDateRange = getSessionsInRange;
 export async function insertSession(session: NewWorkoutSession): Promise<void> {
   const status = session.status ?? "planned";
   if (status !== "planned" && status !== "in_progress") throw new Error("A new workout session must be planned or in progress.");
-  await db.insert(workoutSessions).values({ ...session, status, updated_at: new Date().toISOString() });
+  await db.transaction(async (tx: any) => {
+    const now = new Date().toISOString();
+    await tx.insert(workoutSessions).values({ ...session, status, updated_at: now });
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${session.id}:created`, eventType: "workout.session.started", entityType: "workout_session", entityId: session.id, entityVersion: eventVersion, occurredAt: now, metadata: { date: session.date, status } });
+  });
 }
 
 export async function setSessionStatus(id: string, status: WorkoutSessionStatus): Promise<void> {
@@ -81,6 +87,9 @@ export async function setSessionStatus(id: string, status: WorkoutSessionStatus)
       updates.duration_min = session.started_at == null ? 0 : Math.max(0, Math.round((now - session.started_at) / 60));
     }
     await tx.update(workoutSessions).set(updates).where(eq(workoutSessions.id, id));
+    const eventVersion = Date.now();
+    const eventType = status === "completed" ? "workout.session.completed" : status === "cancelled" ? "workout.session.cancelled" : status === "in_progress" ? "workout.session.started" : "workout.session.updated";
+    await appendDomainEvent(tx, { id: `workout-session:${id}:${status}:${eventVersion}`, eventType, entityType: "workout_session", entityId: id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: session.date, status } });
   });
 }
 
@@ -97,10 +106,10 @@ export async function updateSession(
     if (status === "completed" || status === "cancelled") {
       throw new Error("This workout is " + status + " and can no longer be edited.");
     }
-    await tx.update(workoutSessions).set({
-      ...mutableUpdates,
-      updated_at: new Date().toISOString(),
-    }).where(eq(workoutSessions.id, id));
+    const updatedAt = new Date().toISOString();
+    await tx.update(workoutSessions).set({ ...mutableUpdates, updated_at: updatedAt }).where(eq(workoutSessions.id, id));
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${id}:updated:${eventVersion}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: id, entityVersion: eventVersion, occurredAt: updatedAt, metadata: { date: session.date } });
   });
 }
 
@@ -201,6 +210,8 @@ export async function insertSetLog(set: NewSetLog): Promise<{ isPR: boolean; dup
     const isPR = await checkAndUpdatePR(set, tx);
     await tx.insert(setLogs).values({ ...set, is_pr: isPR ? 1 : 0 });
     await updateSessionVolumeForSession(tx, exercise.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-set:${set.id}:recorded`, eventType: "workout.set.recorded", entityType: "workout_set", entityId: set.id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: exercise.date, sessionId: exercise.session_id } });
     return { isPR };
   });
 }
@@ -218,6 +229,8 @@ export async function deleteSetLog(id: string, exerciseLogId: string): Promise<v
     await tx.delete(setLogs).where(eq(setLogs.id, id));
     await recomputePersonalRecord(tx, exercise.exercise_name);
     await updateSessionVolumeForSession(tx, exercise.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-set:${id}:deleted:${eventVersion}`, eventType: "workout.set.deleted", entityType: "workout_set", entityId: id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: exercise.date, sessionId: exercise.session_id } });
   });
 }
 
@@ -241,6 +254,8 @@ export async function updateSetLog(
     await tx.update(setLogs).set(mutableUpdates).where(eq(setLogs.id, id));
     await recomputePersonalRecord(tx, exercise.exercise_name);
     await updateSessionVolumeForSession(tx, exercise.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-set:${id}:updated:${eventVersion}`, eventType: "workout.set.updated", entityType: "workout_set", entityId: id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: exercise.date, sessionId: exercise.session_id } });
   });
 }
 
