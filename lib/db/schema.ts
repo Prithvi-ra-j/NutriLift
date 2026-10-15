@@ -64,6 +64,7 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   id: text("id").primaryKey(),
   date: text("date").notNull(),
   day_type: text("day_type").notNull(), // Push A | Pull A | Legs A | Push B | Pull B | Legs B | Rest
+  status: text("status").notNull().default("planned"), // planned | in_progress | completed | cancelled
   started_at: integer("started_at"),
   ended_at: integer("ended_at"),
   duration_min: integer("duration_min"),
