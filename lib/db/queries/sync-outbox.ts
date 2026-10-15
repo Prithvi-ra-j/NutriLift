@@ -1,5 +1,5 @@
-import { syncQueue, syncTombstones, type DailyNutrition } from "../schema";
-import { mapDailyNutrition, mapTombstone } from "../../integrations/life-os/recordMappers";
+import { syncQueue, syncTombstones, type BodyStat, type DailyNutrition } from "../schema";
+import { mapBodyStat, mapDailyNutrition, mapTombstone } from "../../integrations/life-os/recordMappers";
 import type { SyncRecord } from "../../integrations/life-os/exportSchema";
 
 /** Durable local outbox write; callers pass their active domain transaction. */
@@ -22,7 +22,7 @@ export async function enqueueSyncRecord(tx: any, record: SyncRecord): Promise<vo
   });
 }
 
-export async function enqueueDailyNutrition(tx: any, row: DailyNutrition): Promise<void> {
+export async function enqueueBodyStat(tx: any, row: BodyStat): Promise<void> {\n  await enqueueSyncRecord(tx, mapBodyStat(row as any));\n}\n\nexport async function enqueueDailyNutrition(tx: any, row: DailyNutrition): Promise<void> {
   await enqueueSyncRecord(tx, mapDailyNutrition(row as unknown as Record<string, unknown>));
 }
 
