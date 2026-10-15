@@ -7,6 +7,7 @@ import { getBodyStatsForDateRange } from "../db/queries/body";
 import { getWeeklySummary, insertWeeklySummary, getPreviousWeeklySummaries } from "../db/queries/reports";
 import { generateWeeklySummary } from "../groq/generateCoachResponse";
 import type { WeeklySummary } from "../db/schema";
+import { fromLocalDateKey, toLocalDateKey } from "../utils/local-date";
 
 /**
  * Generate or retrieve AI-powered weekly summary
@@ -20,9 +21,8 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
   }
 
   // Don't generate summary for current week (incomplete data)
-  const today = new Date();
-  const weekEndDate = new Date(weekEnd);
-  if (weekEndDate >= today) {
+  const todayKey = toLocalDateKey();
+  if (weekEnd >= todayKey) {
     return null; // Current week - don't generate yet
   }
 
