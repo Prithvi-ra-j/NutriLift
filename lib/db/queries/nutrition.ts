@@ -1,7 +1,7 @@
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { db } from "../client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
-import { USER_PROFILE } from "../../constants/user-profile";
+import { getNutritionTargetsForDate } from "./nutrition-targets";
 import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 import { validateFoodLogInput, validateFoodLogsInput } from "../../data/food-log-validation";
 
@@ -20,6 +20,7 @@ export async function getFoodLogsByMeal(date: string, meal: string): Promise<Foo
 
 export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
   validateFoodLogsInput(logs);
+  const targets = await getNutritionTargetsForDate(logs[0].date);
 
   // The food rows and their daily aggregate commit or roll back together.
   await db.transaction(async (tx: any) => {
@@ -35,12 +36,12 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
       }),
       { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 },
     );
-    const proteinTargetMet = totals.protein_g >= USER_PROFILE.targets.protein_g ? 1 : 0;
+    const proteinTargetMet = totals.protein_g >= targets.protein_g ? 1 : 0;
     const calorieTargetMet =
-      totals.calories >= USER_PROFILE.targets.calories * 0.9 &&
-      totals.calories <= USER_PROFILE.targets.calories * 1.1 ? 1 : 0;
-    const proteinScore = Math.min(100, (totals.protein_g / USER_PROFILE.targets.protein_g) * 100);
-    const calorieScore = Math.max(0, 100 - Math.abs(totals.calories - USER_PROFILE.targets.calories) / USER_PROFILE.targets.calories * 100);
+      totals.calories >= targets.calories * 0.9 &&
+      totals.calories <= targets.calories * 1.1 ? 1 : 0;
+    const proteinScore = Math.min(100, (totals.protein_g / targets.protein_g) * 100);
+    const calorieScore = Math.max(0, 100 - Math.abs(totals.calories - targets.calories) / targets.calories * 100);
     const summary = {
       total_calories: totals.calories,
       total_protein_g: totals.protein_g,
@@ -115,6 +116,7 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
     return;
   }
 
+  const targets = await getNutritionTargetsForDate(date);
   const totals = logs.reduce(
     (acc, log) => ({
       calories: acc.calories + log.calories,
@@ -125,18 +127,18 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
     { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   );
 
-  const proteinTargetMet = totals.protein_g >= USER_PROFILE.targets.protein_g ? 1 : 0;
+  const proteinTargetMet = totals.protein_g >= targets.protein_g ? 1 : 0;
   const calorieTargetMet =
-    totals.calories >= USER_PROFILE.targets.calories * 0.9 &&
-    totals.calories <= USER_PROFILE.targets.calories * 1.1
+    totals.calories >= targets.calories * 0.9 &&
+    totals.calories <= targets.calories * 1.1
       ? 1
       : 0;
 
   // Adherence score: weighted average of protein (60%) + calories (40%)
-  const proteinScore = Math.min(100, (totals.protein_g / USER_PROFILE.targets.protein_g) * 100);
+  const proteinScore = Math.min(100, (totals.protein_g / targets.protein_g) * 100);
   const calorieScore = Math.min(
     100,
-    100 - Math.abs(totals.calories - USER_PROFILE.targets.calories) / USER_PROFILE.targets.calories * 100
+    100 - Math.abs(totals.calories - targets.calories) / targets.calories * 100
   );
   const adherenceScore = proteinScore * 0.6 + calorieScore * 0.4;
 
