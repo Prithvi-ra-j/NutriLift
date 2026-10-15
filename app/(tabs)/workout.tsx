@@ -560,7 +560,7 @@ export default function WorkoutScreen() {
   ];
 
   const filteredExercises = allExercises.filter((e) => {
-    const isSunday = new Date(selectedDate).getDay() === 0;
+    const isSunday = fromLocalDateKey(selectedDate).getDay() === 0;
     if (isSunday) {
       if (!e.day_types.includes("Cardio")) return false;
     } else {
@@ -852,7 +852,7 @@ export default function WorkoutScreen() {
         <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />
 
         {/* ── Marathon Day Notice ── */}
-        {new Date(selectedDate).getDay() === 0 && (
+        {fromLocalDateKey(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
               <Feather name="activity" size={20} color={M3.colors.error} />
@@ -869,7 +869,7 @@ export default function WorkoutScreen() {
         )}
 
         {/* ── Sunday Cardio Selector ── */}
-        {!session && new Date(selectedDate).getDay() === 0 && (
+        {!session && fromLocalDateKey(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
@@ -896,7 +896,7 @@ export default function WorkoutScreen() {
         )}
 
         {/* ── Day Type Selector ── */}
-        {!session && new Date(selectedDate).getDay() !== 0 && (
+        {!session && fromLocalDateKey(selectedDate).getDay() !== 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
@@ -1206,12 +1206,12 @@ export default function WorkoutScreen() {
         {exercises.length === 0 && !session && (
           <Card>
             <View style={{ alignItems: "center", paddingVertical: 20, gap: 12 }}>
-              <Feather name={new Date(selectedDate).getDay() === 0 ? "activity" : "zap"} size={48} color={M3.colors.onSurfaceMuted} />
+              <Feather name={fromLocalDateKey(selectedDate).getDay() === 0 ? "activity" : "zap"} size={48} color={M3.colors.onSurfaceMuted} />
               <Text style={{ color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
                 No exercises yet
               </Text>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" }}>
-                {new Date(selectedDate).getDay() === 0
+                {fromLocalDateKey(selectedDate).getDay() === 0
                   ? "Select Cardio & Recovery above and add exercises"
                   : "Select a day type above and use the template to get started"}
               </Text>
