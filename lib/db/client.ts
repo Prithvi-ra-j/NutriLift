@@ -372,6 +372,17 @@ export async function runMigrations(): Promise<void> {
       UNIQUE(event_id, projection_key)
     );
     CREATE INDEX IF NOT EXISTS idx_derived_invalidations_pending ON derived_state_invalidations(processed_at, invalidated_at);
+
+    CREATE TABLE IF NOT EXISTS app_telemetry_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      correlation_id TEXT,
+      occurred_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_app_telemetry_type_time ON app_telemetry_events(event_type, occurred_at);
+    CREATE INDEX IF NOT EXISTS idx_app_telemetry_severity_time ON app_telemetry_events(severity, occurred_at);
   `);
 
   // ─── Additive column migrations (safe to run on existing DBs) ───────────────
