@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { db } from "../client";
 import {
