@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
 import * as schema from "./schema";
-import { findMissingRequiredTables, REQUIRED_CORE_TABLES } from "./migration-contract";
+import { findMissingRequiredColumns, findMissingRequiredTables, REQUIRED_CORE_COLUMNS } from "./migration-contract";
 
 // Platform-specific imports and initialization
 let sqlite: any = null;
@@ -386,5 +386,21 @@ export async function runMigrations(): Promise<void> {
   const missingTables = findMissingRequiredTables(existingTables);
   if (missingTables.length > 0) {
     throw new Error("Local database migration incomplete. Missing tables: " + missingTables.join(", "));
+  }
+
+  // Verify additive migrations too; a table can exist while still being too old
+  // for the current Drizzle queries. All table names come from our static contract.
+  const existingColumns: Record<string, Set<string>> = {};
+  for (const table of Object.keys(REQUIRED_CORE_COLUMNS)) {
+    const columns = await sqlite.getAllAsync(`PRAGMA table_info(${table})`);
+    existingColumns[table] = new Set<string>(
+      columns.map((column: { name: string }) => column.name),
+    );
+  }
+  const missingColumns = findMissingRequiredColumns(existingColumns);
+  if (missingColumns.length > 0) {
+    throw new Error(
+      "Local database migration incomplete. Missing columns: " + missingColumns.join(", "),
+    );
   }
 }
