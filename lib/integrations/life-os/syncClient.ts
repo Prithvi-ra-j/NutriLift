@@ -2,6 +2,11 @@ import { Platform } from "react-native";
 import { getCurrentUser } from "../../supabase/auth";
 import { isSupabaseConfigured, supabase } from "../../supabase/client";
 import { type SyncRecord, validateSyncRecord } from "./exportSchema";
+import { recordSyncAttempt } from "../../observability/telemetry";
+
+async function recordSyncAttemptSafely(input: Parameters<typeof recordSyncAttempt>[0]): Promise<void> {
+  try { await recordSyncAttempt(input); } catch { /* Telemetry must never alter sync correctness. */ }
+}
 
 type SupabaseSyncRow = {
   user_id: string;
@@ -41,6 +46,7 @@ export function toSupabaseSyncRow(record: SyncRecord, userId: string): SupabaseS
 }
 
 export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
+  const attemptStartedAt = Date.now();
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 500) {
     throw new Error("Sync batch size must be an integer from 1 to 500.");
   }
@@ -50,17 +56,20 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   }
 
   if (!isSupabaseConfigured) {
+    await recordSyncAttemptSafely({ outcome: "permanent_failure", latencyMs: Date.now() - attemptStartedAt, retryCategory: "not_configured", operationCount: 0 });
     return { uploaded: 0, queued: 0, skipped: 0, needsAttention: 0, cursor: null, error: "Supabase is not configured." };
   }
 
   const { user, error: userError } = await getCurrentUser();
   if (userError || !user) {
+    await recordSyncAttemptSafely({ outcome: "permanent_failure", latencyMs: Date.now() - attemptStartedAt, retryCategory: "authentication_required", operationCount: 0 });
     return { uploaded: 0, queued: 0, skipped: 0, needsAttention: 0, cursor: null, error: "Sign in before syncing NutriLift." };
   }
 
   const repository = await import("./syncRepository");
   const ownerBinding = await repository.bindSyncOwner(user.id);
   if (!ownerBinding.allowed) {
+    await recordSyncAttemptSafely({ outcome: "permanent_failure", latencyMs: Date.now() - attemptStartedAt, retryCategory: "account_ownership_mismatch", operationCount: 0 });
     return {
       uploaded: 0,
       queued: 0,
@@ -92,6 +101,7 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   const nextCursor = repository.newestSourceTimestamp(changedRecords) ?? cursor;
   if (queuedRecords.length === 0) {
     await repository.saveSyncState({ cursor: nextCursor ?? undefined, success: true });
+    await recordSyncAttemptSafely({ outcome: needsAttention > 0 ? "permanent_failure" : "success", latencyMs: Date.now() - attemptStartedAt, retryCategory: needsAttention > 0 ? "invalid_records_quarantined" : null, operationCount: changedRecords.length, acceptedCount: 0, rejectedCount: needsAttention });
     return {
       uploaded: 0,
       queued: validChangedRecords.length,
@@ -148,6 +158,14 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
     cursor: nextCursor ?? undefined,
     error: failureSummary ?? null,
     success: failedItems.length === 0,
+  });
+  await recordSyncAttemptSafely({
+    outcome: failedItems.length || needsAttention ? (failedItems.length ? "retryable_failure" : "permanent_failure") : "success",
+    latencyMs: Date.now() - attemptStartedAt,
+    retryCategory: failedItems.length ? "upload_failed" : needsAttention ? "invalid_records_quarantined" : null,
+    operationCount: queuedRecords.length,
+    acceptedCount: uploadedIds.length,
+    rejectedCount: failedItems.length + needsAttention,
   });
 
   return {
