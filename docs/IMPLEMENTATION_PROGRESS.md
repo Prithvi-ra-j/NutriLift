@@ -220,3 +220,11 @@ After every small implementation unit, update this file with the commit/PR, file
 - [ ] Run the repository's actual Node 22 / Jest / TypeScript / Expo validation workflow against the latest branch head. The GitHub commit-status endpoint currently reports a Vercel build-rate-limit failure, not a code-test result; no GitHub Actions run is currently associated with the latest commit.
 - [ ] Add direct database integration tests for food update/delete aggregate atomicity and supplement upsert idempotency before marking these paths complete.
 - Current commits: `4bf75278e138714d4b184e359b2c84f6a115d3e8` (nutrition mutation consistency), `37c3f315d00cbc136e7307071a01eb1b333dd034` (recovery/supplement persistence), `5058a8dd9a84896a46ffb4427b081aea527d73a5` (date tests), `a10ba7c9cfec41699f4ce505c6bd649f2c8a9f9` (recovery tests).
+
+
+### 2026-10-15 — Follow-up invariant hardening
+- [x] Food deletion now derives the original record date inside the transaction and refreshes both the stored date and caller-provided date, avoiding stale daily totals if the screen date and record date disagree.
+- [x] Food edits cannot change the primary ID through the update payload; editable values are validated before writing.
+- [ ] CI is not yet evidenced for these commits. The Vercel status is a build-rate-limit failure; GitHub Actions has not returned a run for the latest head. Do not treat either as a passing test suite.
+- [ ] Next: obtain actual validation on the latest branch head, add database-level tests for nutrition mutation transactions, then integrate target-history changes with daily comparisons and Coach context.
+- Latest nutrition invariant commit: `923f7a3b9fa418928cfe8d46a59b72019285ec32`.
