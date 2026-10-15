@@ -59,6 +59,17 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
   }
 
   const repository = await import("./syncRepository");
+  const ownerBinding = await repository.bindSyncOwner(user.id);
+  if (!ownerBinding.allowed) {
+    return {
+      uploaded: 0,
+      queued: 0,
+      skipped: 0,
+      needsAttention: 0,
+      cursor: null,
+      error: "This local NutriLift dataset is linked to another account. Clear or explicitly transfer local data before syncing with a different account.",
+    };
+  }
   await repository.recoverInterruptedSyncOperations();
   const cursor = await repository.getSyncCursor();
   const changedRecords = await repository.getChangedRecords(cursor);
