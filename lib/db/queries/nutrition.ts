@@ -549,6 +549,8 @@ export async function setNutritionDayComplete(date: string, complete: boolean): 
       .where(eq(dailyNutrition.date, date));
     const persistedSummary = await tx.select().from(dailyNutrition).where(eq(dailyNutrition.date, date)).limit(1);
     if (persistedSummary[0]) await enqueueDailyNutrition(tx, persistedSummary[0]);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `nutrition-day-review:${date}:${now}`, eventType: "nutrition.day.reviewed", entityType: "daily_nutrition", entityId: date, entityVersion: eventVersion, occurredAt: now, metadata: { date, complete } });
   });
 }
 // ─── Analytics Helpers ────────────────────────────────────────────────────────
