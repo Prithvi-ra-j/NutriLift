@@ -63,6 +63,10 @@ describe("runtime SQLite migrations", () => {
         ["food_logs", "provenance_json"],
         ["food_logs", "estimate_confidence"],
         ["food_logs", "estimate_reviewed"],
+        ["favorite_foods", "provenance_type"],
+        ["favorite_foods", "provenance_json"],
+        ["favorite_foods", "estimate_confidence"],
+        ["favorite_foods", "estimate_reviewed"],
         ["daily_nutrition", "updated_at"],
         ["daily_nutrition", "is_complete"],
         ["daily_nutrition", "completed_at"],
@@ -102,7 +106,7 @@ describe("runtime SQLite migrations", () => {
       for (const table of REQUIRED_CORE_TABLES) {
         expect(tables.has(table)).toBe(true);
       }
-      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(11);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(12);
     } finally {
       database.close();
     }
