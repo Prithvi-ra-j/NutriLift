@@ -66,7 +66,7 @@ export async function insertSession(session: NewWorkoutSession): Promise<void> {
     const now = new Date().toISOString();
     await tx.insert(workoutSessions).values({ ...session, status, updated_at: now });
     const eventVersion = Date.now();
-    await appendDomainEvent(tx, { id: `workout-session:${session.id}:created`, eventType: "workout.session.started", entityType: "workout_session", entityId: session.id, entityVersion: eventVersion, occurredAt: now, metadata: { date: session.date, status } });
+    await appendDomainEvent(tx, { id: `workout-session:${session.id}:created`, eventType: status === "in_progress" ? "workout.session.started" : "workout.session.updated", entityType: "workout_session", entityId: session.id, entityVersion: eventVersion, occurredAt: now, metadata: { date: session.date, status } });
   });
 }
 
@@ -146,6 +146,8 @@ export async function insertExerciseLog(log: NewExerciseLog): Promise<void> {
   await db.transaction(async (tx: any) => {
     await assertSessionWritableInTransaction(tx, log.session_id);
     await tx.insert(exerciseLogs).values(log);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${log.session_id}:exercise-added:${log.id}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: log.session_id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: log.date } });
   });
 }
 
@@ -167,6 +169,8 @@ export async function updateExerciseLog(
     if (mutableUpdates.exercise_type) {
       await updateSessionVolumeForSession(tx, existing.session_id);
     }
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${existing.session_id}:exercise-updated:${id}:${eventVersion}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: existing.session_id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: existing.date } });
   });
 }
 
@@ -180,6 +184,8 @@ export async function deleteExerciseLog(id: string): Promise<void> {
     await tx.delete(exerciseLogs).where(eq(exerciseLogs.id, id));
     await recomputePersonalRecord(tx, existing.exercise_name);
     await updateSessionVolumeForSession(tx, existing.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${existing.session_id}:exercise-deleted:${id}:${eventVersion}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: existing.session_id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: existing.date } });
   });
 }
 
