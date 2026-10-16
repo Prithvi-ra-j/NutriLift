@@ -6,10 +6,10 @@ Last reviewed: 2026-10-16
 
 - Canonical integration branch: `implementation/phase-0-baseline`
 - Branch creation/base commit: `843cafd469d863d4d12380dda7fdbe9ab02fffda`.
-- Current `main` head at this audit: `b5b37b3aa88b84f1dda557da3a1845a87e6a79e7` (the intervening commit adds the UX discovery audit). The implementation branch has not incorporated that main-branch commit; GitHub reported PR #8 as not mergeable, so recheck/reconcile before merge.
+- Current `main` head at this audit: `b5b37b3aa88b84f1dda557da3a1845a87e6a79e7`. This commit was incorporated as the second parent of the implementation branch's integration merge commit. The branch version of `lib/db/__tests__/migration-contract.test.ts` was retained because it covers schema v15 and the expanded profile/nutrition/sync columns; the main version reflects the older schema-v9 contract.
 - Canonical implementation PR: [#8 — incremental implementation and validation baseline](https://github.com/Prithvi-ra-j/NutriLift/pull/8)
 - No changes from this implementation branch have been merged into `main`.
-- Latest successful code validation: [GitHub Actions run #38844029940](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38844029940) on code commit `8e308ff`, with Node 22 dependency install, strict TypeScript, Jest (70 suites / 512 tests), and Expo config/assets. The subsequent baseline documentation commits have their own validation run pending.
+- Latest successful code validation: [GitHub Actions run #38844503903](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38844503903) on code commit `5fe7f44`, with Node 22 dependency install, strict TypeScript, Jest (71 suites / 517 tests), and Expo config/assets. The integration merge commit preserves this tested code tree; its validation is pending.
 
 ## Existing PR overlap map
 
@@ -39,4 +39,9 @@ PRs #1–#7 remain open intentionally. Their overlap has been mapped and the mer
 
 ## Main/branch integration gate
 
-The audit baseline is reproducible, but the implementation PR is not merge-ready merely because checks pass. Before merging, update the branch from current `main` or otherwise resolve the single intervening main-line commit, inspect any content conflict, and confirm GitHub reports PR #8 mergeable. Do not force-push or merge automatically as part of this phase.
+The audit baseline is reproducible and current `main` ancestry has been incorporated into the implementation branch. Before merging PR #8 into `main`, confirm GitHub reports it mergeable, review the final diff, and complete the Android/device release gates. This phase did not merge the implementation PR into `main`.
+
+
+## Integration merge record
+
+The implementation branch now includes current main commit `b5b37b3aa88b84f1dda557da3a1845a87e6a79e7` as a second parent. The resulting tree deliberately retains the branch's schema-v15 migration contract and tests rather than the older schema-v9 test from main. This reconciles ancestry without merging the implementation into main or closing the overlapping PRs.
