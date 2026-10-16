@@ -13,6 +13,8 @@ export interface CoachProfileContext {
     carbs_g: number;
     fat_g: number;
     physique_goal: string | null;
+    body_fat_goal_pct: number | null;
+    body_fat_goal_date: string | null;
   };
   training: {
     current_split: string | null;
@@ -37,6 +39,8 @@ export function buildApprovedCoachProfile(
       carbs_g: nutritionTargets?.carbs_g ?? DEFAULT_NUTRITION_TARGETS.carbs_g,
       fat_g: nutritionTargets?.fat_g ?? DEFAULT_NUTRITION_TARGETS.fat_g,
       physique_goal: profile?.physique_goal ?? null,
+      body_fat_goal_pct: profile?.body_fat_goal_pct ?? null,
+      body_fat_goal_date: profile?.body_fat_goal_date ?? null,
     },
     training: {
       current_split: profile?.current_split ?? null,
