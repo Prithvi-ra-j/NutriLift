@@ -156,7 +156,7 @@ ${JSON.stringify(context, null, 2)}`;
     });
     if (onChunk && content) onChunk(content);
     return content;
-  }) as Promise<string>;
+  })) as Promise<string>;
 }
 
 /**
@@ -190,7 +190,7 @@ export async function generateDailyInsight(todayData: {
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Daily insight returned an empty response.");
     return content;
-  }) as Promise<string>;
+  })) as Promise<string>;
 }
 
 /**
@@ -249,7 +249,7 @@ Be direct, reference actual numbers, and focus on actionable insights. This summ
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Weekly summary returned an empty response.");
     return content;
-  }) as Promise<string>;
+  })) as Promise<string>;
 }
 
 /**
@@ -296,7 +296,7 @@ Be analytical, reference specific numbers, and tell the story of the month. This
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Monthly summary returned an empty response.");
     return content;
-  }) as Promise<string>;
+  })) as Promise<string>;
 }
 
 /**
@@ -344,7 +344,7 @@ Be comprehensive, tell the 3-month story, and provide strategic analysis. This w
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Quarterly summary returned an empty response.");
     return content;
-  }) as Promise<string>;
+  })) as Promise<string>;
 }
 
 /**
@@ -401,5 +401,5 @@ Be inspirational yet analytical. This is the user's annual transformation story.
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Yearly summary returned an empty response.");
     return content;
-  }) as Promise<string>;
+  })) as Promise<string>;
 }
