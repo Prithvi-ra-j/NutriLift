@@ -41,8 +41,8 @@ function assertNonNegativeMetric(value: number | undefined, label: string): void
 
 /** Persist an operational event after privacy filtering; never accept free-form health content. */
 export async function recordAppEvent(input: AppEventInput): Promise<void> {
-  const { db } = await import("../db/client");
   const { occurredAt, metadataJson } = validateEventInput(input);
+  const { db } = await import("../db/client");
   const { default: uuid } = await import("react-native-uuid");
   await db.insert(appTelemetryEvents).values({
     id: uuid.v4() as string,
@@ -180,10 +180,10 @@ export async function getLocalHealthSummary(): Promise<LocalHealthSummary> {
 
 /** Keep the local telemetry database bounded; domain records are never pruned here. */
 export async function pruneOldTelemetryEvents(retentionDays = 30): Promise<void> {
-  const { db } = await import("../db/client");
   if (!Number.isInteger(retentionDays) || retentionDays < 7 || retentionDays > 365) {
     throw new Error("Telemetry retention must be an integer from 7 to 365 days.");
   }
+  const { db } = await import("../db/client");
   const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
   await db.delete(appTelemetryEvents).where(lt(appTelemetryEvents.occurred_at, cutoff));
 }
