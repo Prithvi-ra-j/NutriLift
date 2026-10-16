@@ -429,16 +429,28 @@ export async function checkDoubleProgression(
   exerciseName: string
 ): Promise<DoubleProgressionStatus> {
   // Get last 2 sessions where this exercise was logged
-  const recentExercises = await db
+  const exerciseRows = await db
     .select({
       session_id: exerciseLogs.session_id,
       date: exerciseLogs.date,
       exercise_log_id: exerciseLogs.id,
     })
     .from(exerciseLogs)
-    .where(eq(exerciseLogs.exercise_name, exerciseName))
+    .innerJoin(workoutSessions, eq(exerciseLogs.session_id, workoutSessions.id))
+    .where(and(
+      eq(exerciseLogs.exercise_name, exerciseName),
+      eq(workoutSessions.status, "completed"),
+    ))
     .orderBy(desc(exerciseLogs.date))
-    .limit(2);
+    .limit(50);
+  // One exercise can appear more than once in a session; progression needs two
+  // distinct completed sessions, not two rows from the same session.
+  const seenSessions = new Set<string>();
+  const recentExercises = exerciseRows.filter((row: { session_id: string }) => {
+    if (seenSessions.has(row.session_id)) return false;
+    seenSessions.add(row.session_id);
+    return true;
+  }).slice(0, 2);
 
   if (recentExercises.length < 2) {
     return {
@@ -476,7 +488,11 @@ export async function getLastWeightForExercise(
   const recent = await db
     .select({ exercise_log_id: exerciseLogs.id })
     .from(exerciseLogs)
-    .where(eq(exerciseLogs.exercise_name, exerciseName))
+    .innerJoin(workoutSessions, eq(exerciseLogs.session_id, workoutSessions.id))
+    .where(and(
+      eq(exerciseLogs.exercise_name, exerciseName),
+      eq(workoutSessions.status, "completed"),
+    ))
     .orderBy(desc(exerciseLogs.date))
     .limit(1);
 
@@ -510,6 +526,7 @@ export async function getPreviousSessionForDayType(
     .where(
       and(
         eq(workoutSessions.day_type, dayType),
+        eq(workoutSessions.status, "completed"),
         sql`${workoutSessions.date} < ${beforeDate}`
       )
     )
