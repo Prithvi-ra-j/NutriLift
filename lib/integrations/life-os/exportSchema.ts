@@ -9,6 +9,7 @@ export const SUPPORTED_RECORD_TYPES = [
   "body.recovery.soreness",
   "body.recovery.stress",
   "body.nutrition.adherence",
+  "body.nutrition.food",
 ] as const;
 
 export type SupportedRecordType = (typeof SUPPORTED_RECORD_TYPES)[number];

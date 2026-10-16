@@ -21,6 +21,7 @@ import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
+import { getTodayKey } from "../../lib/dates";
 import uuid from "react-native-uuid";
 import type { MonthlyReport } from "../../lib/groq";
 
@@ -37,7 +38,7 @@ export default function MonthlyReportModal() {
 
     try {
       const startDate = `${currentMonth}-01`;
-      const endDate = new Date().toISOString().split("T")[0];
+      const endDate = getTodayKey();
 
       const [nutrition, sessions, prs, inBodyRecords, weightHistory, recoveryLogs, supplementAdherence] =
         await Promise.all([

@@ -16,6 +16,7 @@ import { logger } from "../../lib/logger";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
+import { getTodayKey } from "../../lib/dates";
 import type { FoodResult } from "../../lib/services/barcodeScanner";
 
 export default function NutritionCardModal() {
@@ -78,7 +79,7 @@ export default function NutritionCardModal() {
 
       await insertFoodLog({
         id: uuid.v4() as string,
-        date: new Date().toISOString().split("T")[0],
+        date: getTodayKey(),
         meal,
         name: name.trim(),
         quantity_g: qty,

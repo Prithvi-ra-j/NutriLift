@@ -1,3 +1,4 @@
+import { recordTombstone } from "../../integrations/life-os/syncRepository";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { db } from "../client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
@@ -17,17 +18,18 @@ export async function getFoodLogsByMeal(date: string, meal: string): Promise<Foo
 }
 
 export async function insertFoodLog(log: NewFoodLog): Promise<void> {
-  await db.insert(foodLogs).values(log);
+  await db.insert(foodLogs).values({ ...log, updated_at: new Date().toISOString() });
   await recomputeDailyNutrition(log.date);
 }
 
 export async function deleteFoodLog(id: string, date: string): Promise<void> {
+  await recordTombstone("food_log", id, `nutrilift:food_log:${id}`);
   await db.delete(foodLogs).where(eq(foodLogs.id, id));
   await recomputeDailyNutrition(date);
 }
 
 export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, date: string): Promise<void> {
-  await db.update(foodLogs).set(updates).where(eq(foodLogs.id, id));
+  await db.update(foodLogs).set({ ...updates, updated_at: new Date().toISOString() }).where(eq(foodLogs.id, id));
   await recomputeDailyNutrition(date);
 }
 
@@ -78,7 +80,11 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
   const logs = await getFoodLogsForDate(date);
 
   if (logs.length === 0) {
-    await db.delete(dailyNutrition).where(eq(dailyNutrition.date, date));
+    const existing = await getDailyNutrition(date);
+    if (existing) {
+      await recordTombstone("daily_nutrition", date, `nutrilift:daily_nutrition:${date}`);
+      await db.delete(dailyNutrition).where(eq(dailyNutrition.date, date));
+    }
     return;
   }
 
