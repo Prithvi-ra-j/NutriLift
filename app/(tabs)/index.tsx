@@ -14,7 +14,6 @@ import { useUIStore } from "../../lib/stores/ui.store";
 import { getDailyNutrition, getFoodLogsForDate, getLast7DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { getRecoveryLog } from "../../lib/db/queries/recovery";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
 import { DAY_TYPES, type DayType } from "../../lib/constants/exercises";
 import { Card } from "../../components/ui/Card";
@@ -206,7 +205,7 @@ export default function DashboardScreen() {
               {formatDate(new Date())}
             </Text>
             <Text style={{ color: M3.colors.onSurface, fontSize: 26, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-              {getGreeting()}, {USER_PROFILE.name}
+              {getGreeting()}, there
             </Text>
           </View>
           <View
@@ -222,7 +221,7 @@ export default function DashboardScreen() {
             }}
           >
             <Text style={{ color: M3.colors.primary, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
-              {USER_PROFILE.name?.charAt(0).toUpperCase() ?? "N"}
+              {"N"}
             </Text>
           </View>
         </View>
