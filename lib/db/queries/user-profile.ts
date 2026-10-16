@@ -29,11 +29,9 @@ export async function getUserProfile(executor: any = db): Promise<PersistedUserP
 }
 
 export async function updateUserProfile(patch: UserProfileInput): Promise<PersistedUserProfile> {
-  let savedProfile: PersistedUserProfile | null = null;
-
   // Read/merge/validate/write inside one transaction so concurrent partial
   // edits cannot overwrite fields they did not intend to change.
-  await db.transaction(async (tx: any) => {
+  return db.transaction(async (tx: any) => {
     const existing = await getUserProfile(tx);
     const merged = mergeUserProfileFields(existing, patch);
     const next = {
@@ -78,11 +76,8 @@ export async function updateUserProfile(patch: UserProfileInput): Promise<Persis
       entityId: "1",
       entityVersion: version,
       occurredAt: next.updated_at,
-      metadata: { changedFields: Object.keys(patch).filter((key) => (patch as Record<string, unknown>)[key] !== undefined) },
+      metadata: { changedFields: Object.entries(patch).filter(([, value]) => value !== undefined).map(([key]) => key) },
     });
-    savedProfile = next;
+    return next;
   });
-
-  if (!savedProfile) throw new Error("Profile update did not commit.");
-  return savedProfile;
 }
