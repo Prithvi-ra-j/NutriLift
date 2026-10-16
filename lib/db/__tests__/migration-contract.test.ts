@@ -10,7 +10,7 @@ import {
 
 describe("local database migration contract", () => {
   it("supports legacy and current schema versions but rejects future versions", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(14);
+    expect(CURRENT_SCHEMA_VERSION).toBe(15);
     expect(() => assertSupportedSchemaVersion(0)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(1)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();
@@ -20,7 +20,7 @@ describe("local database migration contract", () => {
   it("keeps additive migration declarations aligned with required column checks", () => {
     const declared = ADDITIVE_COLUMN_MIGRATIONS.map(({ table, column }) => `${table}.${column}`);
     const required = Object.entries(REQUIRED_CORE_COLUMNS).flatMap(([table, columns]) =>
-      columns.filter((column) => table !== "user_profile" && !(table === "custom_exercises" && (column === "exercise_type" || column === "created_at"))).map((column) => `${table}.${column}`),
+      columns.filter((column) => !(table === "custom_exercises" && (column === "exercise_type" || column === "created_at")) && !(table === "user_profile" && !["body_fat_goal_pct", "body_fat_goal_date"].includes(column))).map((column) => `${table}.${column}`),
     );
     expect(declared.sort()).toEqual(required.sort());
   });
@@ -107,6 +107,8 @@ describe("local database migration contract", () => {
       "user_profile.equipment",
       "user_profile.physique_goal",
       "user_profile.updated_at",
+      "user_profile.body_fat_goal_pct",
+      "user_profile.body_fat_goal_date",
     ]);
   });
 });
