@@ -50,3 +50,18 @@ export function validateUserProfile(profile: UserProfileInput): ProfileValidatio
   }
   return { valid: errors.length === 0, errors };
 }
+
+
+/**
+ * Merge a partial profile update without turning omitted fields into nulls.
+ * Explicit null is intentional and clears a stored field.
+ */
+export function mergeUserProfileFields(
+  existing: UserProfileInput | null | undefined,
+  patch: UserProfileInput,
+): UserProfileInput {
+  return {
+    ...(existing ?? {}),
+    ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
+  };
+}
