@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useAudioRecorder, RecordingPresets } from "expo-audio";
+import { AudioModule, useAudioRecorder, RecordingPresets } from "expo-audio";
 import { transcribeAudioMultilingual } from "../../lib/groq/transcribeAudio";
 import { parseFoodFromVoice } from "../../lib/groq/parseFood";
 import { isGroqConfigured } from "../../lib/groq/client";
@@ -34,7 +34,7 @@ export default function VoiceInputModal() {
         return;
       }
 
-      const { granted } = await (audioRecorder as any).requestPermissions();
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
       if (!granted) {
         Alert.alert(
           "Permission Required",
@@ -47,7 +47,8 @@ export default function VoiceInputModal() {
       setError(null);
       setTranscript("");
       setParsedFood(null);
-      await audioRecorder.record();
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
       setIsRecording(true);
     } catch (err: any) {
       console.error("Recording error:", err);
@@ -61,9 +62,10 @@ export default function VoiceInputModal() {
     setIsProcessing(true);
 
     try {
-      const uri = await audioRecorder.stop();
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
       
-      if (uri === undefined || uri === null) {
+      if (!uri) {
         throw new Error("No audio recorded");
       }
 
