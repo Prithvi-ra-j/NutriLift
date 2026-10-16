@@ -23,6 +23,7 @@ import { ListRow } from "../../components/ui/ListRow";
 import type { SupplementLog, MonthlyReport } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { processSyncQueue } from "../../lib/integrations/life-os/syncClient";
+import { getLocalHealthSummary, type LocalHealthSummary } from "../../lib/observability/telemetry";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/auth";
 import { M3 } from "../../design-system/tokens";
@@ -69,6 +70,8 @@ export default function MoreScreen() {
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState("Not synced yet");
+  const [localHealth, setLocalHealth] = useState<LocalHealthSummary | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
@@ -288,6 +291,19 @@ export default function MoreScreen() {
     Alert.alert("Saved", "Recovery log saved.");
   };
 
+  const refreshLocalHealth = useCallback(async () => {
+    setHealthLoading(true);
+    try {
+      const summary = await getLocalHealthSummary();
+      setLocalHealth(summary);
+    } catch {
+      // Diagnostics are best-effort and must not interrupt normal app use.
+      setLocalHealth(null);
+    } finally {
+      setHealthLoading(false);
+    }
+  }, []);
+
   const syncNow = async () => {
     setIsSyncing(true);
     try {
@@ -314,8 +330,13 @@ export default function MoreScreen() {
       Alert.alert("Sync failed", message);
     } finally {
       setIsSyncing(false);
+      void refreshLocalHealth();
     }
   };
+
+  useEffect(() => {
+    if (activeSection === "account") void refreshLocalHealth();
+  }, [activeSection, refreshLocalHealth]);
 
   const handleSignIn = async () => {
     if (!email.trim() || !password) {
@@ -689,6 +710,66 @@ export default function MoreScreen() {
               <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
                 {isWeb ? "Web uses a no-op database; use Android for local-first sync." : signedInEmail ? "Sync uploads locally queued changes to your Supabase account." : "Sign in above before syncing."}
               </Text>
+            </Card>
+
+            <Card>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>Local health</Text>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 3 }}>
+                    Operational diagnostics only; no food, recovery or health values are shown.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Refresh local health diagnostics"
+                  onPress={() => void refreshLocalHealth()}
+                  disabled={healthLoading}
+                  style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: M3.colors.surfaceVariant }}
+                >
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_700Bold" }}>{healthLoading ? "Checking…" : "Refresh"}</Text>
+                </TouchableOpacity>
+              </View>
+              {localHealth ? (
+                <>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {[
+                      { label: "Pending sync", value: localHealth.pendingSync },
+                      { label: "Uploading", value: localHealth.uploadingSync },
+                      { label: "Needs attention", value: localHealth.needsAttentionSync },
+                      { label: "Pending refreshes", value: localHealth.pendingDerivedStateInvalidations },
+                      { label: "Errors · 24h", value: localHealth.recentErrorCount },
+                    ].map((item) => (
+                      <View key={item.label} style={{ minWidth: "29%", flexGrow: 1, padding: 10, borderRadius: 8, backgroundColor: M3.colors.surfaceVariant }}>
+                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium" }}>{item.label}</Text>
+                        <Text style={{ color: item.value > 0 && (item.label === "Needs attention" || item.label === "Errors · 24h") ? M3.colors.error : M3.colors.onSurface, fontSize: 20, fontFamily: "DMSans_700Bold", marginTop: 4 }}>{item.value}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {localHealth.recentIssues.length > 0 ? (
+                    <View style={{ marginTop: 12, gap: 8 }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_700Bold" }}>RECENT OPERATIONAL ISSUES</Text>
+                      {localHealth.recentIssues.slice(0, 5).map((issue, index) => (
+                        <View key={`${issue.eventType}:${issue.occurredAt}:${index}`} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <Feather name={issue.severity === "error" ? "alert-circle" : "alert-triangle"} size={14} color={issue.severity === "error" ? M3.colors.error : M3.colors.warning} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>{issue.eventType}</Text>
+                            <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10, fontFamily: "DMSans_400Regular" }}>{new Date(issue.occurredAt).toLocaleString()}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 10 }}>
+                      No warnings or errors were recorded in the last 24 hours.
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+                  {healthLoading ? "Reading local diagnostics…" : "Diagnostics are unavailable. Refresh to retry."}
+                </Text>
+              )}
             </Card>
 
             <Card>
