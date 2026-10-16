@@ -1,7 +1,8 @@
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { db } from "../client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
-import { USER_PROFILE } from "../../constants/user-profile";
+import { getNutritionTargets, getNutritionTargetsForDate } from "./nutrition-targets";
+import { addCalendarDays, toLocalDateKey } from "../../utils/local-date";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
 
@@ -53,23 +54,13 @@ export async function getDailyNutritionRange(
 }
 
 export async function getLast7DaysNutrition(): Promise<DailyNutrition[]> {
-  const today = new Date();
-  const sevenDaysAgo = new Date(today);
-  sevenDaysAgo.setDate(today.getDate() - 6);
-  return getDailyNutritionRange(
-    sevenDaysAgo.toISOString().split("T")[0],
-    today.toISOString().split("T")[0]
-  );
+  const today = toLocalDateKey();
+  return getDailyNutritionRange(addCalendarDays(today, -6), today);
 }
 
 export async function getLast30DaysNutrition(): Promise<DailyNutrition[]> {
-  const today = new Date();
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setDate(today.getDate() - 29);
-  return getDailyNutritionRange(
-    thirtyDaysAgo.toISOString().split("T")[0],
-    today.toISOString().split("T")[0]
-  );
+  const today = toLocalDateKey();
+  return getDailyNutritionRange(addCalendarDays(today, -29), today);
 }
 
 // ─── Recompute Daily Nutrition ────────────────────────────────────────────────
@@ -92,18 +83,19 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
     { calories: 0, protein_g: 0, carbs_g: 0, fat_g: 0 }
   );
 
-  const proteinTargetMet = totals.protein_g >= USER_PROFILE.targets.protein_g ? 1 : 0;
+  const targets = await getNutritionTargetsForDate(date);
+  const proteinTargetMet = totals.protein_g >= targets.protein_g ? 1 : 0;
   const calorieTargetMet =
-    totals.calories >= USER_PROFILE.targets.calories * 0.9 &&
-    totals.calories <= USER_PROFILE.targets.calories * 1.1
+    totals.calories >= targets.calories * 0.9 &&
+    totals.calories <= targets.calories * 1.1
       ? 1
       : 0;
 
-  // Adherence score: weighted average of protein (60%) + calories (40%)
-  const proteinScore = Math.min(100, (totals.protein_g / USER_PROFILE.targets.protein_g) * 100);
-  const calorieScore = Math.min(
-    100,
-    100 - Math.abs(totals.calories - USER_PROFILE.targets.calories) / USER_PROFILE.targets.calories * 100
+  // Adherence score uses the effective targets for this date, not today's target.
+  const proteinScore = Math.min(100, (totals.protein_g / targets.protein_g) * 100);
+  const calorieScore = Math.max(
+    0,
+    100 - Math.abs(totals.calories - targets.calories) / targets.calories * 100
   );
   const adherenceScore = proteinScore * 0.6 + calorieScore * 0.4;
 
@@ -121,6 +113,8 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
         protein_target_met: proteinTargetMet,
         calorie_target_met: calorieTargetMet,
         adherence_score: adherenceScore,
+        target_calories_kcal: targets.calories,
+        target_protein_g: targets.protein_g,
         updated_at: updatedAt,
       })
       .where(eq(dailyNutrition.date, date));
@@ -134,6 +128,8 @@ export async function recomputeDailyNutrition(date: string): Promise<void> {
       protein_target_met: proteinTargetMet,
       calorie_target_met: calorieTargetMet,
       adherence_score: adherenceScore,
+      target_calories_kcal: targets.calories,
+      target_protein_g: targets.protein_g,
       updated_at: updatedAt,
     });
   }

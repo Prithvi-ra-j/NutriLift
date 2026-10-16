@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
 import { insertFoodLog } from "../../lib/db/queries/nutrition";
 import { logger } from "../../lib/logger";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
@@ -78,7 +79,7 @@ export default function NutritionCardModal() {
 
       await insertFoodLog({
         id: uuid.v4() as string,
-        date: new Date().toISOString().split("T")[0],
+        date: toLocalDateKey(),
         meal,
         name: name.trim(),
         quantity_g: qty,

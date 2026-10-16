@@ -27,17 +27,27 @@ import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/auth";
 import { M3 } from "../../design-system/tokens";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getNutritionTargets, saveNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
+import { recomputeDailyNutrition } from "../../lib/db/queries/nutrition";
+import { toLocalDateKey } from "../../lib/utils/local-date";
+import { getAdaptiveTargetRecommendation } from "../../lib/db/queries/adaptive-targets";
+import type { AdaptiveTargetResult } from "../../lib/nutrition/adaptive-targets";
 
 type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "account" | "settings";
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
 
 export default function MoreScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
   const params = useLocalSearchParams<{ section?: string }>();
   const [activeSection, setActiveSection] = useState<MoreSection>("menu");
   // Body stats
   const [weightInput, setWeightInput] = useState("");
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
+  const [nutritionTargets, setNutritionTargets] = useState<NutritionTargets>({ calories: USER_PROFILE.targets.calories, protein_g: USER_PROFILE.targets.protein_g, carbs_g: USER_PROFILE.targets.carbs_g, fat_g: USER_PROFILE.targets.fat_g, goal: "lose", mode: "manual" });
+  const [targetInputs, setTargetInputs] = useState({ calories: String(USER_PROFILE.targets.calories), protein: String(USER_PROFILE.targets.protein_g), carbs: String(USER_PROFILE.targets.carbs_g), fat: String(USER_PROFILE.targets.fat_g) });
+  const [targetsSaving, setTargetsSaving] = useState(false);
+  const [adaptiveResult, setAdaptiveResult] = useState<AdaptiveTargetResult | null>(null);
+  const [isCalculatingAdaptive, setIsCalculatingAdaptive] = useState(false);
 
   // Supplements
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>([]);
@@ -92,6 +102,10 @@ export default function MoreScreen() {
 
   useEffect(() => {
     loadData();
+    getNutritionTargets().then((targets) => {
+      setNutritionTargets(targets);
+      setTargetInputs({ calories: String(targets.calories), protein: String(targets.protein_g), carbs: String(targets.carbs_g), fat: String(targets.fat_g) });
+    }).catch(() => {});
   }, [loadData]);
 
   useEffect(() => {
@@ -669,20 +683,113 @@ export default function MoreScreen() {
 
             <Card>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-                TARGETS
+                NUTRITION TARGETS
               </Text>
-              {[
-                { label: "Calories", value: `${USER_PROFILE.targets.calories} kcal` },
-                { label: "Protein", value: `${USER_PROFILE.targets.protein_g}g` },
-                { label: "Carbs", value: `${USER_PROFILE.targets.carbs_g}g` },
-                { label: "Fat", value: `${USER_PROFILE.targets.fat_g}g` },
-                { label: "BF% Goal (Dec 2026)", value: `${USER_PROFILE.targets.body_fat_pct_dec2026}%` },
-              ].map((item) => (
-                <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: M3.colors.outline }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
-                  <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{item.value}</Text>
+              {([
+                { key: "calories", label: "Calories (kcal)", value: targetInputs.calories },
+                { key: "protein", label: "Protein (g)", value: targetInputs.protein },
+                { key: "carbs", label: "Carbs (g)", value: targetInputs.carbs },
+                { key: "fat", label: "Fat (g)", value: targetInputs.fat },
+              ] as const).map((item) => (
+                <View key={item.key} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 7 }}>
+                  <Text style={{ flex: 1, color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
+                  <Input value={item.value} onChangeText={(value) => setTargetInputs((current) => ({ ...current, [item.key]: value }))} keyboardType="decimal-pad" style={{ width: 100, textAlign: "right" }} />
                 </View>
               ))}
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, lineHeight: 16, marginTop: 6 }}>
+                Current mode: {nutritionTargets.mode}. Targets are saved locally on this device.
+              </Text>
+              <Button
+                label={targetsSaving ? "Saving…" : "Save nutrition targets"}
+                loading={targetsSaving}
+                disabled={targetsSaving}
+                onPress={async () => {
+                  const targets: NutritionTargets = {
+                    calories: Number(targetInputs.calories),
+                    protein_g: Number(targetInputs.protein),
+                    carbs_g: Number(targetInputs.carbs),
+                    fat_g: Number(targetInputs.fat),
+                    goal: nutritionTargets.goal,
+                    mode: "manual",
+                  };
+                  setTargetsSaving(true);
+                  try {
+                    await saveNutritionTargets(targets, { source: "manual", explanation: "Manually updated in Settings." });
+                    await recomputeDailyNutrition(toLocalDateKey());
+                    setNutritionTargets(targets);
+                    Alert.alert("Saved", "Nutrition targets saved. New or recomputed daily summaries use the effective target for that date.");
+                  } catch (error) {
+                    Alert.alert("Invalid targets", error instanceof Error ? error.message : "Please check the values and try again.");
+                  } finally {
+                    setTargetsSaving(false);
+                  }
+                }}
+              />
+              <View style={{ marginTop: 14, paddingTop: 12, borderTopWidth: 1, borderTopColor: M3.colors.outline }}>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", marginBottom: 6 }}>Body-fat goal (Dec 2026)</Text>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{USER_PROFILE.targets.body_fat_pct_dec2026}% (profile default)</Text>
+              </View>
+            </Card>
+
+            <Card>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
+                ADAPTIVE CALORIE REVIEW
+              </Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18, marginBottom: 12 }}>
+                NutriLift uses explicitly completed food diaries and reviewed entries with your dated weigh-ins. It will not change your target automatically.
+              </Text>
+              <Button
+                label={isCalculatingAdaptive ? "Analyzing history…" : "Review calorie recommendation"}
+                loading={isCalculatingAdaptive}
+                disabled={isCalculatingAdaptive}
+                onPress={async () => {
+                  setIsCalculatingAdaptive(true);
+                  try {
+                    const result = await getAdaptiveTargetRecommendation();
+                    setAdaptiveResult(result);
+                    if (result.status !== "ready") Alert.alert("Not enough reliable data", result.reason);
+                  } catch {
+                    Alert.alert("Could not analyze history", "Please try again after your local data finishes loading.");
+                  } finally {
+                    setIsCalculatingAdaptive(false);
+                  }
+                }}
+              />
+              {adaptiveResult && (
+                <View style={{ marginTop: 12, gap: 6 }}>
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>
+                    {adaptiveResult.status === "ready" ? `Suggested: ${adaptiveResult.suggestedTargetKcal} kcal/day` : adaptiveResult.status === "insufficient-data" ? "Baseline still building" : "Data needs review"}
+                  </Text>
+                  {adaptiveResult.status === "ready" && (
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12 }}>
+                      Estimated maintenance: {adaptiveResult.maintenanceKcal} kcal · Average logged intake: {adaptiveResult.averageIntakeKcal} kcal · Weight trend: {adaptiveResult.weightChangeKgPerWeek} kg/week
+                    </Text>
+                  )}
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18 }}>{adaptiveResult.reason}</Text>
+                  {adaptiveResult.status === "ready" && adaptiveResult.suggestedTargetKcal !== null && adaptiveResult.suggestedTargetKcal !== nutritionTargets.calories && (
+                    <Button
+                      label="Apply suggested calorie target"
+                      onPress={async () => {
+                        const next: NutritionTargets = { ...nutritionTargets, calories: adaptiveResult.suggestedTargetKcal as number, mode: "adaptive" };
+                        try {
+                          await saveNutritionTargets(next, {
+                            source: "adaptive",
+                            maintenanceEstimateKcal: adaptiveResult.maintenanceKcal,
+                            algorithmVersion: adaptiveResult.algorithmVersion,
+                            explanation: adaptiveResult.reason,
+                          });
+                          await recomputeDailyNutrition(toLocalDateKey());
+                          setNutritionTargets(next);
+                          setTargetInputs((current) => ({ ...current, calories: String(next.calories) }));
+                          Alert.alert("Target updated", "The reviewed recommendation is now active. Historical target records were retained.");
+                        } catch {
+                          Alert.alert("Could not apply target", "The target was not changed. Please retry.");
+                        }
+                      }}
+                    />
+                  )}
+                </View>
+              )}
             </Card>
 
             <Card>

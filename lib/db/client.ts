@@ -322,6 +322,9 @@ export async function runMigrations(): Promise<void> {
   await addColumnIfMissing("set_logs", "distance_km", "REAL");
   await addColumnIfMissing("exercise_logs", "exercise_type", "TEXT");
   await addColumnIfMissing("daily_nutrition", "updated_at", "TEXT");
+  await addColumnIfMissing("daily_nutrition", "target_calories_kcal", "INTEGER");
+  await addColumnIfMissing("daily_nutrition", "target_protein_g", "REAL");
+  await addColumnIfMissing("food_logs", "confidence", "TEXT");
   await addColumnIfMissing("workout_sessions", "updated_at", "TEXT");
   await addColumnIfMissing("personal_records", "updated_at", "TEXT");
   await addColumnIfMissing("body_stats", "updated_at", "TEXT");
@@ -329,6 +332,8 @@ export async function runMigrations(): Promise<void> {
   await addColumnIfMissing("sync_tombstones", "external_id", "TEXT");
 
   const migrationTimestamp = new Date().toISOString();
+  
+
   await sqlite.execAsync(`
     UPDATE daily_nutrition SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
     UPDATE workout_sessions SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
@@ -368,5 +373,50 @@ export async function runMigrations(): Promise<void> {
       last_error TEXT,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS nutrition_profile (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      calorie_target_kcal INTEGER NOT NULL CHECK (calorie_target_kcal BETWEEN 1200 AND 6000),
+      protein_target_g REAL NOT NULL CHECK (protein_target_g BETWEEN 20 AND 400),
+      carbs_target_g REAL NOT NULL CHECK (carbs_target_g BETWEEN 0 AND 800),
+      fat_target_g REAL NOT NULL CHECK (fat_target_g BETWEEN 0 AND 300),
+      goal TEXT NOT NULL DEFAULT 'lose' CHECK (goal IN ('lose', 'maintain', 'gain')),
+      target_mode TEXT NOT NULL DEFAULT 'manual' CHECK (target_mode IN ('manual', 'adaptive')),
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS nutrition_target_history (
+      id TEXT PRIMARY KEY,
+      effective_date TEXT NOT NULL,
+      calorie_target_kcal INTEGER NOT NULL,
+      protein_target_g REAL NOT NULL,
+      carbs_target_g REAL NOT NULL,
+      fat_target_g REAL NOT NULL,
+      source TEXT NOT NULL CHECK (source IN ('manual', 'adaptive')),
+      maintenance_estimate_kcal INTEGER,
+      algorithm_version INTEGER,
+      explanation TEXT,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_nutrition_target_history_date ON nutrition_target_history(effective_date);
+
+    CREATE TABLE IF NOT EXISTS nutrition_day_status (
+      date TEXT PRIMARY KEY,
+      is_complete INTEGER NOT NULL DEFAULT 0 CHECK (is_complete IN (0, 1)),
+      confirmed_at TEXT,
+      updated_at TEXT NOT NULL
+    );
+
+    INSERT OR IGNORE INTO nutrition_profile
+      (id, calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g, goal, target_mode, updated_at)
+    VALUES (1, 2500, 155, 240, 65, 'lose', 'manual', '${migrationTimestamp}');
+
+    INSERT OR IGNORE INTO nutrition_target_history
+      (id, effective_date, calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g, source, explanation, created_at)
+    VALUES ('legacy-defaults-v1', '1900-01-01', 2500, 155, 240, 65, 'manual',
+      'Legacy application defaults migrated; historical targets before this migration were not separately recorded.', '${migrationTimestamp}');
+
+    UPDATE daily_nutrition SET target_calories_kcal = 2500 WHERE target_calories_kcal IS NULL;
+    UPDATE daily_nutrition SET target_protein_g = 155 WHERE target_protein_g IS NULL;
   `);
 }

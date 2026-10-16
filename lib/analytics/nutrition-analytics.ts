@@ -15,7 +15,7 @@ export interface NutritionSummary {
   proteinGapAnalysis: string;
 }
 
-export function computeNutritionSummary(days: DailyNutrition[]): NutritionSummary {
+export function computeNutritionSummary(days: DailyNutrition[], targets: { calories: number; protein_g: number } = USER_PROFILE.targets): NutritionSummary {
   if (days.length === 0) {
     return {
       avgDailyCalories: 0,
@@ -75,10 +75,10 @@ export function computeNutritionSummary(days: DailyNutrition[]): NutritionSummar
       : null;
 
   // Protein gap analysis
-  const proteinGap = USER_PROFILE.targets.protein_g - avgProtein;
+  const proteinGap = targets.protein_g - avgProtein;
   let proteinGapAnalysis: string;
   if (proteinGap <= 0) {
-    proteinGapAnalysis = `Averaging ${avgProtein.toFixed(0)}g — ${Math.abs(proteinGap).toFixed(0)}g above your ${USER_PROFILE.targets.protein_g}g target. Solid.`;
+    proteinGapAnalysis = `Averaging ${avgProtein.toFixed(0)}g — ${Math.abs(proteinGap).toFixed(0)}g above your ${targets.protein_g}g target. Solid.`;
   } else {
     proteinGapAnalysis = `Averaged ${avgProtein.toFixed(0)}g — ${proteinGap.toFixed(0)}g short of your ${USER_PROFILE.targets.protein_g}g target.`;
   }
