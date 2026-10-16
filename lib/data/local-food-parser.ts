@@ -109,7 +109,7 @@ function chooseServing(food: IndianFood, unit = ""): { label: string; grams: num
 
 function getQuantityGrams(segment: string, food: IndianFood): { grams: number; label: string } {
   const normalized = normalize(segment);
-  const amountMatch = normalized.match(/^(\\d+(?:\\.\\d+)?)\\s*(kg|g|grams?|ml|cups?|bowls?|servings?|scoops?|tbsp|tablespoons?|tsp|teaspoons?)?\\b/);
+  const amountMatch = normalized.match(/^(\d+(?:\.\d+)?)\s*(kg|g|grams?|ml|cups?|bowls?|servings?|scoops?|tbsp|tablespoons?|tsp|teaspoons?)?\b/);
   const amount = amountMatch ? Number(amountMatch[1]) : 1;
   const unit = amountMatch?.[2] ?? "";
   const serving = normalizeServing({ food, quantity: Number.isFinite(amount) && amount > 0 ? amount : 1, unit });
