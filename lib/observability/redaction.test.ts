@@ -19,7 +19,7 @@ describe("redactSensitiveFields", () => {
     expect(result.error).not.toContain("person@example.com");
     expect(result.error).not.toContain("555");
     expect(result.error).not.toContain("Bearer abc");
-    expect(result.key).toBeUndefined();
+    expect(result.key).toBe("[REDACTED]");
   });
 
   it("normalizes unsupported and non-finite values safely", () => {
