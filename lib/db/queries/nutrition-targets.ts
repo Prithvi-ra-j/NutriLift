@@ -1,4 +1,4 @@
-import { desc, eq, gte, lte } from "drizzle-orm";
+import { asc, desc, eq, gte, lte } from "drizzle-orm";
 import uuid from "react-native-uuid";
 import { toLocalDateKey } from "../../utils/local-date";
 import { db } from "../client";
@@ -174,6 +174,17 @@ export async function getNutritionTargetsForDate(date: string, executor: any = d
   } catch {
     return getNutritionTargets(executor);
   }
-  // Older installs may have a current profile but no history row yet.
+
+  // Do not apply a newer target to a historical day that predates the first
+  // known version. Runtime migrations seed legacy profiles into target history.
+  try {
+    const earliestRows = await executor.select().from(nutritionTargetHistory)
+      .orderBy(asc(nutritionTargetHistory.effective_date), asc(nutritionTargetHistory.created_at))
+      .limit(1);
+    if (earliestRows[0] && date < earliestRows[0].effective_date) return DEFAULT_NUTRITION_TARGETS;
+  } catch {
+    // On web/no-op storage, fall back to the safe generic target set below.
+    return DEFAULT_NUTRITION_TARGETS;
+  }
   return getNutritionTargets(executor);
 }
