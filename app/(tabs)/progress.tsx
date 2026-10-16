@@ -15,7 +15,7 @@ import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getRecentRecoveryLogs } from "../../lib/db/queries/recovery";
 import { computeNutritionSummary } from "../../lib/analytics/nutrition-analytics";
 import { computeBodySummary } from "../../lib/analytics/body-analytics";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getUserProfile, type PersistedUserProfile } from "../../lib/db/queries/user-profile";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
@@ -56,6 +56,7 @@ export default function ProgressScreen() {
   const [inBodyRecords, setInBodyRecords] = useState<BodyStat[]>([]);
   const [nutritionHistory, setNutritionHistory] = useState<DailyNutrition[]>([]);
   const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>([]);
+  const [userProfile, setUserProfile] = useState<PersistedUserProfile | null>(null);
 
   // Date-only keys are parsed as local calendar dates; week bounds are inclusive.
   const getWeekRange = (dateStr: string) => {
@@ -72,18 +73,20 @@ export default function ProgressScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [prsData, weightData, inBodyData, nutritionData, recoveryData] = await Promise.all([
+      const [prsData, weightData, inBodyData, nutritionData, recoveryData, profileData] = await Promise.all([
         getAllPRs(),
         getWeightHistory(90), // Get 90 days to cover multiple weeks
         getAllInBodyRecords(),
         getLast30DaysNutrition(),
         getRecentRecoveryLogs(30), // Get 30 days to cover multiple weeks
+        getUserProfile(),
       ]);
       setPRs(prsData);
       setWeightHistory(weightData);
       setInBodyRecords(inBodyData);
       setNutritionHistory(nutritionData);
       setRecoveryLogs(recoveryData);
+      setUserProfile(profileData);
     } catch (err) {
       console.error("Progress load error:", err);
     } finally {
@@ -115,7 +118,7 @@ export default function ProgressScreen() {
 
   const nutritionSummary = computeNutritionSummary(weekNutritionHistory);
   const latestInBody = inBodyRecords[inBodyRecords.length - 1] ?? null;
-  const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
+  const bodySummary = computeBodySummary(weekWeightHistory, latestInBody, userProfile?.body_fat_goal_pct != null && userProfile.body_fat_goal_date ? { targetBodyFatPct: userProfile.body_fat_goal_pct, goalDate: userProfile.body_fat_goal_date } : null);
 
   const goToPreviousWeek = () => {
     setSelectedDate(addCalendarDays(selectedDate, -7));
@@ -248,7 +251,7 @@ export default function ProgressScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
                 <Feather name="target" size={16} color={M3.colors.primary} />
                 <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                  December 2026 Goal
+                  Body Composition Goal
                 </Text>
               </View>
               <View style={{ gap: 8 }}>
@@ -257,7 +260,15 @@ export default function ProgressScreen() {
                     Target Body Fat
                   </Text>
                   <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                    {USER_PROFILE.targets.body_fat_pct_dec2026}%
+                    {userProfile?.body_fat_goal_pct != null ? `${userProfile.body_fat_goal_pct}%` : "Not set"}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
+                    Goal Date
+                  </Text>
+                  <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                    {userProfile?.body_fat_goal_date ?? "Set in Settings"}
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
