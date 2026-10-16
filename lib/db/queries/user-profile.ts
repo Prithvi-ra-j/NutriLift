@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../client";
 import { userProfile } from "../schema";
 import { appendDomainEvent } from "./domain-events";
-import { validateUserProfile, type UserProfileInput, type ProfileSex } from "../../profile/profile-validation";
+import { mergeUserProfileFields, validateUserProfile, type UserProfileInput, type ProfileSex } from "../../profile/profile-validation";
 
 export type { UserProfileInput, ProfileSex, ProfileValidationResult } from "../../profile/profile-validation";
 export { validateUserProfile } from "../../profile/profile-validation";
@@ -29,30 +29,37 @@ export async function getUserProfile(executor: any = db): Promise<PersistedUserP
 }
 
 export async function updateUserProfile(patch: UserProfileInput): Promise<PersistedUserProfile> {
-  const existing = await getUserProfile();
-  const next = {
-    id: 1,
-    age: existing?.age ?? null,
-    sex: existing?.sex ?? null,
-    height_cm: existing?.height_cm ?? null,
-    training_start_date: existing?.training_start_date ?? null,
-    current_split: existing?.current_split ?? null,
-    training_phase: existing?.training_phase ?? null,
-    cardio: existing?.cardio ?? null,
-    equipment: existing?.equipment ?? null,
-    physique_goal: existing?.physique_goal ?? null,
-    body_fat_goal_pct: existing?.body_fat_goal_pct ?? null,
-    body_fat_goal_date: existing?.body_fat_goal_date ?? null,
-    ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
-    updated_at: new Date().toISOString(),
-  } as PersistedUserProfile;
-  const validation = validateUserProfile(next);
-  if (!validation.valid) throw new Error(validation.errors.join(" "));
-  if (next.training_start_date === "") next.training_start_date = null;
-  for (const key of ["current_split", "training_phase", "cardio", "equipment", "physique_goal"] as const) {
-    if (next[key] != null) next[key] = next[key]!.trim();
-  }
+  let savedProfile: PersistedUserProfile | null = null;
+
+  // Read/merge/validate/write inside one transaction so concurrent partial
+  // edits cannot overwrite fields they did not intend to change.
   await db.transaction(async (tx: any) => {
+    const existing = await getUserProfile(tx);
+    const merged = mergeUserProfileFields(existing, patch);
+    const next = {
+      id: 1,
+      age: null,
+      sex: null,
+      height_cm: null,
+      training_start_date: null,
+      current_split: null,
+      training_phase: null,
+      cardio: null,
+      equipment: null,
+      physique_goal: null,
+      body_fat_goal_pct: null,
+      body_fat_goal_date: null,
+      ...merged,
+      updated_at: new Date().toISOString(),
+    } as PersistedUserProfile;
+
+    const validation = validateUserProfile(next);
+    if (!validation.valid) throw new Error(validation.errors.join(" "));
+    if (next.training_start_date === "") next.training_start_date = null;
+    for (const key of ["current_split", "training_phase", "cardio", "equipment", "physique_goal"] as const) {
+      if (next[key] != null) next[key] = next[key]!.trim();
+    }
+
     await tx.insert(userProfile).values(next).onConflictDoUpdate({
       target: userProfile.id,
       set: {
@@ -71,8 +78,11 @@ export async function updateUserProfile(patch: UserProfileInput): Promise<Persis
       entityId: "1",
       entityVersion: version,
       occurredAt: next.updated_at,
-      metadata: { changedFields: Object.keys(patch) },
+      metadata: { changedFields: Object.keys(patch).filter((key) => (patch as Record<string, unknown>)[key] !== undefined) },
     });
+    savedProfile = next;
   });
-  return next;
+
+  if (!savedProfile) throw new Error("Profile update did not commit.");
+  return savedProfile;
 }

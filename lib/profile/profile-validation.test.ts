@@ -1,4 +1,4 @@
-import { validateUserProfile } from "./profile-validation";
+import { mergeUserProfileFields, validateUserProfile } from "./profile-validation";
 
 describe("user profile validation", () => {
   it("allows an empty or partial profile so users can complete it gradually", () => {
@@ -25,5 +25,22 @@ describe("user profile validation", () => {
       current_split: "PPL", training_phase: "Foundation", physique_goal: "Athletic",
       body_fat_goal_pct: 22, body_fat_goal_date: "2026-12-31",
     }).valid).toBe(true);
+  });
+});
+
+
+describe("partial profile updates", () => {
+  it("preserves omitted fields and clears only fields explicitly set to null", () => {
+    const existing = { age: 23, height_cm: 172, physique_goal: "Athletic", sex: "male" as const };
+    expect(mergeUserProfileFields(existing, { height_cm: 173 })).toEqual({
+      age: 23, height_cm: 173, physique_goal: "Athletic", sex: "male",
+    });
+    expect(mergeUserProfileFields(existing, { physique_goal: null })).toEqual({
+      age: 23, height_cm: 172, physique_goal: null, sex: "male",
+    });
+  });
+
+  it("starts a new partial profile without inventing personal defaults", () => {
+    expect(mergeUserProfileFields(null, { height_cm: 172 })).toEqual({ height_cm: 172 });
   });
 });
