@@ -1,7 +1,27 @@
 import * as FileSystem from "expo-file-system/legacy";
 import { isSupabaseConfigured, supabase } from "../supabase/client";
+import { recordAIRequestMetrics } from "../observability/telemetry";
 
 const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
+const TRANSCRIPTION_MODEL = "whisper-large-v3-turbo";
+
+async function recordTranscriptionMetrics(input: {
+  latencyMs: number;
+  outputValid: boolean;
+  failureCategory?: string;
+}): Promise<void> {
+  try {
+    await recordAIRequestMetrics({
+      provider: "groq-via-supabase",
+      model: TRANSCRIPTION_MODEL,
+      latencyMs: input.latencyMs,
+      outputValid: input.outputValid,
+      ...(input.failureCategory ? { failureCategory: input.failureCategory } : {}),
+    });
+  } catch {
+    // Operational telemetry must never hide the transcription result or its real error.
+  }
+}
 
 async function transcribe(audioUri: string, language?: string): Promise<string> {
   if (!audioUri.trim()) throw new Error("Audio recording is missing.");
@@ -20,19 +40,38 @@ async function transcribe(audioUri: string, language?: string): Promise<string> 
   const audioBase64 = await FileSystem.readAsStringAsync(audioUri, {
     encoding: FileSystem.EncodingType.Base64,
   });
-  const { data, error } = await supabase.functions.invoke("ai-transcribe", {
-    body: {
-      audio_base64: audioBase64,
-      mime_type: "audio/m4a",
-      ...(language ? { language } : {}),
-    },
-  });
 
-  if (error) throw new Error(error.message || "Voice transcription failed.");
-  if (typeof data?.text !== "string" || !data.text.trim()) {
-    throw new Error("The transcription service returned no text. Please try recording again.");
+  const startedAt = Date.now();
+  let failureCategory = "gateway_error";
+  try {
+    const { data, error } = await supabase.functions.invoke("ai-transcribe", {
+      body: {
+        audio_base64: audioBase64,
+        mime_type: "audio/m4a",
+        ...(language ? { language } : {}),
+      },
+    });
+
+    if (error) throw new Error(error.message || "Voice transcription failed.");
+    if (typeof data?.text !== "string" || !data.text.trim()) {
+      failureCategory = "empty_output";
+      throw new Error("The transcription service returned no text. Please try recording again.");
+    }
+
+    const text = data.text.trim();
+    await recordTranscriptionMetrics({
+      latencyMs: Date.now() - startedAt,
+      outputValid: true,
+    });
+    return text;
+  } catch (error) {
+    await recordTranscriptionMetrics({
+      latencyMs: Date.now() - startedAt,
+      outputValid: false,
+      failureCategory,
+    });
+    throw error;
   }
-  return data.text.trim();
 }
 
 /** Transcribe a recording in English. */
