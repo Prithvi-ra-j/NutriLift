@@ -717,7 +717,7 @@ export default function MoreScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>Local health</Text>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 3 }}>
-                    Operational diagnostics only; no food, recovery or health values are shown.
+                    Operational diagnostics only; recent 100 events from the last 24 hours.
                   </Text>
                 </View>
                 <TouchableOpacity
@@ -738,11 +738,11 @@ export default function MoreScreen() {
                       { label: "Uploading", value: localHealth.uploadingSync },
                       { label: "Needs attention", value: localHealth.needsAttentionSync },
                       { label: "Pending refreshes", value: localHealth.pendingDerivedStateInvalidations },
-                      { label: "Errors · 24h", value: localHealth.recentErrorCount },
+                      { label: "Errors · recent", value: localHealth.recentErrorCount },
                     ].map((item) => (
                       <View key={item.label} style={{ minWidth: "29%", flexGrow: 1, padding: 10, borderRadius: 8, backgroundColor: M3.colors.surfaceVariant }}>
                         <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium" }}>{item.label}</Text>
-                        <Text style={{ color: item.value > 0 && (item.label === "Needs attention" || item.label === "Errors · 24h") ? M3.colors.error : M3.colors.onSurface, fontSize: 20, fontFamily: "DMSans_700Bold", marginTop: 4 }}>{item.value}</Text>
+                        <Text style={{ color: item.value > 0 && (item.label === "Needs attention" || item.label === "Errors · recent") ? M3.colors.error : M3.colors.onSurface, fontSize: 20, fontFamily: "DMSans_700Bold", marginTop: 4 }}>{item.value}</Text>
                       </View>
                     ))}
                   </View>
@@ -761,7 +761,7 @@ export default function MoreScreen() {
                     </View>
                   ) : (
                     <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 10 }}>
-                      No warnings or errors were recorded in the last 24 hours.
+                      No warnings or errors were found in the recent event window.
                     </Text>
                   )}
                 </>
