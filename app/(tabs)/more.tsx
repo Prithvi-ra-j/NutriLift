@@ -57,11 +57,11 @@ export default function MoreScreen() {
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>([]);
 
   // Recovery
-  const [sleepHr, setSleepHr] = useState("7");
-  const [sleepQuality, setSleepQuality] = useState(3);
-  const [energyLevel, setEnergyLevel] = useState(3);
-  const [soreness, setSoreness] = useState(3);
-  const [stressLevel, setStressLevel] = useState(3);
+  const [sleepHr, setSleepHr] = useState("");
+  const [sleepQuality, setSleepQuality] = useState<number | null>(null);
+  const [energyLevel, setEnergyLevel] = useState<number | null>(null);
+  const [soreness, setSoreness] = useState<number | null>(null);
+  const [stressLevel, setStressLevel] = useState<number | null>(null);
   const [recoveryNotes, setRecoveryNotes] = useState("");
   const [recoverySaved, setRecoverySaved] = useState(false);
 
@@ -94,11 +94,11 @@ export default function MoreScreen() {
     setReports(reportsData);
 
     if (recoveryLog) {
-      setSleepHr(recoveryLog.sleep_duration_hr?.toString() ?? "7");
-      setSleepQuality(recoveryLog.sleep_quality ?? 3);
-      setEnergyLevel(recoveryLog.energy_level ?? 3);
-      setSoreness(recoveryLog.muscle_soreness ?? 3);
-      setStressLevel(recoveryLog.stress_level ?? 3);
+      setSleepHr(recoveryLog.sleep_duration_hr?.toString() ?? "");
+      setSleepQuality(recoveryLog.sleep_quality ?? null);
+      setEnergyLevel(recoveryLog.energy_level ?? null);
+      setSoreness(recoveryLog.muscle_soreness ?? null);
+      setStressLevel(recoveryLog.stress_level ?? null);
       setRecoveryNotes(recoveryLog.notes ?? "");
       setRecoverySaved(true);
     }
@@ -271,7 +271,7 @@ export default function MoreScreen() {
   const saveRecovery = async () => {
     await upsertRecoveryLog({
       date: today,
-      sleep_duration_hr: parseFloat(sleepHr) || null,
+      sleep_duration_hr: sleepHr.trim() ? Number(sleepHr) : null,
       sleep_quality: sleepQuality,
       bedtime: null,
       wake_time: null,
@@ -355,11 +355,11 @@ export default function MoreScreen() {
     { key: "settings", label: "Settings", icon: "settings" },
   ];
 
-  const RatingRow = ({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) => (
+  const RatingRow = ({ label, value, onChange }: { label: string; value: number | null; onChange: (v: number | null) => void }) => (
     <View style={{ marginBottom: 14 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
         <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{label}</Text>
-        <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{value} / 5</Text>
+        <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{value == null ? "Not logged" : `${value} / 5`}</Text>
       </View>
       <View style={{ flexDirection: "row", gap: 8 }}>
         {[1, 2, 3, 4, 5].map((v) => (
@@ -371,9 +371,9 @@ export default function MoreScreen() {
               flex: 1,
               height: 36,
               borderRadius: 6,
-              backgroundColor: value >= v ? M3.colors.primary + "22" : M3.colors.surfaceVariant,
+              backgroundColor: value != null && value >= v ? M3.colors.primary + "22" : M3.colors.surfaceVariant,
               borderWidth: 1,
-              borderColor: value >= v ? M3.colors.primary : M3.colors.outline,
+              borderColor: value != null && value >= v ? M3.colors.primary : M3.colors.outline,
               alignItems: "center",
               justifyContent: "center",
             }}
@@ -384,6 +384,9 @@ export default function MoreScreen() {
           </TouchableOpacity>
         ))}
       </View>
+      <TouchableOpacity onPress={() => onChange(null)} accessibilityRole="button" style={{ alignSelf: "flex-end", paddingVertical: 4 }}>
+        <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11 }}>Clear / not logged</Text>
+      </TouchableOpacity>
     </View>
   );
 
