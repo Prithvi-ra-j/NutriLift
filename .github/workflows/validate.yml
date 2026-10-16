@@ -36,6 +36,14 @@ jobs:
       - name: Jest tests
         run: npm test -- --passWithNoTests
 
+      - name: Set up Deno for Supabase Edge Functions
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Supabase Edge Functions
+        run: deno check supabase/functions/ai-chat/index.ts supabase/functions/ai-transcribe/index.ts
+
       - name: Validate Expo configuration and referenced assets
         run: |
           node - <<'NODE'
