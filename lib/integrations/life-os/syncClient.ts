@@ -6,6 +6,7 @@ import { isSupabaseConfigured, supabase } from "../../supabase/client";
 import { type SyncRecord, validateSyncRecord } from "./exportSchema";
 import { parseNutriLiftExternalId, resolveSourceEntity } from "./sourceResolver";
 import { recordSyncAttempt } from "../../observability/telemetry";
+import * as syncRepository from "./syncRepository";
 
 async function recordSyncAttemptSafely(input: Parameters<typeof recordSyncAttempt>[0]): Promise<void> {
   try { await recordSyncAttempt(input); } catch { /* Telemetry must never alter sync correctness. */ }
@@ -50,7 +51,7 @@ export function toSupabaseSyncRow(record: SyncRecord, userId: string): SupabaseS
 
 async function acknowledgeSyncInvalidationsIfQueueDrained(): Promise<void> {
   try {
-    const repository = await import("./syncRepository");
+
     const counts = await repository.getSyncQueueCounts();
     if (counts.pending > 0 || counts.uploading > 0 || counts.failed > 0 || counts.needs_attention > 0) return;
     const pending = await getPendingDerivedStateInvalidations(db, 500);
@@ -116,7 +117,7 @@ export async function processSyncQueue(batchSize = 100): Promise<SyncResult> {
     return { uploaded: 0, queued: 0, skipped: 0, needsAttention: 0, cursor: null, error: "Sign in before syncing NutriLift." };
   }
 
-  const repository = await import("./syncRepository");
+  const repository = syncRepository;
   const ownerBinding = await repository.bindSyncOwner(user.id);
   if (!ownerBinding.allowed) {
     await recordSyncAttemptSafely({ outcome: "permanent_failure", latencyMs: Date.now() - attemptStartedAt, retryCategory: "account_ownership_mismatch", operationCount: 0 });
