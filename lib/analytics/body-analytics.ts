@@ -1,5 +1,4 @@
 import type { BodyStat } from "../db/schema";
-import { USER_PROFILE } from "../constants/user-profile";
 import { addCalendarDays, differenceInCalendarDays, toLocalDateKey } from "../utils/local-date";
 
 export interface BodyCompositionSummary {
@@ -11,9 +10,15 @@ export interface BodyCompositionSummary {
   onTrackForGoal: boolean;
 }
 
+export interface BodyCompositionGoal {
+  targetBodyFatPct: number;
+  goalDate: string;
+}
+
 export function computeBodySummary(
   weightHistory: BodyStat[],
-  latestInBody: BodyStat | null
+  latestInBody: BodyStat | null,
+  goal: BodyCompositionGoal | null = null,
 ): BodyCompositionSummary {
   if (weightHistory.length === 0) {
     return {
@@ -30,53 +35,59 @@ export function computeBodySummary(
   const latest = sorted[sorted.length - 1];
   const currentWeight = latest.weight_kg;
 
-  // 7-day change
-  const sevenDaysAgo = sorted.find((s) => {
-    return differenceInCalendarDays(latest.date, s.date) >= 6;
-  });
+  // Compare against the closest measurement near each requested window.
+  // Sparse histories remain unknown instead of borrowing a much older record.
+  const closestPrior = (targetDays: number, minimumDays: number) => {
+    const candidates = sorted.filter((stat) => {
+      const elapsed = differenceInCalendarDays(latest.date, stat.date);
+      return elapsed >= minimumDays && stat.weight_kg != null;
+    });
+    return candidates.sort((a, b) => {
+      const da = differenceInCalendarDays(latest.date, a.date);
+      const db = differenceInCalendarDays(latest.date, b.date);
+      return Math.abs(da - targetDays) - Math.abs(db - targetDays);
+    })[0] ?? null;
+  };
+
+  const sevenDaysAgo = closestPrior(7, 6);
+  const thirtyDaysAgo = closestPrior(30, 27);
   const weightChange7d =
-    sevenDaysAgo && currentWeight && sevenDaysAgo.weight_kg
+    currentWeight != null && sevenDaysAgo?.weight_kg != null
       ? currentWeight - sevenDaysAgo.weight_kg
       : null;
-
-  // 30-day change
-  const thirtyDaysAgo = sorted[0];
   const weightChange30d =
-    thirtyDaysAgo && currentWeight && thirtyDaysAgo.weight_kg
+    currentWeight != null && thirtyDaysAgo?.weight_kg != null
       ? currentWeight - thirtyDaysAgo.weight_kg
       : null;
 
-  // Trend
   let trend: "gaining" | "losing" | "maintaining" = "maintaining";
   if (weightChange7d !== null) {
     if (weightChange7d > 0.3) trend = "gaining";
     else if (weightChange7d < -0.3) trend = "losing";
   }
 
-  // Projection to goal BF%
+  // Projection is shown only with an explicit user goal and observed downward
+  // weight trend. Never invent a default loss rate or a hard-coded deadline.
   let projectedBFDate: string | null = null;
   let onTrackForGoal = false;
-
-  if (latestInBody?.body_fat_pct) {
-    const currentBF = latestInBody.body_fat_pct;
-    const targetBF = USER_PROFILE.targets.body_fat_pct_dec2026;
-    const goalDateKey = "2026-12-31";
+  const currentBF = latestInBody?.body_fat_pct;
+  const currentMeasurementWeight = latestInBody?.weight_kg;
+  if (
+    goal &&
+    currentBF != null &&
+    currentMeasurementWeight != null &&
+    currentMeasurementWeight > 0 &&
+    weightChange7d != null &&
+    weightChange7d < 0
+  ) {
     const todayKey = toLocalDateKey();
-    const daysToGoal = differenceInCalendarDays(goalDateKey, todayKey);
-
-    // Estimate weekly fat loss rate from weight trend
-    const weeklyWeightChange = weightChange7d ?? -0.2; // default conservative
-    // Assume ~70% of weight loss is fat when in deficit
-    const weeklyFatLossKg = Math.abs(weeklyWeightChange) * 0.7;
-    const weeklyFatLossPct =
-      latestInBody.weight_kg
-        ? (weeklyFatLossKg / latestInBody.weight_kg) * 100
-        : 0.1;
-
-    if (weeklyFatLossPct > 0) {
-      const weeksNeeded = (currentBF - targetBF) / weeklyFatLossPct;
-      projectedBFDate = addCalendarDays(todayKey, Math.trunc(weeksNeeded * 7));
-      onTrackForGoal = projectedBFDate <= goalDateKey;
+    const daysToGoal = differenceInCalendarDays(goal.goalDate, todayKey);
+    const weeklyFatLossKg = -weightChange7d * 0.7;
+    const weeklyFatLossPct = (weeklyFatLossKg / currentMeasurementWeight) * 100;
+    if (daysToGoal >= 0 && weeklyFatLossPct > 0 && currentBF > goal.targetBodyFatPct) {
+      const weeksNeeded = (currentBF - goal.targetBodyFatPct) / weeklyFatLossPct;
+      projectedBFDate = addCalendarDays(todayKey, Math.ceil(weeksNeeded * 7));
+      onTrackForGoal = projectedBFDate <= goal.goalDate;
     }
   }
 
