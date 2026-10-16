@@ -1,45 +1,48 @@
-import { USER_PROFILE } from "../constants/user-profile";
+import type { PersistedUserProfile } from "../db/queries/user-profile";
 import type { NutritionTargets } from "../nutrition/target-validation";
 import type { BodyStat, DailyNutrition, PersonalRecord, RecoveryLog, WorkoutSession } from "../db/schema";
 
 export interface CoachProfileContext {
-  age: number;
-  sex: string;
-  height_cm: number;
-  training_start_date: string;
+  age: number | null;
+  sex: string | null;
+  height_cm: number | null;
+  training_start_date: string | null;
   targets: {
     calories: number;
     protein_g: number;
     carbs_g: number;
     fat_g: number;
-    physique_goal: string;
+    physique_goal: string | null;
   };
   training: {
-    current_split: string;
-    phase: string;
-    cardio: string;
-    equipment: string;
+    current_split: string | null;
+    phase: string | null;
+    cardio: string | null;
+    equipment: string | null;
   };
 }
 
-export function buildApprovedCoachProfile(nutritionTargets?: NutritionTargets): CoachProfileContext {
+export function buildApprovedCoachProfile(
+  nutritionTargets?: NutritionTargets,
+  profile?: PersistedUserProfile | null,
+): CoachProfileContext {
   return {
-    age: USER_PROFILE.age,
-    sex: USER_PROFILE.sex,
-    height_cm: USER_PROFILE.height_cm,
-    training_start_date: USER_PROFILE.training_start_date,
+    age: profile?.age ?? null,
+    sex: profile?.sex ?? null,
+    height_cm: profile?.height_cm ?? null,
+    training_start_date: profile?.training_start_date ?? null,
     targets: {
-      calories: nutritionTargets?.calories ?? USER_PROFILE.targets.calories,
-      protein_g: nutritionTargets?.protein_g ?? USER_PROFILE.targets.protein_g,
-      carbs_g: nutritionTargets?.carbs_g ?? USER_PROFILE.targets.carbs_g,
-      fat_g: nutritionTargets?.fat_g ?? USER_PROFILE.targets.fat_g,
-      physique_goal: nutritionTargets?.goal ?? USER_PROFILE.targets.physique_goal,
+      calories: nutritionTargets?.calories ?? 0,
+      protein_g: nutritionTargets?.protein_g ?? 0,
+      carbs_g: nutritionTargets?.carbs_g ?? 0,
+      fat_g: nutritionTargets?.fat_g ?? 0,
+      physique_goal: profile?.physique_goal ?? null,
     },
     training: {
-      current_split: USER_PROFILE.training.current_split,
-      phase: USER_PROFILE.training.phase,
-      cardio: USER_PROFILE.training.cardio,
-      equipment: USER_PROFILE.training.equipment,
+      current_split: profile?.current_split ?? null,
+      phase: profile?.training_phase ?? null,
+      cardio: profile?.cardio ?? null,
+      equipment: profile?.equipment ?? null,
     },
   };
 }
