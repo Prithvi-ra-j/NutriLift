@@ -450,7 +450,11 @@ export default function MoreScreen() {
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
               TODAY'S SUPPLEMENTS
             </Text>
-            {USER_PROFILE.supplements.map((supp) => {
+            {USER_PROFILE.supplements.length === 0 ? (
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18 }}>
+                No supplement defaults are configured. The app will not assume a personal supplement stack.
+              </Text>
+            ) : USER_PROFILE.supplements.map((supp) => {
               const log = supplementLogs.find((l) => l.supplement_name === supp.name);
               const taken = log?.taken === 1;
               return (
@@ -861,6 +865,7 @@ export default function MoreScreen() {
               />
             </Card>
 
+            {USER_PROFILE.structural_notes.length > 0 && (
             <Card>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 STRUCTURAL NOTES
@@ -874,6 +879,7 @@ export default function MoreScreen() {
                 </View>
               ))}
             </Card>
+            )}
 
             <ListRow
               icon="download"
