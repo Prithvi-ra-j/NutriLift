@@ -1,4 +1,4 @@
-import { validateRecoveryInput, type RecoveryInput } from "../validation";
+import { validateRecoveryInput, summarizeRecoveryCheckIn, type RecoveryInput } from "../validation";
 
 const valid: RecoveryInput = {
   date: "2026-10-15",
