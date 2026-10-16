@@ -74,3 +74,49 @@ describe("target-aware adherence comparison", () => {
     }, DEFAULT_NUTRITION_TARGETS)).toThrow("finite, non-negative");
   });
 });
+
+
+jest.mock("../client", () => ({ db: {} }));
+import { getNutritionTargetsForDate } from "../queries/nutrition-targets";
+import { nutritionTargetHistory } from "../schema";
+
+function fakeTargetExecutor(firstHistoryResult: any[], earliestHistoryResult: any[] = firstHistoryResult) {
+  let historyQueries = 0;
+  return {
+    select: () => {
+      let table: unknown;
+      const chain: any = {
+        from(value: unknown) { table = value; return chain; },
+        where() { return chain; },
+        orderBy() { return chain; },
+        limit: async () => {
+          if (table !== nutritionTargetHistory) return [];
+          historyQueries += 1;
+          return historyQueries === 1 ? firstHistoryResult : earliestHistoryResult;
+        },
+      };
+      return chain;
+    },
+  };
+}
+
+describe("effective-dated target resolution", () => {
+  it("does not apply the first known future target to an earlier date", async () => {
+    const earliest = {
+      effective_date: "2026-10-10", created_at: "2026-10-10T00:00:00.000Z",
+      calorie_target_kcal: 2100, protein_target_g: 140, carbs_target_g: 220, fat_target_g: 60,
+      source: "manual", goal: "maintain",
+    };
+    const targets = await getNutritionTargetsForDate("2026-10-01", fakeTargetExecutor([], [earliest]));
+    expect(targets).toEqual(DEFAULT_NUTRITION_TARGETS);
+  });
+  it("returns the version effective on the requested date", async () => {
+    const active = {
+      effective_date: "2026-10-10", created_at: "2026-10-10T00:00:00.000Z",
+      calorie_target_kcal: 2100, protein_target_g: 140, carbs_target_g: 220, fat_target_g: 60,
+      source: "adaptive", goal: "maintain",
+    };
+    const targets = await getNutritionTargetsForDate("2026-10-16", fakeTargetExecutor([active]));
+    expect(targets).toMatchObject({ calories: 2100, protein_g: 140, carbs_g: 220, fat_g: 60, goal: "maintain", mode: "adaptive" });
+  });
+});
