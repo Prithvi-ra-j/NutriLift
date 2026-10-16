@@ -13,6 +13,7 @@ describe("body analytics", () => {
     const summary = computeBodySummary([stat("2026-10-16", 74.5)], inBody, {
       targetBodyFatPct: 22, goalDate: "2027-12-31",
     });
+    expect(summary.trend).toBe("unknown");
     expect(summary.weightChange7d).toBeNull();
     expect(summary.weightChange30d).toBeNull();
     expect(summary.projectedBFDate).toBeNull();
