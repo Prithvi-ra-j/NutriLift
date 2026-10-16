@@ -18,6 +18,8 @@ export interface PersistedUserProfile {
   cardio: string | null;
   equipment: string | null;
   physique_goal: string | null;
+  body_fat_goal_pct: number | null;
+  body_fat_goal_date: string | null;
   updated_at: string;
 }
 
@@ -39,6 +41,8 @@ export async function updateUserProfile(patch: UserProfileInput): Promise<Persis
     cardio: existing?.cardio ?? null,
     equipment: existing?.equipment ?? null,
     physique_goal: existing?.physique_goal ?? null,
+    body_fat_goal_pct: existing?.body_fat_goal_pct ?? null,
+    body_fat_goal_date: existing?.body_fat_goal_date ?? null,
     ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
     updated_at: new Date().toISOString(),
   } as PersistedUserProfile;
@@ -55,7 +59,8 @@ export async function updateUserProfile(patch: UserProfileInput): Promise<Persis
         age: next.age, sex: next.sex, height_cm: next.height_cm,
         training_start_date: next.training_start_date, current_split: next.current_split,
         training_phase: next.training_phase, cardio: next.cardio, equipment: next.equipment,
-        physique_goal: next.physique_goal, updated_at: next.updated_at,
+        physique_goal: next.physique_goal, body_fat_goal_pct: next.body_fat_goal_pct,
+        body_fat_goal_date: next.body_fat_goal_date, updated_at: next.updated_at,
       },
     });
     const version = Date.now();
