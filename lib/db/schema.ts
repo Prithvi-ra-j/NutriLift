@@ -78,6 +78,8 @@ export const userProfile = sqliteTable("user_profile", {
   cardio: text("cardio"),
   equipment: text("equipment"),
   physique_goal: text("physique_goal"),
+  body_fat_goal_pct: real("body_fat_goal_pct"),
+  body_fat_goal_date: text("body_fat_goal_date"),
   updated_at: text("updated_at").notNull(),
 });
 
