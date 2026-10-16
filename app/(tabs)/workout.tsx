@@ -52,6 +52,7 @@ import { fromLocalDateKey, getMondayWeekRange, toLocalDateKey } from "../../lib/
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SetForm {
+  pendingSetId: string;
   exerciseLogId: string;
   exerciseName: string;
   exerciseType: ExerciseType;
@@ -99,6 +100,7 @@ function setLabel(set: SetLog, type: ExerciseType): string {
 /** Build a blank SetForm for a new set */
 function blankForm(exerciseLogId: string, exerciseName: string, exerciseType: ExerciseType, lastWeight?: number | null): SetForm {
   return {
+    pendingSetId: uuid.v4() as string,
     exerciseLogId,
     exerciseName,
     exerciseType,
@@ -115,6 +117,7 @@ function blankForm(exerciseLogId: string, exerciseName: string, exerciseType: Ex
 /** Build a SetForm pre-filled from an existing set (for editing) */
 function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, exerciseType: ExerciseType): SetForm {
   return {
+    pendingSetId: set.id,
     exerciseLogId,
     exerciseName,
     exerciseType,
@@ -493,7 +496,7 @@ export default function WorkoutScreen() {
     }
     const { weight, reps, durationSec, distanceKm } = validated;
 
-    const setId = uuid.v4() as string;
+    const setId = addSetForm.pendingSetId;
     const existingSets = sets[addSetForm.exerciseLogId] ?? [];
     const newSet: SetLog = {
       id: setId,
@@ -522,7 +525,7 @@ export default function WorkoutScreen() {
 
     // Keep weight, clear variable fields
     setAddSetForm((prev) =>
-      prev ? { ...prev, reps: "", rpe: "", durationSec: "", distanceKm: "", durationMin: "" } : null
+      prev ? { ...prev, pendingSetId: uuid.v4() as string, reps: "", rpe: "", durationSec: "", distanceKm: "", durationMin: "" } : null
     );
 
     loadWorkout();
