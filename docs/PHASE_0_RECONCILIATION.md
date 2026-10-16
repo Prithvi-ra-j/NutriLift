@@ -39,7 +39,7 @@ PRs #1–#7 remain open intentionally. Their overlap has been mapped and the mer
 
 ## Main/branch integration gate
 
-The audit baseline is reproducible and current `main` ancestry has been incorporated into the implementation branch. Before merging PR #8 into `main`, confirm GitHub reports it mergeable, review the final diff, and complete the Android/device release gates. This phase did not merge the implementation PR into `main`.
+The audit baseline is reproducible and current `main` ancestry has been incorporated into the implementation branch. GitHub now reports PR #8 mergeable after ancestry reconciliation. Before merging PR #8 into `main`, review the final diff and complete the Android/device release gates. This phase did not merge the implementation PR into `main`.
 
 
 ## Integration merge record

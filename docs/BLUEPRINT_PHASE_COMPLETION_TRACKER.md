@@ -20,7 +20,7 @@ This is the separate, phase-level view of completion against the full blueprint.
 
 | Phase | Scope | Status as of 2026-10-15 | Estimated phase completion | Main remaining gate |
 |---|---|---|---:|---|
-| 0 | Baseline and defect register | Complete (audited baseline; merge gate remains) | 100% | Recheck PR #8 mergeability after current main ancestry was integrated; device/release gates remain |
+| 0 | Baseline and defect register | Complete (audited baseline; merge gate remains) | 100% | PR #8 now reports mergeable after main ancestry integration; draft/device/release gates remain |
 | 1 | CI and build reproducibility | Automated checks pass; release artifact unverified | 75% | Verify actual Android artifact and install/run it on device or emulator; resolve release pipeline issues |
 | 2 | Canonical domain and persistence | Automated migration checks pass; device smoke pending | 65% | Confirm canonical write ownership/contracts and fresh-install plus upgrade behavior on device |
 | 3 | Calendar dates and time zones | Automated checks pass; device smoke pending | 85% | Verify critical date journeys on device and ensure cross-feature behavior remains correct |
@@ -86,4 +86,5 @@ Whenever meaningful NutriLift progress is implemented or verified:
 - [x] Rechecked Coach state construction from persisted facts, explicit unknown values, evidence-backed bounded recommendations, persisted recommendation outcomes, and genuine LLM conversational responses with provider failures kept as errors.
 - [x] Validation run [#38844503903](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38844503903) passed on code commit `5fe7f44`: Node 22 install, TypeScript, **71 suites / 517 tests**, Expo config, and four configured asset paths.
 - [x] Integrated current `main` commit `b5b37b3` into the implementation branch ancestry while retaining the branch's schema-v15 migration-contract test (the current main version targets the older schema contract).
+- [x] Verified GitHub reports PR #8 mergeable after the ancestry update; PR remains draft pending device/release gates.
 - [ ] Still required before merge/release: verify PR #8 mergeability after the integration commit, run fresh-install/upgrade and workout/recovery/Coach smoke tests on Android, and obtain an installable Android artifact. These are not claimed as complete.
