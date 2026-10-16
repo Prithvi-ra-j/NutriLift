@@ -1,3 +1,4 @@
+import { getLocalDateKey } from "../utils/date";
 // @ts-nocheck
 /**
  * Generate comprehensive progress report PDF
@@ -46,7 +47,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
     includePRs = true,
   } = options;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateKey();
   const start = startDate || getDateDaysAgo(30); // Default 30 days
   const end = endDate || today;
 
@@ -486,7 +487,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
 function getDateDaysAgo(days: number): string {
   const date = new Date();
   date.setDate(date.getDate() - days);
-  return date.toISOString().split("T")[0];
+  return getLocalDateKey(date);
 }
 
 function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {

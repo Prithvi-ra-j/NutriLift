@@ -1,3 +1,4 @@
+import { getLocalDateKey } from "../../utils/date";
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { db } from "../client";
 import { monthlyReports, aiConversations, weeklySummaries, quarterlySummaries, yearlySummaries, type MonthlyReport, type NewMonthlyReport, type AiConversation, type NewAiConversation, type WeeklySummary, type NewWeeklySummary, type QuarterlySummary, type NewQuarterlySummary, type YearlySummary, type NewYearlySummary } from "../schema";
@@ -74,7 +75,7 @@ export async function getPreviousWeeklySummaries(limit: number = 3): Promise<Wee
     const weekStart = new Date(currentWeekStart);
     weekStart.setDate(currentWeekStart.getDate() - weekOffset * 7);
     
-    const summary = await getWeeklySummary(weekStart.toISOString().split("T")[0]);
+    const summary = await getWeeklySummary(getLocalDateKey(weekStart));
     if (summary) {
       summaries.push(summary);
     }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { getLocalDateKey } from "../utils/date";
 import { immer } from "zustand/middleware/immer";
 import type { FoodLog, DailyNutrition, WorkoutSession, ExerciseLog, SetLog } from "../db/schema";
 
@@ -28,7 +29,7 @@ interface TodayState {
   reset: () => void;
 }
 
-const today = new Date().toISOString().split("T")[0];
+const today = getLocalDateKey();
 
 export const useTodayStore = create<TodayState>()(
   immer((set) => ({

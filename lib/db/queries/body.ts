@@ -1,3 +1,4 @@
+import { getLocalDateKey } from "../../utils/date";
 import { eq, and, desc, lte, gte } from "drizzle-orm";
 import { db } from "../client";
 import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
@@ -38,7 +39,7 @@ export async function getAllInBodyRecords(): Promise<BodyStat[]> {
 export async function getWeightHistory(days: number = 30): Promise<BodyStat[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = getLocalDateKey(cutoff);
 
   return db
     .select()

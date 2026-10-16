@@ -1,3 +1,4 @@
+import { getLocalDateKey } from "../../utils/date";
 // @ts-nocheck
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { db } from "../client";
@@ -195,7 +196,7 @@ async function checkAndUpdatePR(set: NewSetLog): Promise<boolean> {
     .from(personalRecords)
     .where(eq(personalRecords.exercise_name, exerciseName));
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getLocalDateKey();
 
   if (!existing[0]) {
     // First time logging this exercise — it's a PR by default

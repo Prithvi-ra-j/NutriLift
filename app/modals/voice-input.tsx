@@ -11,6 +11,7 @@ import { insertFoodLog } from "../../lib/db/queries/nutrition";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
+import { getLocalDateKey } from "../../lib/utils/date";
 import uuid from "react-native-uuid";
 
 export default function VoiceInputModal() {
@@ -26,8 +27,8 @@ export default function VoiceInputModal() {
       // Check if Groq is configured
       if (!isGroqConfigured()) {
         Alert.alert(
-          "API Key Required",
-          "Groq API key is not configured. Please add GROQ_API_KEY to your .env file.",
+          "AI service unavailable",
+          "The AI gateway is not configured. Please configure the Supabase AI gateway before using voice logging.",
           [{ text: "OK" }]
         );
         return;
@@ -92,7 +93,7 @@ export default function VoiceInputModal() {
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = getLocalDateKey();
       const meal = parsedFood.meal_suggestion || "snack";
 
       // Save each food item

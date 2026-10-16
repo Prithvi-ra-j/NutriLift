@@ -13,11 +13,11 @@
 
 export const colors = {
   // ── Backgrounds ──
-  background:         "#0F0F13",   // Darkest layer — screen bg
-  surface:            "#16161E",   // Cards, base surfaces
-  surfaceVariant:     "#1E1E2A",   // Elevated cards, input fields
-  surfaceContainer:   "#22222F",   // Chips, pills, tags
-  surfaceContainerHigh: "#282838", // Hover / pressed states
+  background:         "#0B0B0E",   // Darkest layer — screen bg
+  surface:            "#141419",   // Cards, base surfaces
+  surfaceVariant:     "#1A1A21",   // Elevated cards, input fields
+  surfaceContainer:   "#202027",   // Chips, pills, tags
+  surfaceContainerHigh: "#27272F", // Hover / pressed states
   inverseSurface:     "#E8E8F0",   // Light surface (toasts, snackbars)
 
   // ── Primary (Teal) ──
@@ -57,12 +57,12 @@ export const colors = {
   // ── Text ──
   onBackground:       "#E8E8F0",   // Primary text
   onSurface:          "#E8E8F0",   // Primary text on surfaces
-  onSurfaceVariant:   "#909090",   // Secondary / helper text
-  onSurfaceMuted:     "#8080A0",   // Placeholder, disabled
+  onSurfaceVariant:   "#9A9AA3",   // Secondary / helper text
+  onSurfaceMuted:     "#6F707A",   // Placeholder, disabled
 
   // ── Borders ──
-  outline:            "#2E2E3F",   // Card borders, dividers
-  outlineVariant:     "#3A3A50",   // Subtle separators
+  outline:            "#282830",   // Card borders, dividers
+  outlineVariant:     "#34343D",   // Subtle separators
 } as const;
 
 export type ColorToken = keyof typeof colors;
@@ -72,11 +72,11 @@ export type ColorToken = keyof typeof colors;
 export const shape = {
   // M3 shape scale
   none:       0,
-  extraSmall: 4,
-  small:      8,
-  medium:     12,
-  large:      16,
-  extraLarge: 28,
+  extraSmall: 6,
+  small:      10,
+  medium:     14,
+  large:      18,
+  extraLarge: 26,
   full:       999,
 } as const;
 
@@ -84,12 +84,12 @@ export const shape = {
 
 export const typescale = {
   // Display — BebasNeue for athletic identity
-  displayLarge:   { fontFamily: "BebasNeue_400Regular", fontSize: 40, letterSpacing: 1 },
-  displayMedium:  { fontFamily: "BebasNeue_400Regular", fontSize: 32, letterSpacing: 1 },
+  displayLarge:   { fontFamily: "BebasNeue_400Regular", fontSize: 42, letterSpacing: 0.4 },
+  displayMedium:  { fontFamily: "BebasNeue_400Regular", fontSize: 34, letterSpacing: 0.6 },
   displaySmall:   { fontFamily: "BebasNeue_400Regular", fontSize: 24, letterSpacing: 0.5 },
 
   // Headlines — DMSans bold
-  headlineLarge:  { fontFamily: "DMSans_700Bold", fontSize: 22, letterSpacing: 0 },
+  headlineLarge:  { fontFamily: "DMSans_700Bold", fontSize: 24, letterSpacing: -0.3 },
   headlineMedium: { fontFamily: "DMSans_700Bold", fontSize: 18, letterSpacing: 0 },
   headlineSmall:  { fontFamily: "DMSans_700Bold", fontSize: 16, letterSpacing: 0 },
 
@@ -99,14 +99,14 @@ export const typescale = {
   titleSmall:     { fontFamily: "DMSans_500Medium", fontSize: 13, letterSpacing: 0.1 },
 
   // Body
-  bodyLarge:      { fontFamily: "DMSans_400Regular", fontSize: 14, letterSpacing: 0.15 },
+  bodyLarge:      { fontFamily: "DMSans_400Regular", fontSize: 15, letterSpacing: 0 },
   bodyMedium:     { fontFamily: "DMSans_400Regular", fontSize: 13, letterSpacing: 0.25 },
   bodySmall:      { fontFamily: "DMSans_400Regular", fontSize: 12, letterSpacing: 0.4 },
 
   // Labels
   labelLarge:     { fontFamily: "DMSans_500Medium", fontSize: 12, letterSpacing: 0.5 },
   labelMedium:    { fontFamily: "DMSans_500Medium", fontSize: 11, letterSpacing: 0.5 },
-  labelSmall:     { fontFamily: "DMSans_500Medium", fontSize: 10, letterSpacing: 0.8 },
+  labelSmall:     { fontFamily: "DMSans_500Medium", fontSize: 10, letterSpacing: 1.0 },
 } as const;
 
 // ─── Spacing Tokens ───────────────────────────────────────────────────────────
@@ -119,6 +119,9 @@ export const spacing = {
   xl:   20,
   xxl:  24,
   xxxl: 32,
+  screen: 18,
+  section: 28,
+  content: 22,
 } as const;
 
 // ─── Elevation (Surface Tint) ──────────────────────────────────────────────────

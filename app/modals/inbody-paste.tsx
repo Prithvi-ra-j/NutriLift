@@ -16,6 +16,7 @@ import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
+import { getLocalDateKey } from "../../lib/utils/date";
 import uuid from "react-native-uuid";
 
 export default function InBodyPasteModal() {
@@ -23,7 +24,7 @@ export default function InBodyPasteModal() {
   const [isParsing, setIsParsing] = useState(false);
   const [parsed, setParsed] = useState<InBodyParseResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [dateOverride, setDateOverride] = useState(new Date().toISOString().split("T")[0]);
+  const [dateOverride, setDateOverride] = useState(getLocalDateKey());
 
   const handleParse = async () => {
     if (!pasteText.trim()) return;

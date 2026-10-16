@@ -14,18 +14,16 @@ interface SegmentedControlProps<T extends string> {
   onChange: (key: T) => void;
 }
 
-/** Pill-style segmented control — replaces repeated ad-hoc "section tab" rows. */
 export function SegmentedControl<T extends string>({ segments, active, onChange }: SegmentedControlProps<T>) {
   return (
     <View
       style={{
         flexDirection: "row",
         backgroundColor: M3.colors.surface,
-        borderRadius: M3.shape.large,
+        borderRadius: M3.shape.extraLarge,
         borderWidth: 1,
         borderColor: M3.colors.outline,
-        padding: 4,
-        gap: 2,
+        padding: 3,
       }}
     >
       {segments.map((s) => {
@@ -34,33 +32,29 @@ export function SegmentedControl<T extends string>({ segments, active, onChange 
           <TouchableOpacity
             key={s.key}
             onPress={() => onChange(s.key)}
-            activeOpacity={0.75}
+            activeOpacity={0.8}
             style={{
               flex: 1,
+              minHeight: 40,
               backgroundColor: isActive ? M3.colors.primary : "transparent",
-              borderRadius: M3.shape.medium,
-              paddingVertical: 9,
+              borderRadius: M3.shape.extraLarge,
+              paddingHorizontal: 5,
               alignItems: "center",
               justifyContent: "center",
               flexDirection: "row",
               gap: 5,
-              shadowColor: isActive ? M3.colors.primary : "transparent",
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: isActive ? 0.3 : 0,
-              shadowRadius: 4,
-              elevation: isActive ? 3 : 0,
             }}
           >
-            {s.icon && (
-              <Feather name={s.icon} size={13} color={isActive ? M3.colors.onPrimary : M3.colors.onSurfaceVariant} />
-            )}
+            {s.icon ? <Feather name={s.icon} size={13} color={isActive ? M3.colors.onPrimary : M3.colors.onSurfaceVariant} /> : null}
             <Text
               style={{
                 color: isActive ? M3.colors.onPrimary : M3.colors.onSurfaceVariant,
-                fontSize: 12,
+                fontSize: 11,
                 fontFamily: isActive ? "DMSans_700Bold" : "DMSans_500Medium",
               }}
               numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
             >
               {s.label}
             </Text>

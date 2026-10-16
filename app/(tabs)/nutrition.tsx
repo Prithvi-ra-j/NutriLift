@@ -26,6 +26,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { getLocalDateKey } from "../../lib/utils/date";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -56,7 +57,7 @@ function groupByMeal(logs: FoodLog[]): MealGroup[] {
 }
 
 export default function NutritionScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getLocalDateKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
   const { nutrition, foodLogs, setNutrition, setFoodLogs } = useTodayStore();
 

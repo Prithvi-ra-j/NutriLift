@@ -44,6 +44,7 @@ import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { getLocalDateKey } from "../../lib/utils/date";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -128,7 +129,7 @@ function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, e
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function WorkoutScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getLocalDateKey();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const getDefaultDayType = (dateStr: string): DayType => {
@@ -220,7 +221,7 @@ export default function WorkoutScreen() {
     const curr = new Date(selectedDate);
     const first = curr.getDate() - curr.getDay() + 1;
     const monday = new Date(curr.setDate(first));
-    const mondayStr = monday.toISOString().split("T")[0];
+    const mondayStr = getLocalDateKey(monday);
     const { getSessionsInRange } = await import("../../lib/db/queries/workout");
     const sessions = await getSessionsInRange(mondayStr, selectedDate);
     setCompletedDayTypes(new Set(sessions.map((s) => s.day_type)));

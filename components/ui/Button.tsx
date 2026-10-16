@@ -14,21 +14,14 @@ interface ButtonProps {
   style?: ViewStyle;
 }
 
-/** Shared button primitive — replaces the hand-rolled TouchableOpacity styling repeated across screens. */
 export function Button({ label, onPress, variant = "primary", icon, loading = false, disabled = false, style }: ButtonProps) {
   const isDisabled = disabled || loading;
-
   const { bg, border, fg } = (() => {
     switch (variant) {
-      case "secondary":
-        return { bg: M3.colors.surface, border: M3.colors.outline, fg: M3.colors.onSurface };
-      case "ghost":
-        return { bg: "transparent", border: "transparent", fg: M3.colors.primary };
-      case "danger":
-        return { bg: isDisabled ? M3.colors.surfaceVariant : M3.colors.errorContainer, border: M3.colors.error, fg: M3.colors.error };
-      case "primary":
-      default:
-        return { bg: isDisabled ? M3.colors.surfaceVariant : M3.colors.primary, border: "transparent", fg: isDisabled ? M3.colors.onSurfaceMuted : M3.colors.onPrimary };
+      case "secondary": return { bg: M3.colors.surface, border: M3.colors.outline, fg: M3.colors.onSurface };
+      case "ghost": return { bg: "transparent", border: "transparent", fg: M3.colors.primary };
+      case "danger": return { bg: isDisabled ? M3.colors.surfaceVariant : M3.colors.errorContainer, border: M3.colors.error, fg: M3.colors.error };
+      default: return { bg: isDisabled ? M3.colors.surfaceVariant : M3.colors.primary, border: "transparent", fg: isDisabled ? M3.colors.onSurfaceMuted : M3.colors.onPrimary };
     }
   })();
 
@@ -36,14 +29,14 @@ export function Button({ label, onPress, variant = "primary", icon, loading = fa
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.75}
+      activeOpacity={0.82}
       style={[
         {
+          minHeight: 46,
           backgroundColor: bg,
           borderWidth: variant === "secondary" || variant === "danger" ? 1 : 0,
           borderColor: border,
-          borderRadius: M3.shape.medium,
-          paddingVertical: 13,
+          borderRadius: 14,
           paddingHorizontal: 18,
           flexDirection: "row",
           alignItems: "center",
@@ -54,11 +47,7 @@ export function Button({ label, onPress, variant = "primary", icon, loading = fa
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={fg} />
-      ) : (
-        icon && <Feather name={icon} size={16} color={fg} />
-      )}
+      {loading ? <ActivityIndicator size="small" color={fg} /> : icon ? <Feather name={icon} size={16} color={fg} /> : null}
       <Text style={{ color: fg, fontSize: 14, fontFamily: "DMSans_700Bold" }}>{label}</Text>
     </TouchableOpacity>
   );

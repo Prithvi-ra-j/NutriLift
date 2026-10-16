@@ -1,3 +1,4 @@
+import { getLocalDateKey } from "../../utils/date";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
 import { db } from "../client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
@@ -57,8 +58,8 @@ export async function getLast7DaysNutrition(): Promise<DailyNutrition[]> {
   const sevenDaysAgo = new Date(today);
   sevenDaysAgo.setDate(today.getDate() - 6);
   return getDailyNutritionRange(
-    sevenDaysAgo.toISOString().split("T")[0],
-    today.toISOString().split("T")[0]
+    getLocalDateKey(sevenDaysAgo),
+    getLocalDateKey(today)
   );
 }
 
