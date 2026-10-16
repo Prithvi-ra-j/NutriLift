@@ -76,6 +76,17 @@ Deno.serve(async (request) => {
     return Response.json({ error: "Audio is empty or exceeds the 20 MB limit." }, { status: 413, headers: corsHeaders });
   }
 
+  // Reserve quota before calling the provider so concurrent requests cannot
+  // all pass the count check and exceed the per-user daily limit.
+  const { error: usageError } = await admin.from("ai_request_usage").insert({
+    user_id: user.id,
+    model: "whisper-large-v3-turbo",
+    max_output_tokens: 0,
+  });
+  if (usageError) {
+    return Response.json({ error: "Could not record AI usage. Please retry." }, { status: 503, headers: corsHeaders });
+  }
+
   const form = new FormData();
   form.append("file", new Blob([bytes], { type: mimeType }), mimeType === "audio/m4a" ? "recording.m4a" : `recording.${mimeType.split("/")[1]}`);
   form.append("model", "whisper-large-v3-turbo");
@@ -106,15 +117,6 @@ Deno.serve(async (request) => {
   }
   if (typeof transcription.text !== "string" || !transcription.text.trim()) {
     return Response.json({ error: "No speech was detected in the recording." }, { status: 422, headers: corsHeaders });
-  }
-
-  const { error: usageError } = await admin.from("ai_request_usage").insert({
-    user_id: user.id,
-    model: "whisper-large-v3-turbo",
-    max_output_tokens: 0,
-  });
-  if (usageError) {
-    return Response.json({ error: "Could not record AI usage. Please retry." }, { status: 503, headers: corsHeaders });
   }
 
   return Response.json({ text: transcription.text.trim() }, { headers: corsHeaders });
