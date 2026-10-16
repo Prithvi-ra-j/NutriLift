@@ -21,3 +21,11 @@ describe("domain event invalidation policy", () => {
     expect(getInvalidatedProjectionKeys("recovery.check-in.saved")).toContain("coach.recommendations");
   });
 });
+
+
+describe("recommendation outcome invalidation policy", () => {
+  it("refreshes Coach recommendations and context when a user actions a recommendation", () => {
+    const keys = getInvalidatedProjectionKeys("coach.recommendation.outcome_recorded");
+    expect(keys).toEqual(["coach.recommendations", "coach.context"]);
+  });
+});
