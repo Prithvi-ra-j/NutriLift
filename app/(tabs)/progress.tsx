@@ -16,6 +16,7 @@ import { getRecentRecoveryLogs } from "../../lib/db/queries/recovery";
 import { computeNutritionSummary } from "../../lib/analytics/nutrition-analytics";
 import { computeBodySummary } from "../../lib/analytics/body-analytics";
 import { getUserProfile, type PersistedUserProfile } from "../../lib/db/queries/user-profile";
+import { DEFAULT_NUTRITION_TARGETS, getNutritionTargetsForDate, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
@@ -57,6 +58,7 @@ export default function ProgressScreen() {
   const [nutritionHistory, setNutritionHistory] = useState<DailyNutrition[]>([]);
   const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>([]);
   const [userProfile, setUserProfile] = useState<PersistedUserProfile | null>(null);
+  const [activeTargets, setActiveTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
 
   // Date-only keys are parsed as local calendar dates; week bounds are inclusive.
   const getWeekRange = (dateStr: string) => {
@@ -99,6 +101,13 @@ export default function ProgressScreen() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    getNutritionTargetsForDate(selectedDate).then(setActiveTargets).catch((error) => {
+      console.error("Target history load error:", error);
+      setActiveTargets(DEFAULT_NUTRITION_TARGETS);
+    });
+  }, [selectedDate]);
+
   // Filter data for selected week
   const weekWeightHistory = weightHistory.filter(
     (stat) => stat.date >= weekRange.start && stat.date <= weekRange.end
@@ -116,7 +125,7 @@ export default function ProgressScreen() {
     (pr) => pr.achieved_date >= weekRange.start && pr.achieved_date <= weekRange.end
   );
 
-  const nutritionSummary = computeNutritionSummary(weekNutritionHistory);
+  const nutritionSummary = computeNutritionSummary(weekNutritionHistory, activeTargets);
   const latestInBody = inBodyRecords[inBodyRecords.length - 1] ?? null;
   const bodySummary = computeBodySummary(weekWeightHistory, latestInBody, userProfile?.body_fat_goal_pct != null && userProfile.body_fat_goal_date ? { targetBodyFatPct: userProfile.body_fat_goal_pct, goalDate: userProfile.body_fat_goal_date } : null);
 
@@ -466,8 +475,8 @@ export default function ProgressScreen() {
                 {isCurrentWeek ? "THIS WEEK" : "WEEK"} NUTRITION SUMMARY
               </Text>
               {[
-                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: `${USER_PROFILE.targets.calories}` },
-                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: `${USER_PROFILE.targets.protein_g}g` },
+                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: `${activeTargets.calories}` },
+                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: `${activeTargets.protein_g}g` },
                 { label: "Protein Hit Rate", value: `${nutritionSummary.proteinHitRate.toFixed(0)}%`, target: "100%" },
                 { label: "Best Streak", value: `${nutritionSummary.bestStreak} days`, target: "" },
                 { label: "Current Streak", value: `${nutritionSummary.currentStreak} days`, target: "" },
