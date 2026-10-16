@@ -1,5 +1,5 @@
 import type { PersistedUserProfile } from "../db/queries/user-profile";
-import type { NutritionTargets } from "../nutrition/target-validation";
+import { DEFAULT_NUTRITION_TARGETS, type NutritionTargets } from "../nutrition/target-validation";
 import type { BodyStat, DailyNutrition, PersonalRecord, RecoveryLog, WorkoutSession } from "../db/schema";
 
 export interface CoachProfileContext {
@@ -32,10 +32,10 @@ export function buildApprovedCoachProfile(
     height_cm: profile?.height_cm ?? null,
     training_start_date: profile?.training_start_date ?? null,
     targets: {
-      calories: nutritionTargets?.calories ?? 0,
-      protein_g: nutritionTargets?.protein_g ?? 0,
-      carbs_g: nutritionTargets?.carbs_g ?? 0,
-      fat_g: nutritionTargets?.fat_g ?? 0,
+      calories: nutritionTargets?.calories ?? DEFAULT_NUTRITION_TARGETS.calories,
+      protein_g: nutritionTargets?.protein_g ?? DEFAULT_NUTRITION_TARGETS.protein_g,
+      carbs_g: nutritionTargets?.carbs_g ?? DEFAULT_NUTRITION_TARGETS.carbs_g,
+      fat_g: nutritionTargets?.fat_g ?? DEFAULT_NUTRITION_TARGETS.fat_g,
       physique_goal: profile?.physique_goal ?? null,
     },
     training: {
