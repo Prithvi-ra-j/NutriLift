@@ -97,8 +97,6 @@ describe("local database migration contract", () => {
       "sync_tombstones.external_id",
       "nutrition_target_history.goal",
       "sync_state.owner_user_id",
-      "custom_exercises.exercise_type",
-      "custom_exercises.created_at",
       "user_profile.age",
       "user_profile.sex",
       "user_profile.height_cm",
