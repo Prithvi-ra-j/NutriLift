@@ -321,6 +321,8 @@ CREATE TABLE `user_profile` (
   `cardio` text,
   `equipment` text,
   `physique_goal` text,
+  `body_fat_goal_pct` real,
+  `body_fat_goal_date` text,
   `updated_at` text NOT NULL
 );
 --> statement-breakpoint
