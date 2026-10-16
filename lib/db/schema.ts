@@ -66,6 +66,21 @@ export const nutritionTargetHistory = sqliteTable("nutrition_target_history", {
   created_at: text("created_at").notNull(),
 });
 
+// ─── User-owned profile context (no personal values baked into source defaults) ──
+export const userProfile = sqliteTable("user_profile", {
+  id: integer("id").primaryKey(),
+  age: integer("age"),
+  sex: text("sex"),
+  height_cm: real("height_cm"),
+  training_start_date: text("training_start_date"),
+  current_split: text("current_split"),
+  training_phase: text("training_phase"),
+  cardio: text("cardio"),
+  equipment: text("equipment"),
+  physique_goal: text("physique_goal"),
+  updated_at: text("updated_at").notNull(),
+});
+
 // ─── Workout Sessions ─────────────────────────────────────────────────────────
 export const workoutSessions = sqliteTable("workout_sessions", {
   id: text("id").primaryKey(),
