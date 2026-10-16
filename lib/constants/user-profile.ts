@@ -1,5 +1,3 @@
-import { DEFAULT_NUTRITION_TARGETS } from "../nutrition/target-validation";
-
 /**
  * Generic, non-personal compatibility defaults for legacy consumers and demo
  * seeding only. Runtime profile/targets must come from SQLite repositories.
@@ -23,10 +21,10 @@ export const USER_PROFILE = {
   },
 
   targets: {
-    calories: DEFAULT_NUTRITION_TARGETS.calories,
-    protein_g: DEFAULT_NUTRITION_TARGETS.protein_g,
-    carbs_g: DEFAULT_NUTRITION_TARGETS.carbs_g,
-    fat_g: DEFAULT_NUTRITION_TARGETS.fat_g,
+    calories: 2200,
+    protein_g: 140,
+    carbs_g: 250,
+    fat_g: 70,
     body_fat_pct_dec2026: null,
     physique_goal: "General fitness",
   },
