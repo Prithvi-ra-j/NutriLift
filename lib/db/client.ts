@@ -516,6 +516,20 @@ export async function runMigrations(): Promise<void> {
 
     CREATE INDEX IF NOT EXISTS idx_nutrition_target_history_effective_date
       ON nutrition_target_history(effective_date, created_at);
+
+    CREATE TABLE IF NOT EXISTS user_profile (
+      id INTEGER PRIMARY KEY,
+      age INTEGER,
+      sex TEXT,
+      height_cm REAL,
+      training_start_date TEXT,
+      current_split TEXT,
+      training_phase TEXT,
+      cardio TEXT,
+      equipment TEXT,
+      physique_goal TEXT,
+      updated_at TEXT NOT NULL
+    );
   `);
 
   // Preserve an existing profile as the first known target version if history is empty.
