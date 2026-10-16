@@ -1,5 +1,5 @@
 import type { NewFoodLog } from "../../db/schema";
-import { validateFoodLogInput } from "../food-log-validation";
+import { validateFoodLogInput, validateNutritionEstimate } from "../food-log-validation";
 
 function validLog(overrides: Partial<NewFoodLog> = {}): NewFoodLog {
   return {
