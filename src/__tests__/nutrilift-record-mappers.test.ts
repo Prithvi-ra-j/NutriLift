@@ -1,3 +1,9 @@
+jest.mock("react-native", () => ({ Platform: { OS: "android" } }));
+jest.mock("expo-sqlite", () => ({
+  openDatabaseSync: () => ({ execAsync: async () => undefined, getAllAsync: async () => [] }),
+}));
+jest.mock("drizzle-orm/expo-sqlite", () => ({ drizzle: () => ({}) }));
+
 import {
   buildPersonalRecordExternalId,
   mapDailyNutrition,
