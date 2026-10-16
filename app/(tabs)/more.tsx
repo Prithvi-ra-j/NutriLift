@@ -30,6 +30,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { toLocalDateKey } from "../../lib/utils/local-date";
 import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, saveNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
 import { getAdaptiveTargetSuggestion } from "../../lib/nutrition/adaptive-target-service";
+import { getUserProfile, updateUserProfile, type PersistedUserProfile, type ProfileSex } from "../../lib/db/queries/user-profile";
 
 type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "account" | "settings";
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
@@ -45,6 +46,12 @@ export default function MoreScreen() {
   const [targetInputs, setTargetInputs] = useState({ calories: String(DEFAULT_NUTRITION_TARGETS.calories), protein: String(DEFAULT_NUTRITION_TARGETS.protein_g), carbs: String(DEFAULT_NUTRITION_TARGETS.carbs_g), fat: String(DEFAULT_NUTRITION_TARGETS.fat_g) });
   const [targetsSaving, setTargetsSaving] = useState(false);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [persistedProfile, setPersistedProfile] = useState<PersistedUserProfile | null>(null);
+  const [profileInputs, setProfileInputs] = useState({
+    age: "", sex: "", height_cm: "", training_start_date: "", current_split: "",
+    training_phase: "", cardio: "", equipment: "", physique_goal: "",
+  });
 
   // Supplements
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>([]);
@@ -99,6 +106,20 @@ export default function MoreScreen() {
 
   useEffect(() => {
     loadData();
+    getUserProfile().then((profile) => {
+      setPersistedProfile(profile);
+      setProfileInputs({
+        age: profile?.age == null ? "" : String(profile.age),
+        sex: profile?.sex ?? "",
+        height_cm: profile?.height_cm == null ? "" : String(profile.height_cm),
+        training_start_date: profile?.training_start_date ?? "",
+        current_split: profile?.current_split ?? "",
+        training_phase: profile?.training_phase ?? "",
+        cardio: profile?.cardio ?? "",
+        equipment: profile?.equipment ?? "",
+        physique_goal: profile?.physique_goal ?? "",
+      });
+    }).catch((error) => Alert.alert("Profile unavailable", error instanceof Error ? error.message : "Could not load saved profile."));
     getNutritionTargets().then((targets) => {
       setNutritionTargets(targets);
       setTargetInputs({ calories: String(targets.calories), protein: String(targets.protein_g), carbs: String(targets.carbs_g), fat: String(targets.fat_g) });
@@ -725,18 +746,48 @@ export default function MoreScreen() {
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 PROFILE
               </Text>
-              {[
-                { label: "Name", value: USER_PROFILE.name },
-                { label: "Age", value: `${USER_PROFILE.age}` },
-                { label: "Height", value: `${USER_PROFILE.height_cm}cm` },
-                { label: "Training Since", value: USER_PROFILE.training_start_date },
-                { label: "Current Split", value: USER_PROFILE.training.current_split },
-              ].map((item) => (
-                <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: M3.colors.outline }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
-                  <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>{item.value}</Text>
+              {([
+                { key: "age", label: "Age", keyboardType: "number-pad" },
+                { key: "sex", label: "Sex (male/female/other/prefer_not_to_say)", keyboardType: "default" },
+                { key: "height_cm", label: "Height (cm)", keyboardType: "decimal-pad" },
+                { key: "training_start_date", label: "Training since (YYYY-MM-DD)", keyboardType: "default" },
+                { key: "current_split", label: "Current split", keyboardType: "default" },
+                { key: "training_phase", label: "Training phase", keyboardType: "default" },
+                { key: "cardio", label: "Cardio routine", keyboardType: "default" },
+                { key: "equipment", label: "Available equipment", keyboardType: "default" },
+                { key: "physique_goal", label: "Physique / training goal", keyboardType: "default" },
+              ] as const).map((item) => (
+                <View key={item.key} style={{ gap: 5, paddingVertical: 6 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
+                  <Input value={profileInputs[item.key]} onChangeText={(value) => setProfileInputs((current) => ({ ...current, [item.key]: value }))} keyboardType={item.keyboardType as any} placeholder="Leave blank if unknown" />
                 </View>
               ))}
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, lineHeight: 16, marginVertical: 8 }}>
+                Profile fields are stored on this device. Unknown values stay blank and are not inferred by Coach.
+                {persistedProfile ? ` Last saved ${new Date(persistedProfile.updated_at).toLocaleDateString()}.` : ""}
+              </Text>
+              <Button label={profileSaving ? "Saving profile…" : "Save profile"} loading={profileSaving} disabled={profileSaving} onPress={async () => {
+                setProfileSaving(true);
+                try {
+                  const saved = await updateUserProfile({
+                    age: profileInputs.age.trim() ? Number(profileInputs.age) : null,
+                    sex: profileInputs.sex.trim() ? profileInputs.sex.trim() as ProfileSex : null,
+                    height_cm: profileInputs.height_cm.trim() ? Number(profileInputs.height_cm) : null,
+                    training_start_date: profileInputs.training_start_date.trim() || null,
+                    current_split: profileInputs.current_split.trim() || null,
+                    training_phase: profileInputs.training_phase.trim() || null,
+                    cardio: profileInputs.cardio.trim() || null,
+                    equipment: profileInputs.equipment.trim() || null,
+                    physique_goal: profileInputs.physique_goal.trim() || null,
+                  });
+                  setPersistedProfile(saved);
+                  Alert.alert("Profile saved", "Coach will use saved values and treat blank fields as unknown.");
+                } catch (error) {
+                  Alert.alert("Invalid profile", error instanceof Error ? error.message : "Check the profile fields and try again.");
+                } finally {
+                  setProfileSaving(false);
+                }
+              }} />
             </Card>
 
             <Card>
