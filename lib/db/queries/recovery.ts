@@ -3,7 +3,7 @@ import { db } from "../client";
 import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, type SupplementLog } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
 import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
-import { validateRecoveryInput } from "../../recovery/validation";
+import { validateRecoveryInput, summarizeRecoveryCheckIn, type RecoverySummary } from "../../recovery/validation";
 import { appendDomainEvent } from "./domain-events";
 import { enqueueRecoveryLog } from "./sync-outbox";
 
@@ -186,4 +186,21 @@ export async function getSupplementAdherence30d(): Promise<Record<string, number
   }
 
   return result;
+}
+
+
+/** Blueprint contract alias: save one validated, user-reported check-in atomically. */
+export async function saveRecoveryCheckIn(input: NewRecoveryLog): Promise<void> {
+  return upsertRecoveryLog(input);
+}
+
+/** Return history with explicit inclusive date bounds. */
+export async function getRecoveryHistory(startDate: string, endDate: string): Promise<RecoveryLog[]> {
+  return getRecoveryLogsForDateRange(startDate, endDate);
+}
+
+/** Missing fields stay unknown; this function intentionally does not create a numeric readiness score. */
+export async function getRecoverySummary(date: string): Promise<RecoverySummary> {
+  const checkIn = await getRecoveryLog(date);
+  return summarizeRecoveryCheckIn(checkIn, date);
 }
