@@ -106,9 +106,9 @@ describe("local database migration contract", () => {
       "user_profile.cardio",
       "user_profile.equipment",
       "user_profile.physique_goal",
-      "user_profile.updated_at",
       "user_profile.body_fat_goal_pct",
       "user_profile.body_fat_goal_date",
+      "user_profile.updated_at",
     ]);
   });
 });
