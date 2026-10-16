@@ -50,7 +50,7 @@ export default function MoreScreen() {
   const [persistedProfile, setPersistedProfile] = useState<PersistedUserProfile | null>(null);
   const [profileInputs, setProfileInputs] = useState({
     age: "", sex: "", height_cm: "", training_start_date: "", current_split: "",
-    training_phase: "", cardio: "", equipment: "", physique_goal: "",
+    training_phase: "", cardio: "", equipment: "", physique_goal: "", body_fat_goal_pct: "", body_fat_goal_date: "",
   });
 
   // Supplements
@@ -118,6 +118,8 @@ export default function MoreScreen() {
         cardio: profile?.cardio ?? "",
         equipment: profile?.equipment ?? "",
         physique_goal: profile?.physique_goal ?? "",
+        body_fat_goal_pct: profile?.body_fat_goal_pct == null ? "" : String(profile.body_fat_goal_pct),
+        body_fat_goal_date: profile?.body_fat_goal_date ?? "",
       });
     }).catch((error) => Alert.alert("Profile unavailable", error instanceof Error ? error.message : "Could not load saved profile."));
     getNutritionTargets().then((targets) => {
@@ -759,6 +761,8 @@ export default function MoreScreen() {
                 { key: "cardio", label: "Cardio routine", keyboardType: "default" },
                 { key: "equipment", label: "Available equipment", keyboardType: "default" },
                 { key: "physique_goal", label: "Physique / training goal", keyboardType: "default" },
+                { key: "body_fat_goal_pct", label: "Body-fat goal (%)", keyboardType: "decimal-pad" },
+                { key: "body_fat_goal_date", label: "Body-fat goal date (YYYY-MM-DD)", keyboardType: "default" },
               ] as const).map((item) => (
                 <View key={item.key} style={{ gap: 5, paddingVertical: 6 }}>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
@@ -782,6 +786,8 @@ export default function MoreScreen() {
                     cardio: profileInputs.cardio.trim() || null,
                     equipment: profileInputs.equipment.trim() || null,
                     physique_goal: profileInputs.physique_goal.trim() || null,
+                    body_fat_goal_pct: profileInputs.body_fat_goal_pct.trim() ? Number(profileInputs.body_fat_goal_pct) : null,
+                    body_fat_goal_date: profileInputs.body_fat_goal_date.trim() || null,
                   });
                   setPersistedProfile(saved);
                   Alert.alert("Profile saved", "Coach will use saved values and treat blank fields as unknown.");
