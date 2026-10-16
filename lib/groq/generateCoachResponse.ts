@@ -156,7 +156,7 @@ ${JSON.stringify(context, null, 2)}`;
     });
     if (onChunk && content) onChunk(content);
     return content;
-  })) as Promise<string>;
+  }) as Promise<string>;
 }
 
 /**
