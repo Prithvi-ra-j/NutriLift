@@ -39,7 +39,7 @@ export async function updateUserProfile(patch: UserProfileInput): Promise<Persis
     cardio: existing?.cardio ?? null,
     equipment: existing?.equipment ?? null,
     physique_goal: existing?.physique_goal ?? null,
-    ...patch,
+    ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined)),
     updated_at: new Date().toISOString(),
   } as PersistedUserProfile;
   const validation = validateUserProfile(next);
