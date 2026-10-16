@@ -10,7 +10,8 @@ describe("Life OS record mappers", () => {
     const records = mapRecoveryLog({ id: "recovery-1", date: "2026-10-15", updated_at: "2026-10-15T10:00:00.000Z", sleep_duration_hr: 7, hrv: null, energy_level: undefined, muscle_soreness: 3, stress_level: null } as any);
     const sleep = records.find((record) => record.externalId.endsWith(":sleep:2026-10-15"));
     const hrv = records.find((record) => record.externalId.endsWith(":hrv:2026-10-15"));
-    expect(records).toHaveLength(5);
+    expect(records).toHaveLength(4);
+    expect(records.some((record) => record.externalId.endsWith(":energy:2026-10-15"))).toBe(false);
     expect(sleep?.deleted).toBe(false);
     expect(hrv?.deleted).toBe(true);
     expect(hrv?.payload).toEqual({});
