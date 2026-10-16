@@ -1,5 +1,5 @@
 /** Increment when a forward-compatible local SQLite schema migration is introduced. */
-export const CURRENT_SCHEMA_VERSION = 14;
+export const CURRENT_SCHEMA_VERSION = 15;
 
 /** Reject a database written by a newer app version. */
 export function assertSupportedSchemaVersion(databaseVersion: number): void {
@@ -63,6 +63,8 @@ export const ADDITIVE_COLUMN_MIGRATIONS = [
   { table: "daily_nutrition", column: "is_complete", type: "INTEGER NOT NULL DEFAULT 0" },
   { table: "daily_nutrition", column: "completed_at", type: "TEXT" },
   { table: "sync_state", column: "owner_user_id", type: "TEXT" },
+  { table: "user_profile", column: "body_fat_goal_pct", type: "REAL" },
+  { table: "user_profile", column: "body_fat_goal_date", type: "TEXT" },
 ] as const;
 
 export const REQUIRED_CORE_COLUMNS: Readonly<Record<string, readonly string[]>> = {
@@ -78,7 +80,7 @@ export const REQUIRED_CORE_COLUMNS: Readonly<Record<string, readonly string[]>> 
   sync_tombstones: ["external_id"],
   nutrition_target_history: ["goal"],
   sync_state: ["owner_user_id"],
-  user_profile: ["age", "sex", "height_cm", "training_start_date", "current_split", "training_phase", "cardio", "equipment", "physique_goal", "updated_at"],
+  user_profile: ["age", "sex", "height_cm", "training_start_date", "current_split", "training_phase", "cardio", "equipment", "physique_goal", "body_fat_goal_pct", "body_fat_goal_date", "updated_at"],
   custom_exercises: ["exercise_type", "created_at"],
 };
 
