@@ -9,13 +9,19 @@ jest.mock("../supabase/client", () => ({
   supabase: { functions: { invoke: jest.fn() } },
 }));
 
+jest.mock("../observability/telemetry", () => ({
+  recordAIRequestMetrics: jest.fn().mockResolvedValue(undefined),
+}));
+
 import * as FileSystem from "expo-file-system/legacy";
 import { supabase } from "../supabase/client";
+import { recordAIRequestMetrics } from "../observability/telemetry";
 import { transcribeAudio, transcribeAudioMultilingual } from "./transcribeAudio";
 
 const getInfoAsync = FileSystem.getInfoAsync as jest.Mock;
 const readAsStringAsync = FileSystem.readAsStringAsync as jest.Mock;
 const invoke = supabase.functions.invoke as jest.Mock;
+const recordMetrics = recordAIRequestMetrics as jest.Mock;
 
 describe("voice transcription gateway", () => {
   beforeEach(() => {
@@ -23,11 +29,13 @@ describe("voice transcription gateway", () => {
     getInfoAsync.mockResolvedValue({ exists: true, isDirectory: false, size: 128 });
     readAsStringAsync.mockResolvedValue("YXVkaW8=");
     invoke.mockResolvedValue({ data: { text: "  four eggs and dal  " }, error: null });
+    recordMetrics.mockResolvedValue(undefined);
   });
 
   it("rejects an empty recording URI before reading the file", async () => {
     await expect(transcribeAudio(" ")).rejects.toThrow("Audio recording is missing.");
     expect(getInfoAsync).not.toHaveBeenCalled();
+    expect(recordMetrics).not.toHaveBeenCalled();
   });
 
   it("rejects missing or empty recordings", async () => {
@@ -51,6 +59,11 @@ describe("voice transcription gateway", () => {
     expect(invoke).toHaveBeenCalledWith("ai-transcribe", {
       body: { audio_base64: "YXVkaW8=", mime_type: "audio/m4a", language: "en" },
     });
+    expect(recordMetrics).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "groq-via-supabase",
+      model: "whisper-large-v3-turbo",
+      outputValid: true,
+    }));
   });
 
   it("omits the language to allow multilingual detection", async () => {
@@ -60,8 +73,27 @@ describe("voice transcription gateway", () => {
     });
   });
 
-  it("surfaces gateway errors instead of fabricating a transcript", async () => {
+  it("surfaces gateway errors and records a failure category instead of fabricating a transcript", async () => {
     invoke.mockResolvedValueOnce({ data: null, error: { message: "Invalid session" } });
     await expect(transcribeAudio("file://meal.m4a")).rejects.toThrow("Invalid session");
+    expect(recordMetrics).toHaveBeenCalledWith(expect.objectContaining({
+      provider: "groq-via-supabase",
+      outputValid: false,
+      failureCategory: "gateway_error",
+    }));
+  });
+
+  it("records empty provider output as a failed request", async () => {
+    invoke.mockResolvedValueOnce({ data: { text: "  " }, error: null });
+    await expect(transcribeAudio("file://meal.m4a")).rejects.toThrow("returned no text");
+    expect(recordMetrics).toHaveBeenCalledWith(expect.objectContaining({
+      outputValid: false,
+      failureCategory: "empty_output",
+    }));
+  });
+
+  it("does not replace a successful transcript when telemetry persistence fails", async () => {
+    recordMetrics.mockRejectedValueOnce(new Error("telemetry database unavailable"));
+    await expect(transcribeAudio("file://meal.m4a")).resolves.toBe("four eggs and dal");
   });
 });
