@@ -378,7 +378,7 @@ export default function MoreScreen() {
               justifyContent: "center",
             }}
           >
-            <Text style={{ color: value >= v ? M3.colors.primary : M3.colors.onSurfaceMuted, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+            <Text style={{ color: value != null && value >= v ? M3.colors.primary : M3.colors.onSurfaceMuted, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
               {v}
             </Text>
           </TouchableOpacity>
