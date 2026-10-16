@@ -12,6 +12,8 @@ export interface UserProfileInput {
   cardio?: string | null;
   equipment?: string | null;
   physique_goal?: string | null;
+  body_fat_goal_pct?: number | null;
+  body_fat_goal_date?: string | null;
 }
 
 export interface ProfileValidationResult { valid: boolean; errors: string[]; }
@@ -25,6 +27,13 @@ export function validateUserProfile(profile: UserProfileInput): ProfileValidatio
   }
   if (profile.sex != null && !["female", "male", "other", "prefer_not_to_say"].includes(profile.sex)) {
     errors.push("Sex must be female, male, other, or prefer_not_to_say.");
+  }
+  if (profile.body_fat_goal_pct != null && (!Number.isFinite(profile.body_fat_goal_pct) || profile.body_fat_goal_pct < 3 || profile.body_fat_goal_pct > 70)) {
+    errors.push("Body-fat goal must be between 3 and 70 percent.");
+  }
+  if (profile.body_fat_goal_date != null && profile.body_fat_goal_date !== "") {
+    try { fromLocalDateKey(profile.body_fat_goal_date); }
+    catch { errors.push("Body-fat goal date must be a real YYYY-MM-DD date."); }
   }
   if (profile.height_cm != null && (!Number.isFinite(profile.height_cm) || profile.height_cm < 100 || profile.height_cm > 250)) {
     errors.push("Height must be between 100 and 250 cm.");
