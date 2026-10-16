@@ -34,3 +34,31 @@ describe("recovery input validation", () => {
     expect(() => validateRecoveryInput({ date: "2026-10-15" })).not.toThrow();
   });
 });
+
+
+describe("recovery summaries", () => {
+  it("keeps missing recovery fields unknown rather than assigning a neutral score", () => {
+    const summary = summarizeRecoveryCheckIn(null, "2026-10-16");
+    expect(summary.status).toBe("insufficient_data");
+    expect(summary.loggedFields).toBe(0);
+    expect(summary.missingFields).toContain("sleep duration");
+    expect(summary.signals).toEqual([]);
+  });
+  it("flags only explicitly reported recovery concerns", () => {
+    const summary = summarizeRecoveryCheckIn({
+      date: "2026-10-16", sleep_duration_hr: 5.5, energy_level: 2,
+      muscle_soreness: null, stress_level: null,
+    }, "2026-10-16");
+    expect(summary.status).toBe("needs_attention");
+    expect(summary.signals).toEqual(["sleep below 6 hours", "low self-reported energy"]);
+    expect(summary.missingFields).toContain("muscle soreness");
+  });
+  it("does not label a partially logged but concerning-free check-in as complete", () => {
+    const summary = summarizeRecoveryCheckIn({
+      date: "2026-10-16", energy_level: 4, stress_level: 2,
+    }, "2026-10-16");
+    expect(summary.status).toBe("no_flags");
+    expect(summary.loggedFields).toBe(2);
+    expect(summary.missingFields.length).toBeGreaterThan(0);
+  });
+});
