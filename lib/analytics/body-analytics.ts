@@ -5,7 +5,7 @@ export interface BodyCompositionSummary {
   currentWeight: number | null;
   weightChange7d: number | null;
   weightChange30d: number | null;
-  trend: "gaining" | "losing" | "maintaining";
+  trend: "gaining" | "losing" | "maintaining" | "unknown";
   projectedBFDate: string | null;
   onTrackForGoal: boolean;
 }
@@ -25,7 +25,7 @@ export function computeBodySummary(
       currentWeight: latestInBody?.weight_kg ?? null,
       weightChange7d: null,
       weightChange30d: null,
-      trend: "maintaining",
+      trend: "unknown",
       projectedBFDate: null,
       onTrackForGoal: false,
     };
@@ -60,8 +60,9 @@ export function computeBodySummary(
       ? currentWeight - thirtyDaysAgo.weight_kg
       : null;
 
-  let trend: "gaining" | "losing" | "maintaining" = "maintaining";
+  let trend: "gaining" | "losing" | "maintaining" | "unknown" = "unknown";
   if (weightChange7d !== null) {
+    trend = "maintaining";
     if (weightChange7d > 0.3) trend = "gaining";
     else if (weightChange7d < -0.3) trend = "losing";
   }
