@@ -84,6 +84,16 @@ async function upsertDeletedFact(record: SyncRecord, userId: string) {
   return supabase.from("sync_records").upsert([toSupabaseSyncRow({ ...record, payload: {}, deleted: true }, userId)], { onConflict: "user_id,external_id" });
 }
 
+function syncErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) return error.message.slice(0, 240);
+  if (typeof error === "object" && error !== null && "message" in error &&
+      typeof (error as { message?: unknown }).message === "string" &&
+      (error as { message: string }).message.trim()) {
+    return (error as { message: string }).message.slice(0, 240);
+  }
+  return "Network request failed. Local data is saved and will retry.";
+}
+
 export async function processSyncQueue(batchSize = 100): Promise<SyncResult> {
   const attemptStartedAt = Date.now();
   if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 500) {
@@ -169,11 +179,20 @@ export async function processSyncQueue(batchSize = 100): Promise<SyncResult> {
 
   // Batch the common case. If the server rejects a batch for a record-level
   // constraint, isolate the bad row so unrelated valid records still progress.
+  // Network exceptions are retryable failures; they must never mark records uploaded.
   for (let offset = 0; offset < queuedRecords.length; offset += 20) {
     const batch = queuedRecords.slice(offset, offset + 20);
-    const batchResult = await supabase
-      .from("sync_records")
-      .upsert(batch.map((record) => toSupabaseSyncRow(record, user.id)), { onConflict: "user_id,external_id" });
+    let batchResult: any;
+    try {
+      batchResult = await supabase
+        .from("sync_records")
+        .upsert(batch.map((record) => toSupabaseSyncRow(record, user.id)), { onConflict: "user_id,external_id" });
+    } catch (error) {
+      const message = syncErrorMessage(error);
+      for (const record of batch) failedItems.push({ externalId: record.externalId, message });
+      continue;
+    }
+
     if (!batchResult.error) {
       uploadedIds.push(...batch.map((record) => record.externalId));
       continue;
@@ -182,14 +201,17 @@ export async function processSyncQueue(batchSize = 100): Promise<SyncResult> {
     const status = Number((batchResult.error as { status?: number }).status ?? 0);
     if (status === 400 || status === 409 || status === 422) {
       for (const record of batch) {
-        const rowError = await uploadOne(record);
-        if (rowError) failedItems.push({ externalId: record.externalId, message: rowError.message });
-        else uploadedIds.push(record.externalId);
+        try {
+          const rowError = await uploadOne(record);
+          if (rowError) failedItems.push({ externalId: record.externalId, message: syncErrorMessage(rowError) });
+          else uploadedIds.push(record.externalId);
+        } catch (error) {
+          failedItems.push({ externalId: record.externalId, message: syncErrorMessage(error) });
+        }
       }
     } else {
-      for (const record of batch) {
-        failedItems.push({ externalId: record.externalId, message: batchResult.error.message });
-      }
+      const message = syncErrorMessage(batchResult.error);
+      for (const record of batch) failedItems.push({ externalId: record.externalId, message });
     }
   }
 
