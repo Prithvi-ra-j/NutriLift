@@ -6,6 +6,7 @@ import { recordAIRequestMetrics } from "../observability/telemetry";
 
 async function recordAIMetricsSafely(input: Parameters<typeof recordAIRequestMetrics>[0]): Promise<void> {
   try { await recordAIRequestMetrics(input); } catch { /* Telemetry must never replace a real AI result or provider error. */ }
+}
 
 async function trackAIRequest<T>(model: string, operation: () => Promise<T>): Promise<T> {
   const startedAt = Date.now();
@@ -28,7 +29,6 @@ async function trackAIRequest<T>(model: string, operation: () => Promise<T>): Pr
     });
     throw error;
   }
-}
 }
 
 export type { CoachContext } from "../ai/context-builder";
@@ -185,7 +185,7 @@ export async function generateDailyInsight(todayData: {
       ],
       temperature: 0.4,
       max_tokens: 100,
-    }));
+    });
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Daily insight returned an empty response.");
@@ -244,7 +244,7 @@ Be direct, reference actual numbers, and focus on actionable insights. This summ
       ],
       temperature: 0.3,
       max_tokens: 200,
-    }));
+    });
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Weekly summary returned an empty response.");
@@ -291,7 +291,7 @@ Be analytical, reference specific numbers, and tell the story of the month. This
       ],
       temperature: 0.3,
       max_tokens: 500,
-    }));
+    });
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Monthly summary returned an empty response.");
@@ -339,7 +339,7 @@ Be comprehensive, tell the 3-month story, and provide strategic analysis. This w
       ],
       temperature: 0.3,
       max_tokens: 800,
-    }));
+    });
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Quarterly summary returned an empty response.");
@@ -396,7 +396,7 @@ Be inspirational yet analytical. This is the user's annual transformation story.
       ],
       temperature: 0.3,
       max_tokens: 1000,
-    }));
+    });
 
     const content = completion.choices[0]?.message?.content?.trim() ?? "";
     if (!content) throw new Error("Yearly summary returned an empty response.");
