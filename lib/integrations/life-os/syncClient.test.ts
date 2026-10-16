@@ -39,6 +39,7 @@ import { supabase } from "../../supabase/client";
 import { recordSyncAttempt } from "../../observability/telemetry";
 import * as repository from "./syncRepository";
 import { processSyncQueue } from "./syncClient";
+import { parseNutriLiftExternalId, resolveSourceEntity } from "./sourceResolver";
 import type { SyncRecord } from "./exportSchema";
 
 const mockFrom = supabase.from as jest.Mock;
@@ -84,11 +85,16 @@ describe("sync client network failure handling", () => {
     }));
   });
 
-  it("does not claim a remote source was deleted when source resolution is unavailable", async () => {
-    // Non-NutriLift external IDs are not looked up against the local source resolver.
-    // They still remain retryable if the remote upload throws.
-    const result = await processSyncQueue();
-    expect(result.uploaded).toBe(0);
-    expect(repository.setQueueState).toHaveBeenCalledWith(["custom:workout-1"], "failed", "network unreachable");
+  it("does not enqueue a deletion tombstone when local source resolution fails", async () => {
+    (parseNutriLiftExternalId as jest.Mock).mockReturnValueOnce({
+      entityType: "daily_nutrition",
+      entityId: "2026-10-16",
+      date: "2026-10-16",
+    });
+    (resolveSourceEntity as jest.Mock).mockRejectedValueOnce(new Error("local database read failed"));
+
+    await expect(processSyncQueue()).rejects.toThrow("local database read failed");
+    expect(repository.enqueueRecords).not.toHaveBeenCalled();
+    expect(repository.enqueueNeedsAttentionRecords).not.toHaveBeenCalled();
   });
 });
