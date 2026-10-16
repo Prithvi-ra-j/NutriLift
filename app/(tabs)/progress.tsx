@@ -23,6 +23,7 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { toLocalDateString } from "../../lib/utils/local-date";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
 
@@ -32,7 +33,7 @@ export default function ProgressScreen() {
   const [refreshing, setRefreshing] = useState(false);
   
   // Week navigation state
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = toLocalDateString();
   const [selectedDate, setSelectedDate] = useState(todayStr);
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
@@ -53,7 +54,7 @@ export default function ProgressScreen() {
     sunday.setDate(monday.getDate() + 6);
     
     return {
-      start: monday.toISOString().split("T")[0],
+      start: toLocalDateString(monday),
       end: sunday.toISOString().split("T")[0],
       monday,
       sunday,
@@ -148,7 +149,7 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 18, paddingTop: 14, paddingBottom: 112, gap: 16 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={M3.colors.primary} />
         }
@@ -218,7 +219,7 @@ export default function ProgressScreen() {
           <>
             {/* Current stats */}
             <Card>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_700Bold", marginBottom: 14, letterSpacing: 0.9 }}>
                 BODY COMPOSITION
               </Text>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -229,7 +230,7 @@ export default function ProgressScreen() {
                   { label: "InBody", value: latestInBody?.inbody_score ? `${latestInBody.inbody_score}` : "—", color: M3.colors.primary },
                 ].map((stat) => (
                   <View key={stat.label} style={{ alignItems: "center" }}>
-                    <Text style={{ color: stat.color, fontSize: 22, fontFamily: "BebasNeue_400Regular" }}>
+                    <Text style={{ color: stat.color, fontSize: 20, fontFamily: "DMSans_700Bold", letterSpacing: -0.4 }}>
                       {stat.value}
                     </Text>
                     <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_400Regular" }}>

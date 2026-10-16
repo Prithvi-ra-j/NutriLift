@@ -165,9 +165,9 @@ export default function CoachScreen() {
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         {/* ── Header ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 10 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 18, paddingTop: 14, paddingBottom: 12 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: M3.colors.onSurface, fontSize: 17, fontFamily: "DMSans_700Bold" }}>
+            <Text style={{ color: M3.colors.onSurface, fontSize: 20, fontFamily: "DMSans_700Bold", letterSpacing: -0.5 }}>
               NutriLift Coach
             </Text>
             {groqConfigured === true && (
@@ -212,7 +212,7 @@ export default function CoachScreen() {
         <ScrollView
           ref={scrollRef}
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 20, paddingTop: messages.length === 0 ? 24 : 0, gap: 20, paddingBottom: 16, flexGrow: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 18, paddingTop: messages.length === 0 ? 28 : 8, gap: 20, paddingBottom: 20, flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
         >
           {messages.length === 0 && (
@@ -228,7 +228,7 @@ export default function CoachScreen() {
                 }}>
                   <Feather name="cpu" size={26} color={M3.colors.primary} />
                 </View>
-                <Text style={{ color: M3.colors.onSurface, fontSize: 19, fontFamily: "DMSans_700Bold", textAlign: "center" }}>
+                <Text style={{ color: M3.colors.onSurface, fontSize: 21, fontFamily: "DMSans_700Bold", textAlign: "center", letterSpacing: -0.5 }}>
                   How can I help your training today?
                 </Text>
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", lineHeight: 20 }}>
@@ -245,12 +245,12 @@ export default function CoachScreen() {
                     style={{
                       width: "48%",
                       backgroundColor: M3.colors.surface,
-                      borderRadius: M3.shape.large,
+                      borderRadius: 18,
                       borderWidth: 1,
                       borderColor: M3.colors.outline,
-                      padding: 14,
-                      gap: 10,
-                      minHeight: 88,
+                      padding: 15,
+                      gap: 12,
+                      minHeight: 92,
                       justifyContent: "space-between",
                     }}
                   >

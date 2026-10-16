@@ -36,10 +36,10 @@ export function Card({
           borderWidth: 1,
           borderColor: M3.colors.outline,
           shadowColor: "#000",
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.28,
-          shadowRadius: 12,
-          elevation: 6,
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.14,
+          shadowRadius: 8,
+          elevation: 3,
         };
       case "outlined":
         return {
@@ -54,10 +54,10 @@ export function Card({
           borderWidth: 1,
           borderColor: M3.colors.outline,
           shadowColor: "#000",
-          shadowOffset: { width: 0, height: 3 },
-          shadowOpacity: 0.18,
-          shadowRadius: 6,
-          elevation: 3,
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.10,
+          shadowRadius: 4,
+          elevation: 1,
         };
     }
   })();
@@ -66,7 +66,7 @@ export function Card({
     <View
       style={[
         {
-          borderRadius: M3.shape.large,       // 16px — M3 card spec
+          borderRadius: 20,
           padding: noPadding ? 0 : M3.spacing.lg,
         },
         variantStyle,
