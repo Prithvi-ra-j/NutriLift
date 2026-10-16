@@ -8,7 +8,8 @@ export type DomainEventType =
   | "workout.session.started" | "workout.session.updated" | "workout.session.completed" | "workout.session.cancelled"
   | "workout.set.recorded" | "workout.set.updated" | "workout.set.deleted"
   | "recovery.check-in.saved" | "recovery.supplement.updated"
-  | "body.measurement.saved" | "body.measurement.deleted";
+  | "body.measurement.saved" | "body.measurement.deleted"
+  | "profile.updated";
 
 export interface AppendDomainEventInput {
   id: string;
@@ -39,6 +40,7 @@ const INVALIDATION_MAP: Readonly<Record<DomainEventType, readonly string[]>> = {
   "recovery.supplement.updated": ["recovery.supplement-adherence", "recovery.history", "sync.recovery"],
   "body.measurement.saved": ["progress.body-composition", "progress.measurement-trends", "coach.recommendations", "sync.body-measurements"],
   "body.measurement.deleted": ["progress.body-composition", "progress.measurement-trends", "coach.recommendations", "sync.body-measurements"],
+  "profile.updated": ["coach.context", "coach.recommendations"],
 };
 
 export function getInvalidatedProjectionKeys(eventType: DomainEventType): string[] {
