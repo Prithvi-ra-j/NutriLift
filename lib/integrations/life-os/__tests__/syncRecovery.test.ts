@@ -17,7 +17,6 @@ describe("recoverInterruptedSyncOperations", () => {
   });
 
   it("returns interrupted uploads to pending after the stale threshold", async () => {
-    const before = Date.now();
     await expect(recoverInterruptedSyncOperations(60_000)).resolves.toBe(2);
 
     expect(mockedSqlite.runAsync).toHaveBeenCalledTimes(1);
@@ -27,7 +26,7 @@ describe("recoverInterruptedSyncOperations", () => {
     expect(sql).toContain("next_retry_at = NULL");
     expect(typeof params[0]).toBe("string");
     expect(typeof params[1]).toBe("string");
-    expect(Date.parse(params[1])).toBeLessThanOrEqual(before - 60_000);
+    expect(Date.parse(params[1])).toBe(Date.parse(params[0]) - 60_000);
   });
 
   it("rejects invalid stale thresholds", async () => {
