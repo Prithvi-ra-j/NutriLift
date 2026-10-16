@@ -10,7 +10,7 @@ import {
 
 describe("local database migration contract", () => {
   it("supports legacy and current schema versions but rejects future versions", () => {
-    expect(CURRENT_SCHEMA_VERSION).toBe(13);
+    expect(CURRENT_SCHEMA_VERSION).toBe(14);
     expect(() => assertSupportedSchemaVersion(0)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(1)).not.toThrow();
     expect(() => assertSupportedSchemaVersion(CURRENT_SCHEMA_VERSION)).not.toThrow();
@@ -20,7 +20,7 @@ describe("local database migration contract", () => {
   it("keeps additive migration declarations aligned with required column checks", () => {
     const declared = ADDITIVE_COLUMN_MIGRATIONS.map(({ table, column }) => `${table}.${column}`);
     const required = Object.entries(REQUIRED_CORE_COLUMNS).flatMap(([table, columns]) =>
-      columns.filter((column) => !(table === "custom_exercises" && (column === "exercise_type" || column === "created_at"))).map((column) => `${table}.${column}`),
+      columns.filter((column) => !((table === "custom_exercises" || table === "user_profile") && (table === "user_profile" || column === "exercise_type" || column === "created_at"))).map((column) => `${table}.${column}`),
     );
     expect(declared.sort()).toEqual(required.sort());
   });
@@ -33,7 +33,7 @@ describe("local database migration contract", () => {
       join(__dirname, "../../../drizzle/0000_wakeful_supernaut.sql"),
       "utf8",
     );
-    for (const table of ["sync_tombstones", "sync_queue", "sync_state", "recommendation_outcomes", "domain_events", "derived_state_invalidations", "app_telemetry_events", "favorite_foods", "repeatable_meals", "life_os_goal_progress"]) {
+    for (const table of ["sync_tombstones", "sync_queue", "sync_state", "recommendation_outcomes", "domain_events", "derived_state_invalidations", "app_telemetry_events", "favorite_foods", "repeatable_meals", "life_os_goal_progress", "user_profile"]) {
       expect(migrationSql).toContain(`CREATE TABLE \`${table}\``);
     }
     expect(migrationSql).toContain("`updated_at` text");
@@ -99,6 +99,16 @@ describe("local database migration contract", () => {
       "sync_state.owner_user_id",
       "custom_exercises.exercise_type",
       "custom_exercises.created_at",
+      "user_profile.age",
+      "user_profile.sex",
+      "user_profile.height_cm",
+      "user_profile.training_start_date",
+      "user_profile.current_split",
+      "user_profile.training_phase",
+      "user_profile.cardio",
+      "user_profile.equipment",
+      "user_profile.physique_goal",
+      "user_profile.updated_at",
     ]);
   });
 });
