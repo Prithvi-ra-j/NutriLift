@@ -20,7 +20,7 @@ describe("local database migration contract", () => {
   it("keeps additive migration declarations aligned with required column checks", () => {
     const declared = ADDITIVE_COLUMN_MIGRATIONS.map(({ table, column }) => `${table}.${column}`);
     const required = Object.entries(REQUIRED_CORE_COLUMNS).flatMap(([table, columns]) =>
-      columns.filter((column) => !((table === "custom_exercises" || table === "user_profile") && (table === "user_profile" || column === "exercise_type" || column === "created_at"))).map((column) => `${table}.${column}`),
+      columns.filter((column) => table !== "user_profile" && !(table === "custom_exercises" && (column === "exercise_type" || column === "created_at"))).map((column) => `${table}.${column}`),
     );
     expect(declared.sort()).toEqual(required.sort());
   });
