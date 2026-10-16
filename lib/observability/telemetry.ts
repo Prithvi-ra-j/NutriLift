@@ -1,5 +1,5 @@
 import { desc, gte, isNull, lt } from "drizzle-orm";
-import { db } from "../db/client";
+
 import { appTelemetryEvents, derivedStateInvalidations, syncQueue } from "../db/schema";
 import { redactSensitiveFields } from "./redaction";
 
@@ -41,6 +41,7 @@ function assertNonNegativeMetric(value: number | undefined, label: string): void
 
 /** Persist an operational event after privacy filtering; never accept free-form health content. */
 export async function recordAppEvent(input: AppEventInput): Promise<void> {
+  const { db } = await import("../db/client");
   const { occurredAt, metadataJson } = validateEventInput(input);
   const { default: uuid } = await import("react-native-uuid");
   await db.insert(appTelemetryEvents).values({
@@ -144,6 +145,7 @@ export interface LocalHealthSummary {
 
 /** Summarize local operational health without returning raw payloads or health records. */
 export async function getLocalHealthSummary(): Promise<LocalHealthSummary> {
+  const { db } = await import("../db/client");
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const [queueRows, events, invalidations] = await Promise.all([
     db.select().from(syncQueue),
@@ -178,6 +180,7 @@ export async function getLocalHealthSummary(): Promise<LocalHealthSummary> {
 
 /** Keep the local telemetry database bounded; domain records are never pruned here. */
 export async function pruneOldTelemetryEvents(retentionDays = 30): Promise<void> {
+  const { db } = await import("../db/client");
   if (!Number.isInteger(retentionDays) || retentionDays < 7 || retentionDays > 365) {
     throw new Error("Telemetry retention must be an integer from 7 to 365 days.");
   }
