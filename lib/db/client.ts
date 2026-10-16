@@ -528,6 +528,8 @@ export async function runMigrations(): Promise<void> {
       cardio TEXT,
       equipment TEXT,
       physique_goal TEXT,
+      body_fat_goal_pct REAL,
+      body_fat_goal_date TEXT,
       updated_at TEXT NOT NULL
     );
   `);
@@ -549,6 +551,8 @@ export async function runMigrations(): Promise<void> {
     FROM nutrition_profile
     WHERE id = 1 AND NOT EXISTS (SELECT 1 FROM nutrition_target_history);
   `);
+  // Additive profile goal fields keep upgrades safe for installs already at schema v14.
+  // Existing profile values remain untouched; absent numeric goals remain unknown.
   // Fail fast on incomplete local schema instead of allowing screens to fail later.
   const rows = await sqlite.getAllAsync("SELECT name FROM sqlite_master WHERE type = 'table'");
   const existingTables = new Set<string>(rows.map((row: { name: string }) => row.name));
