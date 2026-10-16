@@ -127,16 +127,17 @@ export function mapRecoveryLog(row: SyncableRow): SyncRecord[] {
 
   return recoveryFields.flatMap(([recordType, sourceField, payloadField]) => {
     const value = row[sourceField];
-    // A missing/null signal means no observation, not a user deletion. Only
-    // explicit domain tombstones should retract previously synced records.
-    if (value == null) return [];
-    return [createRecord(
+    // Undefined means the caller did not supply this field. Explicit null means
+    // the user cleared a previously recorded signal and should retract that fact.
+    if (value === undefined) return [];
+    const record = createRecord(
       recordType,
       `nutrilift:recovery:${recordType.split(".").at(-1)}:${date}`,
       dateToIso(date),
       updatedAt,
-      { [payloadField]: value },
-    )];
+      value === null ? {} : { [payloadField]: value },
+    );
+    return value === null ? [{ ...record, deleted: true }] : [record];
   });
 }
 
