@@ -310,6 +310,20 @@ CREATE TABLE `nutrition_profile` (
   `updated_at` text NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE `user_profile` (
+  `id` integer PRIMARY KEY NOT NULL,
+  `age` integer,
+  `sex` text,
+  `height_cm` real,
+  `training_start_date` text,
+  `current_split` text,
+  `training_phase` text,
+  `cardio` text,
+  `equipment` text,
+  `physique_goal` text,
+  `updated_at` text NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE `nutrition_target_history` (
   `id` text PRIMARY KEY NOT NULL,
   `effective_date` text NOT NULL,
