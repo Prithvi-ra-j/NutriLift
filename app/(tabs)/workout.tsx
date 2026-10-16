@@ -513,7 +513,13 @@ export default function WorkoutScreen() {
       logged_at: Math.floor(Date.now() / 1000),
     };
 
-    const { isPR } = await insertSetLog(newSet);
+    let isPR: boolean;
+    try {
+      ({ isPR } = await insertSetLog(newSet));
+    } catch (error) {
+      Alert.alert("Could not save set", error instanceof Error ? error.message : "Your set was not confirmed as saved. Retry to safely submit the same set.");
+      return;
+    }
 
     setSets((prev) => ({
       ...prev,
