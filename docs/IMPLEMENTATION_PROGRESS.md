@@ -1,8 +1,9 @@
 # NutriLift implementation progress tracker
 
-Last updated: 2026-10-15
+Last updated: 2026-10-16
 Base branch: `main`
-Base commit: `843cafd469d863d4d12380dda7fdbe9ab02fffda`
+Branch creation base commit: `843cafd469d863d4d12380dda7fdbe9ab02fffda`  
+Current `main` head at last audit: `b5b37b3aa88b84f1dda557da3a1845a87e6a79e7`
 Working branch: `implementation/phase-0-baseline`
 
 ## Working agreement
@@ -19,11 +20,11 @@ Working branch: `implementation/phase-0-baseline`
 
 | Phase | Status | Evidence / notes |
 |---|---|---|
-| 0. Baseline and defect register | Complete (automated baseline) | Canonical branch and PR-overlap disposition documented in docs/PHASE_0_RECONCILIATION.md; no changes merged into main. Older PRs remain open intentionally pending human approval to close. |
+| 0. Baseline and defect register | Complete (automated baseline) | Canonical baseline/defect register and PR-overlap dispositions documented in `docs/PHASE_0_RECONCILIATION.md` and `docs/BASELINE_DEFECT_REGISTER.md`; no stale PR merged/closed. Branch/main divergence is explicitly recorded and must be resolved before PR #8 merge. |
 | 1. CI/build reproducibility | Complete | Validation run [#38618276698](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38618276698) succeeded on tracker/assets commit `390b31be`: locked dependency install, TypeScript, Jest, Expo local-asset validation, and public Expo config all passed. Earlier failed asset check is resolved. |
 | 2. Domain/persistence foundations | Complete (automated; device smoke pending) | Runtime migrations validate required tables/columns, track SQLite `user_version`, reject future-version databases before DDL, and show recoverable initialization/workout errors. In-memory SQLite tests cover clean install, legacy upgrade/data preservation, idempotence, future-version rejection, and Drizzle SQL snapshot parity. Validation run [#38683981092](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38683981092) passed on `12ce59a`; physical-device fresh-install/upgrade smoke testing remains unverified. |
 | 3. Calendar dates/time zones | Complete (automated; device smoke pending) | Added `lib/utils/local-date.ts` for local date keys, strict date-only parsing, calendar-day arithmetic, DST-safe calendar-day differences, and explicit Monday–Sunday UI weeks versus Sunday–Saturday weekly-summary records. Migrated DateNavigator, dashboard/Nutrition/Workout/Progress/More screens and date-only display parsing; food/InBody entry flows; Today store; body/workout/recovery/nutrition queries; report ranges; weekly Coach context; monthly/quarterly summaries; logger filenames; progress exports; Life OS date-only fallback mapping; and demo-seed date generation. Fixed Sunday selected-week handling and body-goal projection date arithmetic. Latest CI run [#38686272529](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38686272529) passed on `a4d12bd71b5bf11a8091cdbb3884674a09b590c6`: TypeScript, Jest, and Expo config/assets all succeeded (38 suites / 284 tests). Regression tests cover invalid keys, month/year boundaries, IST/UTC/negative-offset local-day conversion, DST transitions, and both week conventions. Audit confirms remaining UTC use in the Supabase Edge Function is intentional for server-side quota accounting and ISO timestamps representing instants remain UTC. Physical-device smoke testing remains unverified. Developer-only delete-workout scripts were also migrated to local date keys in commits f3cde09 and cbe5df8; validation is tracked with the current branch CI. |
-| 4. Nutrition pipeline | In progress (expanded) | Shared manual-entry validation is wired into nutrition-card logging; calorie-adherence scoring is now bounded and shared by both aggregate paths. Added parser fallback tests for local-only, AI success, AI failure with local matches, and total parse failure. Latest CI must pass before this slice is accepted; device-level entry and transaction integration testing remain pending. |
+| 4. Nutrition pipeline | In progress (expanded) | Shared manual-entry validation is wired into nutrition-card logging; calorie-adherence scoring is now bounded and shared by both aggregate paths. Added parser fallback tests for local-only, AI success, AI failure with local matches, and total parse failure. Latest validation run [#38844029940](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38844029940) passes TypeScript, 70 suites / 512 tests and Expo config/assets; device-level entry and transaction acceptance remain pending. |
 | 5. Profile/targets | Complete (automated; device smoke pending) | User-owned profile and body-fat goal persist in SQLite with validation and schema v15 migrations; Settings edits profile fields; Coach/report/progress context reads persisted profile and effective-dated nutrition targets. Target history does not apply future targets to earlier dates. Adaptive calorie suggestions remain bounded and require explicit user approval. |
 | 6. Workout/recovery | Complete (automated; device smoke pending) | Set operation IDs are stable across retries; progression/autofill use completed sessions only; blank recovery fields remain unknown; recovery history and non-scoring summaries are available; body-composition trends no longer invent weight-loss rates or deadlines. Unit and integration suites pass. Device interruption/persistence smoke remains. |
 | 7. Coach/recommendations | Complete (automated; provider/device smoke pending) | Coach context and weekly/monthly reports consume persisted profile and effective targets; unknown fields remain null rather than using personal source defaults. Deterministic candidates retain evidence IDs, versioned rules and bounded top-three ordering; recommendation outcomes remain persisted. No canned AI answer fallback was introduced. |
@@ -33,8 +34,8 @@ Working branch: `implementation/phase-0-baseline`
 
 ## Baseline findings (verified)
 
-1. `main` commit: `843cafd469d863d4d12380dda7fdbe9ab02fffda`.
-2. Seven open pull requests exist (#1–#7). They include build stabilization, broad P0 repair, release hardening, UI foundation/polish, and target changes; review for overlapping work before merging/reimplementing.
+1. Branch creation base: `843cafd469d863d4d12380dda7fdbe9ab02fffda`; current `main` head at the latest audit: `b5b37b3aa88b84f1dda557da3a1845a87e6a79e7`. Reconcile before merging PR #8.
+2. PRs #1–#7 remain open and are explicitly dispositioned in `docs/PHASE_0_RECONCILIATION.md`; PR #8 is the canonical draft implementation branch. Do not merge stale overlapping PRs wholesale.
 3. The workflow `.github/workflows/build-apk.yml` runs on every push to `main`, installs dependencies, and then starts an EAS Android preview build without a prior typecheck/unit-test gate.
 4. Latest sampled EAS job (run [38163207596](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38163207596), commit `843cafd`) successfully checked out, installed Node/dependencies and uploaded the project. EAS then failed because the account had used its free-plan Android build allowance for the month. This is a quota failure, not proof of source compilation failure.
 5. CI logs also show the current workflow uses Node 20 while resolved `@supabase/supabase-js@2.116.0` declares Node >=22. Validate a compatible reproducible runtime before finalizing workflow changes.
@@ -289,3 +290,9 @@ After every small implementation unit, update this file with the commit/PR, file
 3. Complete Life OS source-entity resolution, goal evidence/progress refresh and source deep links.
 4. Add durable app/command/AI telemetry and a full local-health report with sensitive-field redaction.
 5. Reconcile overlapping PRs before merge, then run physical-device upgrade/interruption smoke tests and obtain an installable Android artifact.
+
+### 2026-10-16 — Phase 0 / 5 / 6 / 7 audit refresh
+- [x] Added `docs/BASELINE_DEFECT_REGISTER.md` with severity, evidence, source-vs-environment classification, and a per-PR disposition table.
+- [x] Recorded the latest successful implementation-code validation on commit `8e308ff3d9a118ef7d79c848c3ee22c2cf94c651`: [run #38844029940](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38844029940), 70 suites / 512 tests passed, strict TypeScript passed, Expo config/assets passed.
+- [x] Updated phase estimates to distinguish implemented/tested code from unmerged status and device/release validation.
+- [ ] Merge remains blocked until current `main` (`b5b37b3`) and the branch base (`843cafd`) are reconciled and PR #8 mergeability is verified. Device smoke and installable Android artifact remain unverified.

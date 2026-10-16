@@ -5,10 +5,11 @@ Last reviewed: 2026-10-16
 ## Baseline
 
 - Canonical integration branch: `implementation/phase-0-baseline`
-- Base branch remains `main` at baseline commit `843cafd469d863d4d12380dda7fdbe9ab02fffda`
+- Branch creation/base commit: `843cafd469d863d4d12380dda7fdbe9ab02fffda`.
+- Current `main` head at this audit: `b5b37b3aa88b84f1dda557da3a1845a87e6a79e7` (the intervening commit adds the UX discovery audit). The implementation branch has not incorporated that main-branch commit; GitHub reported PR #8 as not mergeable, so recheck/reconcile before merge.
 - Canonical implementation PR: [#8 — incremental implementation and validation baseline](https://github.com/Prithvi-ra-j/NutriLift/pull/8)
 - No changes from this implementation branch have been merged into `main`.
-- Latest successful code validation: [GitHub Actions run #38844029940](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38844029940), Node 22 dependency install, strict TypeScript, Jest (70 suites / 512 tests), and Expo config/assets.
+- Latest successful code validation: [GitHub Actions run #38844029940](https://github.com/Prithvi-ra-j/NutriLift/actions/runs/38844029940) on code commit `8e308ff`, with Node 22 dependency install, strict TypeScript, Jest (70 suites / 512 tests), and Expo config/assets. The subsequent baseline documentation commits have their own validation run pending.
 
 ## Existing PR overlap map
 
@@ -34,3 +35,8 @@ PRs #1–#7 remain open intentionally. Their overlap has been mapped and the mer
 - Recovery check-in save/reload and optional-field verification on device.
 - Coach provider integration smoke test with missing profile fields and provider failure.
 - Produce/install an Android artifact after EAS quota is available.
+
+
+## Main/branch integration gate
+
+The audit baseline is reproducible, but the implementation PR is not merge-ready merely because checks pass. Before merging, update the branch from current `main` or otherwise resolve the single intervening main-line commit, inspect any content conflict, and confirm GitHub reports PR #8 mergeable. Do not force-push or merge automatically as part of this phase.
