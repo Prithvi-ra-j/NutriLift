@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "../client";
 import { workoutSessions, exerciseLogs, setLogs } from "../schema";
+import { toLocalDateKey } from "../../utils/local-date";
 
 /**
  * Delete all workout data for a specific date
@@ -50,6 +51,6 @@ export async function deleteWorkoutForDate(date: string): Promise<void> {
 
 // Helper function to delete today's workout
 export async function deleteTodayWorkout(): Promise<void> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
   await deleteWorkoutForDate(today);
 }

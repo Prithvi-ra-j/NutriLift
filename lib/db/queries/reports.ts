@@ -1,5 +1,6 @@
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { db } from "../client";
+import { addCalendarDays, getSundayWeekRange, toLocalDateKey } from "../../utils/local-date";
 import { monthlyReports, aiConversations, weeklySummaries, quarterlySummaries, yearlySummaries, type MonthlyReport, type NewMonthlyReport, type AiConversation, type NewAiConversation, type WeeklySummary, type NewWeeklySummary, type QuarterlySummary, type NewQuarterlySummary, type YearlySummary, type NewYearlySummary } from "../schema";
 
 // ─── Monthly Report Queries ───────────────────────────────────────────────────
@@ -59,27 +60,18 @@ export async function getWeeklySummary(weekStart: string): Promise<WeeklySummary
 }
 
 export async function getPreviousWeeklySummaries(limit: number = 3): Promise<WeeklySummary[]> {
-  const today = new Date();
-  const currentDayOfWeek = today.getDay();
-  
-  // Calculate start of current week (Sunday)
-  const currentWeekStart = new Date(today);
-  currentWeekStart.setDate(today.getDate() - currentDayOfWeek);
-  currentWeekStart.setHours(0, 0, 0, 0);
-  
+  const currentWeek = getSundayWeekRange(toLocalDateKey());
   const summaries: WeeklySummary[] = [];
-  
-  // Get previous N weeks
+
+  // Weekly summary records use explicit Sunday-to-Saturday calendar weeks.
   for (let weekOffset = 1; weekOffset <= limit; weekOffset++) {
-    const weekStart = new Date(currentWeekStart);
-    weekStart.setDate(currentWeekStart.getDate() - weekOffset * 7);
-    
-    const summary = await getWeeklySummary(weekStart.toISOString().split("T")[0]);
+    const weekStart = addCalendarDays(currentWeek.start, -weekOffset * 7);
+    const summary = await getWeeklySummary(weekStart);
     if (summary) {
       summaries.push(summary);
     }
   }
-  
+
   return summaries;
 }
 
@@ -89,8 +81,8 @@ export async function getWeeklySummariesForMonth(month: string): Promise<WeeklyS
   const startDate = new Date(year, monthNum - 1, 1);
   const endDate = new Date(year, monthNum, 0); // Last day of month
   
-  const startStr = startDate.toISOString().split('T')[0];
-  const endStr = endDate.toISOString().split('T')[0];
+  const startStr = toLocalDateKey(startDate);
+  const endStr = toLocalDateKey(endDate);
   
   return db
     .select()

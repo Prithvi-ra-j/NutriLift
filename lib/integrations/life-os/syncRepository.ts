@@ -20,6 +20,25 @@ function requireNativeSqlite() {
   return sqlite;
 }
 
+export async function bindSyncOwner(userId: string): Promise<{ allowed: boolean; ownerUserId: string | null }> {
+  if (!userId.trim()) throw new Error("A signed-in user ID is required to bind local sync ownership.");
+  const database = requireNativeSqlite();
+  const rows = await database.getAllAsync(
+    "SELECT owner_user_id FROM sync_state WHERE source_app = ? LIMIT 1",
+    [SOURCE_APP],
+  ) as Array<{ owner_user_id: string | null }>;
+  const existingOwner = rows[0]?.owner_user_id ?? null;
+  if (existingOwner && existingOwner !== userId) return { allowed: false, ownerUserId: existingOwner };
+  const now = new Date().toISOString();
+  await database.runAsync(
+    `INSERT INTO sync_state (source_app, owner_user_id, updated_at) VALUES (?, ?, ?)
+     ON CONFLICT(source_app) DO UPDATE SET
+       owner_user_id = COALESCE(sync_state.owner_user_id, excluded.owner_user_id),
+       updated_at = excluded.updated_at`,
+    [SOURCE_APP, userId, now],
+  );
+  return { allowed: true, ownerUserId: userId };
+}
 export async function getSyncCursor(): Promise<string | null> {
   const database = requireNativeSqlite();
   const result = await database.getFirstAsync(
@@ -48,7 +67,10 @@ export async function saveSyncState(values: { cursor?: string; error?: string | 
 export async function getChangedRecords(cursor: string | null): Promise<SyncRecord[]> {
   const database = requireNativeSqlite();
   const since = cursor ?? "1970-01-01T00:00:00.000Z";
-  const query = async (table: string) => database.getAllAsync(`SELECT * FROM ${table} WHERE updated_at > ?`, [since]);
+  // Inclusive replay is intentional: multiple records can share one updated_at
+  // timestamp. Queue upserts below suppress unchanged payloads, while this catches
+  // same-timestamp rows that a strict ">" cursor would silently miss.
+  const query = async (table: string) => database.getAllAsync(`SELECT * FROM ${table} WHERE updated_at >= ?`, [since]);
 
   const [nutrition, workouts, records, bodyStats, recoveryLogs, tombstones] = await Promise.all([
     query("daily_nutrition"),
@@ -56,7 +78,7 @@ export async function getChangedRecords(cursor: string | null): Promise<SyncReco
     query("personal_records"),
     query("body_stats"),
     query("recovery_logs"),
-    database.getAllAsync("SELECT * FROM sync_tombstones WHERE deleted_at > ?", [since]),
+    database.getAllAsync("SELECT * FROM sync_tombstones WHERE deleted_at >= ?", [since]),
   ]);
 
   return [
@@ -84,10 +106,105 @@ export async function enqueueRecords(records: SyncRecord[]): Promise<void> {
          state = 'pending',
          last_error = NULL,
          next_retry_at = NULL,
-         updated_at = excluded.updated_at`,
+         updated_at = excluded.updated_at
+       WHERE sync_queue.payload_json != excluded.payload_json`,
       [`sync:${record.externalId}`, record.externalId, JSON.stringify(record), now, now]
     );
   }
+}
+
+/** Persist invalid source projections for inspection instead of silently dropping them. */
+export async function enqueueNeedsAttentionRecords(
+  entries: Array<{ record: SyncRecord; errors: string[] }>,
+): Promise<void> {
+  if (entries.length === 0) return;
+  const database = requireNativeSqlite();
+  const now = new Date().toISOString();
+
+  for (const [index, entry] of entries.entries()) {
+    const rawExternalId = typeof entry.record.externalId === "string"
+      ? entry.record.externalId.trim()
+      : "";
+    const externalId = rawExternalId || `needs-attention:${entry.record.recordType}:${entry.record.sourceUpdatedAt ?? entry.record.occurredAt}:${index}`;
+    const errors = entry.errors.length ? entry.errors.join("; ") : "Sync payload failed validation.";
+    await database.runAsync(
+      `INSERT INTO sync_queue
+        (id, external_id, payload_json, state, attempt_count, last_error, next_retry_at, created_at, updated_at)
+       VALUES (?, ?, ?, 'needs_attention', 0, ?, NULL, ?, ?)
+       ON CONFLICT(external_id) DO UPDATE SET
+         payload_json = excluded.payload_json,
+         state = 'needs_attention',
+         last_error = excluded.last_error,
+         next_retry_at = NULL,
+         updated_at = excluded.updated_at
+       WHERE sync_queue.payload_json != excluded.payload_json
+          OR sync_queue.state != 'needs_attention'
+          OR sync_queue.last_error != excluded.last_error`,
+      [
+        `needs-attention:${externalId}`,
+        externalId,
+        JSON.stringify(entry.record),
+        errors,
+        now,
+        now,
+      ],
+    );
+  }
+}
+
+export async function getSyncQueueCounts(): Promise<Record<SyncQueueState, number>> {
+  const database = requireNativeSqlite();
+  const rows = await database.getAllAsync(
+    "SELECT state, COUNT(*) AS count FROM sync_queue GROUP BY state",
+  );
+  const counts: Record<SyncQueueState, number> = {
+    pending: 0,
+    uploading: 0,
+    uploaded: 0,
+    failed: 0,
+    needs_attention: 0,
+  };
+  for (const row of rows as Array<{ state: string; count: number }>) {
+    if (row.state in counts) counts[row.state as SyncQueueState] = Number(row.count) || 0;
+  }
+  return counts;
+}
+
+/** Atomically claim eligible work so concurrent sync workers cannot upload it twice. */
+export async function claimQueuedRecords(batchSize = 100): Promise<SyncRecord[]> {
+  if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > 500) {
+    throw new Error("Sync batch size must be an integer from 1 to 500.");
+  }
+  const database = requireNativeSqlite();
+  if (typeof database.withExclusiveTransactionAsync !== "function") {
+    throw new Error("This SQLite runtime does not support exclusive sync-queue transactions.");
+  }
+
+  const now = new Date().toISOString();
+  let claimed: Array<{ payload_json: string }> = [];
+  await database.withExclusiveTransactionAsync(async (transaction: any) => {
+    const candidates = await transaction.getAllAsync(
+      `SELECT external_id FROM sync_queue
+       WHERE state IN ('pending', 'failed')
+         AND (next_retry_at IS NULL OR next_retry_at <= ?)
+       ORDER BY updated_at ASC LIMIT ?`,
+      [now, batchSize],
+    );
+    if (candidates.length === 0) return;
+    const ids = candidates.map((row: { external_id: string }) => row.external_id);
+    const placeholders = ids.map(() => "?").join(", ");
+    await transaction.runAsync(
+      `UPDATE sync_queue SET state = 'uploading', updated_at = ?
+       WHERE state IN ('pending', 'failed') AND external_id IN (${placeholders})`,
+      [now, ...ids],
+    );
+    claimed = await transaction.getAllAsync(
+      `SELECT payload_json FROM sync_queue
+       WHERE state = 'uploading' AND external_id IN (${placeholders})`,
+      ids,
+    );
+  });
+  return claimed.map((row) => JSON.parse(row.payload_json) as SyncRecord);
 }
 
 export async function getQueuedRecords(batchSize = 100): Promise<SyncRecord[]> {
@@ -102,18 +219,76 @@ export async function getQueuedRecords(batchSize = 100): Promise<SyncRecord[]> {
   return rows.map((row: { payload_json: string }) => JSON.parse(row.payload_json) as SyncRecord);
 }
 
+/**
+ * Recover uploads left in-flight when the app was killed or the device lost power.
+ * Upserts are idempotent, so retrying an uncertain upload is safer than leaving it
+ * permanently stuck in the "uploading" state.
+ */
+export async function recoverInterruptedSyncOperations(
+  staleAfterMs = 5 * 60 * 1000,
+): Promise<number> {
+  if (!Number.isFinite(staleAfterMs) || staleAfterMs <= 0) {
+    throw new Error("staleAfterMs must be a positive finite number.");
+  }
+
+  const database = requireNativeSqlite();
+  const now = new Date();
+  const cutoff = new Date(now.getTime() - staleAfterMs).toISOString();
+  const result = await database.runAsync(
+    `UPDATE sync_queue
+     SET state = 'pending',
+         next_retry_at = NULL,
+         last_error = COALESCE(last_error, 'Recovered after an interrupted upload.'),
+         updated_at = ?
+     WHERE state = 'uploading' AND updated_at < ?`,
+    [now.toISOString(), cutoff],
+  );
+
+  return typeof result?.changes === "number" ? result.changes : 0;
+}
+
 export async function setQueueState(externalIds: string[], state: SyncQueueState, error?: string): Promise<void> {
   if (externalIds.length === 0) return;
   const database = requireNativeSqlite();
   const now = new Date().toISOString();
-  const retryAt = state === "failed" ? new Date(Date.now() + 60_000).toISOString() : null;
-  const placeholders = externalIds.map(() => "?").join(", ");
-  await database.runAsync(
-    `UPDATE sync_queue SET state = ?, updated_at = ?, last_error = ?,
-       attempt_count = CASE WHEN ? = 'failed' THEN attempt_count + 1 ELSE attempt_count END,
-       next_retry_at = ? WHERE external_id IN (${placeholders})`,
-    [state, now, error ?? null, state, retryAt, ...externalIds]
-  );
+
+  if (state !== "failed") {
+    const placeholders = externalIds.map(() => "?").join(", ");
+    await database.runAsync(
+      `UPDATE sync_queue SET state = ?, updated_at = ?, last_error = ?,
+         next_retry_at = NULL WHERE external_id IN (${placeholders})`,
+      [state, now, error ?? null, ...externalIds],
+    );
+    return;
+  }
+
+  // Back off transient failures exponentially, cap the delay, and add jitter so
+  // multiple devices do not synchronize their retries into a request burst.
+  for (const externalId of externalIds) {
+    const rows = await database.getAllAsync(
+      "SELECT attempt_count FROM sync_queue WHERE external_id = ? LIMIT 1",
+      [externalId],
+    ) as Array<{ attempt_count: number }>;
+    const attempts = Math.max(0, Number(rows[0]?.attempt_count ?? 0));
+    if (attempts >= 8) {
+      await database.runAsync(
+        `UPDATE sync_queue SET state = 'needs_attention', updated_at = ?,
+           last_error = ?, next_retry_at = NULL, attempt_count = attempt_count + 1
+         WHERE external_id = ?`,
+        [now, error ?? "Sync retry limit reached; inspect this record.", externalId],
+      );
+      continue;
+    }
+    const baseDelayMs = Math.min(6 * 60 * 60 * 1000, 60_000 * (2 ** attempts));
+    const jitteredDelayMs = Math.round(baseDelayMs * (0.75 + Math.random() * 0.5));
+    const retryAt = new Date(Date.now() + jitteredDelayMs).toISOString();
+    await database.runAsync(
+      `UPDATE sync_queue SET state = 'failed', updated_at = ?, last_error = ?,
+         attempt_count = attempt_count + 1, next_retry_at = ?
+       WHERE external_id = ?`,
+      [now, error ?? null, retryAt, externalId],
+    );
+  }
 }
 
 export async function recordTombstone(entityType: string, entityId: string, externalId?: string): Promise<void> {

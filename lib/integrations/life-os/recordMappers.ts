@@ -1,4 +1,5 @@
 import { type SupportedRecordType, type SyncRecord } from "./exportSchema";
+import { toLocalDateKey } from "../../utils/local-date";
 
 type SyncableRow = Record<string, unknown> & { updated_at?: string | null; date?: string | null };
 
@@ -7,7 +8,7 @@ function dateToIso(date: string | null | undefined, timestamp?: unknown): string
     return new Date(timestamp > 10_000_000_000 ? timestamp : timestamp * 1000).toISOString();
   }
 
-  return `${date ?? new Date().toISOString().slice(0, 10)}T00:00:00.000Z`;
+  return `${date ?? toLocalDateKey()}T00:00:00.000Z`;
 }
 
 function sourceUpdatedAt(row: SyncableRow): string {
@@ -42,6 +43,7 @@ export function mapWorkoutSession(row: SyncableRow): SyncRecord {
     sourceUpdatedAt(row),
     {
       dayType: row.day_type,
+      status: row.status ?? "planned",
       durationMin: row.duration_min,
       totalVolumeKg: row.total_volume_kg,
       rpe: row.rpe,
@@ -125,17 +127,17 @@ export function mapRecoveryLog(row: SyncableRow): SyncRecord[] {
 
   return recoveryFields.flatMap(([recordType, sourceField, payloadField]) => {
     const value = row[sourceField];
-    if (value === null || value === undefined) return [];
-
-    return [
-      createRecord(
-        recordType,
-        `nutrilift:recovery:${recordType.split(".").at(-1)}:${date}`,
-        dateToIso(date),
-        updatedAt,
-        { [payloadField]: value }
-      ),
-    ];
+    // Undefined means the caller did not supply this field. Explicit null means
+    // the user cleared a previously recorded signal and should retract that fact.
+    if (value === undefined) return [];
+    const record = createRecord(
+      recordType,
+      `nutrilift:recovery:${recordType.split(".").at(-1)}:${date}`,
+      dateToIso(date),
+      updatedAt,
+      value === null ? {} : { [payloadField]: value },
+    );
+    return value === null ? [{ ...record, deleted: true }] : [record];
   });
 }
 

@@ -1,61 +1,43 @@
+/**
+ * Generic, non-personal compatibility defaults for legacy consumers and demo
+ * seeding only. Runtime profile/targets must come from SQLite repositories.
+ */
 export const USER_PROFILE = {
-  name: "Prithvi",
-  age: 23,
-  sex: "male" as const,
-  height_cm: 172.7, // 5'8"
-  training_start_date: "2026-02-27",
+  name: "User",
+  age: 30,
+  sex: "prefer_not_to_say" as const,
+  height_cm: 170,
+  training_start_date: "",
 
-  // Current InBody (April 9 2026)
+  // Synthetic demo-only values; never used as a live user's latest measurement.
   inbody: {
-    weight_lb: 165.4,
-    weight_kg: 75.0,
-    body_fat_pct: 34.9,
-    body_fat_mass_lb: 57.5,
-    skeletal_muscle_mass_lb: 60.0,
-    inbody_score: 58,
-    bmi: 26.0,
+    weight_lb: 154.3,
+    weight_kg: 70,
+    body_fat_pct: 20,
+    body_fat_mass_lb: 30.9,
+    skeletal_muscle_mass_lb: 66.1,
+    inbody_score: 70,
+    bmi: 24.2,
   },
 
-  // Targets
   targets: {
-    calories: 2500,
-    protein_g: 155,
-    carbs_g: 240,
-    fat_g: 65,
-    body_fat_pct_dec2026: 22.0, // December 2026 goal
-    physique_goal: "Toji Fushiguro aesthetic — lean, dense, athletic",
+    calories: 2200,
+    protein_g: 140,
+    carbs_g: 250,
+    fat_g: 70,
+    body_fat_pct_dec2026: null,
+    physique_goal: "General fitness",
   },
 
-  // Known structural issues (used in AI recommendations)
-  structural_notes: [
-    "Anterior pelvic tilt (APT)",
-    "TFL overactivation / glute medius weakness",
-    "Ankle dorsiflexion restriction",
-    "Left knee pain — resolved by sequencing compound before isolation",
-    "Wears hard-soled formal shoes daily — affects kinetic chain",
-  ],
-
-  // Training context
+  // Personal notes and supplement plans are user-owned; never seed them from source.
+  structural_notes: [] as string[],
   training: {
-    current_split: "PPL x2 (6-day)",
-    phase: "Hypertrophy / Foundation",
-    cardio: "Treadmill 20min post-workout, incline 8-10, speed 3.5-4.5",
-    equipment: "Primarily machines, transitioning to free weights",
+    current_split: "Flexible",
+    phase: "General fitness",
+    cardio: "",
+    equipment: "Gym or bodyweight",
   },
-
-  // Supplement stack
-  supplements: [
-    { name: "Creatine Monohydrate", dose: "5g", timing: "daily" },
-    { name: "Whey Protein (ON Gold Standard)", dose: "1 scoop", timing: "post-workout" },
-    { name: "Ashwagandha (Himalaya)", dose: "2 tablets", timing: "nightly with fat" },
-    { name: "Vitamin D3 + K2 MK-7", dose: "per label", timing: "morning with fat" },
-    { name: "Zinc Bisglycinate", dose: "per label", timing: "morning" },
-    { name: "Copper Glycinate", dose: "per label", timing: "evening (spaced from zinc)" },
-    { name: "Omega-3", dose: "per label", timing: "with meals" },
-    { name: "Magnesium Glycinate", dose: "per label", timing: "nightly" },
-    { name: "Brahmi/Bacopa (Himalaya)", dose: "per label", timing: "morning" },
-    { name: "Saw Palmetto 320mg", dose: "320mg standardized", timing: "with fat" },
-  ],
+  supplements: [] as Array<{ name: string; dose: string; timing: string }>,
 } as const;
 
 export type UserProfile = typeof USER_PROFILE;

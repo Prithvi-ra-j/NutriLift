@@ -1,6 +1,6 @@
 import "../global.css";
 import { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, Platform } from "react-native";
+import { View, Text, ActivityIndicator, Platform, TouchableOpacity } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -13,15 +13,18 @@ import {
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
 import { runMigrations } from "../lib/db/client";
+import { processDerivedStateInvalidations } from "../lib/db/queries/derived-state-consumer";
+import { pruneOldTelemetryEvents, recordCommandFailure } from "../lib/observability/telemetry";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
 import { M3 } from "../design-system/tokens";
-import { syncToSupabase } from "../lib/integrations/life-os/syncClient";
+import { processSyncQueue } from "../lib/integrations/life-os/syncClient";
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [migrationAttempt, setMigrationAttempt] = useState(0);
 
   const [fontsLoaded] = useFonts({
     BebasNeue_400Regular,
@@ -33,12 +36,18 @@ export default function RootLayout() {
   useEffect(() => {
     logger.info("App starting - initializing database");
     runMigrations()
-      .then(() => {
+      .then(async () => {
         logger.info("Database migrations completed successfully");
+        try { await processDerivedStateInvalidations(); }
+        catch (error) {
+          try { await recordCommandFailure({ commandName: "derived_state_invalidation", errorCategory: "processing_failed" }); } catch { /* Best effort during startup. */ }
+          logger.warn("Derived-state invalidation processing failed", { error: error instanceof Error ? error.message : "unknown" });
+        }
+        try { await pruneOldTelemetryEvents(30); } catch { /* Telemetry retention must not block app startup. */ }
         setDbReady(true);
         if (Platform.OS === "web") return;
 
-        syncToSupabase().then((result) => {
+        processSyncQueue().then((result) => {
           if (result.error && result.error !== "Supabase is not configured." && result.error !== "Sign in before syncing NutriLift.") {
             logger.warn("NutriLift sync did not complete", { error: result.error });
           }
@@ -47,6 +56,7 @@ export default function RootLayout() {
         });
       })
       .catch((err) => {
+        void recordCommandFailure({ commandName: "database_migration", errorCategory: "migration_failed" }).catch(() => undefined);
         logger.error("DB migration failed", {
           error: err.message,
           stack: err.stack,
@@ -55,7 +65,35 @@ export default function RootLayout() {
         setDbError(err.message);
         setDbReady(true); // Still proceed, show error in UI
       });
-  }, []);
+  }, [migrationAttempt]);
+
+  if (dbError) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", padding: 24, backgroundColor: M3.colors.background, gap: 14 }}>
+        <Text style={{ color: M3.colors.error, fontFamily: "DMSans_700Bold", fontSize: 20, textAlign: "center" }}>
+          NutriLift could not initialize its local database
+        </Text>
+        <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_400Regular", fontSize: 14, lineHeight: 21, textAlign: "center" }}>
+          Your existing local data has not been intentionally deleted. The app has stopped before opening screens that depend on the database.
+        </Text>
+        <Text selectable style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, textAlign: "center" }}>
+          {dbError}
+        </Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Retry database initialization"
+          onPress={() => {
+            setDbReady(false);
+            setDbError(null);
+            setMigrationAttempt((attempt) => attempt + 1);
+          }}
+          style={{ backgroundColor: M3.colors.primary, borderRadius: M3.shape.full, paddingHorizontal: 22, paddingVertical: 12, marginTop: 4 }}
+        >
+          <Text style={{ color: M3.colors.onPrimary, fontFamily: "DMSans_700Bold" }}>Retry initialization</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   if (!fontsLoaded || !dbReady) {
     return (

@@ -17,6 +17,8 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import type { FoodResult } from "../../lib/services/barcodeScanner";
+import { toLocalDateKey } from "../../lib/utils/local-date";
+import { validateManualFoodEntry } from "../../lib/data/manual-food-entry-validation";
 
 export default function NutritionCardModal() {
   const params = useLocalSearchParams();
@@ -55,22 +57,13 @@ export default function NutritionCardModal() {
   const warnings = foodData?.warnings || [];
 
   const handleLog = async () => {
-    // Validation
-    if (!name.trim()) {
-      Alert.alert("Error", "Please enter a food name");
+    const validation = validateManualFoodEntry({ name, calories, protein, carbs, fat, fiber, quantity });
+    if (!validation.valid) {
+      Alert.alert("Invalid food details", validation.message);
       return;
     }
 
-    const cal = parseFloat(calories);
-    const pro = parseFloat(protein);
-    const carb = parseFloat(carbs);
-    const f = parseFloat(fat);
-    const qty = parseFloat(quantity);
-
-    if (isNaN(cal) || isNaN(pro) || isNaN(carb) || isNaN(f) || isNaN(qty)) {
-      Alert.alert("Error", "Please enter valid numbers for all fields");
-      return;
-    }
+    const { calories: cal, protein: pro, carbs: carb, fat: f, fiber: fiberValue, quantity: qty } = validation.values;
 
     try {
       // Calculate actual values based on quantity
@@ -78,7 +71,7 @@ export default function NutritionCardModal() {
 
       await insertFoodLog({
         id: uuid.v4() as string,
-        date: new Date().toISOString().split("T")[0],
+        date: toLocalDateKey(),
         meal,
         name: name.trim(),
         quantity_g: qty,
@@ -86,12 +79,12 @@ export default function NutritionCardModal() {
         protein_g: pro * factor,
         carbs_g: carb * factor,
         fat_g: f * factor,
-        fiber_g: fiber ? parseFloat(fiber) * factor : null,
+        fiber_g: fiberValue === null ? null : fiberValue * factor,
         sugar_g: null,
         sodium_mg: null,
         source: source === "barcode" ? "barcode" : "manual",
         raw_input: barcode || null,
-        created_at: Date.now(),
+        created_at: Math.floor(Date.now() / 1000),
       });
 
       logger.info("Food logged", {

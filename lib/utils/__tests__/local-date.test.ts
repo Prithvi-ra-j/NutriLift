@@ -1,0 +1,107 @@
+import { spawnSync } from "node:child_process";
+import {
+  addCalendarDays,
+  differenceInCalendarDays,
+  fromLocalDateKey,
+  getMondayWeekRange,
+  getSundayWeekRange,
+  isSameLocalCalendarDay,
+  toLocalDateKey,
+} from "../local-date";
+
+describe("local calendar date utilities", () => {
+  it("formats the local calendar date instead of converting through UTC", () => {
+    const localDate = new Date(2026, 9, 15, 0, 5, 0);
+    expect(toLocalDateKey(localDate)).toBe("2026-10-15");
+  });
+
+  it("parses a date-only key as local midnight", () => {
+    const date = fromLocalDateKey("2026-10-15");
+    expect(date.getFullYear()).toBe(2026);
+    expect(date.getMonth()).toBe(9);
+    expect(date.getDate()).toBe(15);
+    expect(date.getHours()).toBe(0);
+  });
+
+  it.each(["2026-2-01", "2026-02-30", "not-a-date"])(
+    "rejects invalid date keys: %s",
+    (dateKey) => {
+      expect(() => fromLocalDateKey(dateKey)).toThrow(RangeError);
+    },
+  );
+
+  it("adds calendar days across month and year boundaries", () => {
+    expect(addCalendarDays("2026-01-01", -1)).toBe("2025-12-31");
+    expect(addCalendarDays("2026-01-31", 1)).toBe("2026-02-01");
+  });
+
+  it("uses a Monday-to-Sunday range when selected date is Sunday", () => {
+    expect(getMondayWeekRange("2026-10-18")).toEqual({
+      start: "2026-10-12",
+      end: "2026-10-18",
+    });
+  });
+
+  it("keeps Monday in the same Monday-to-Sunday range", () => {
+    expect(getMondayWeekRange("2026-10-12")).toEqual({
+      start: "2026-10-12",
+      end: "2026-10-18",
+    });
+  });
+
+  it("compares dates by local calendar day rather than timestamp", () => {
+    expect(
+      isSameLocalCalendarDay(
+        new Date(2026, 9, 15, 0, 1),
+        new Date(2026, 9, 15, 23, 59),
+      ),
+    ).toBe(true);
+    expect(
+      isSameLocalCalendarDay(new Date(2026, 9, 15), new Date(2026, 9, 16)),
+    ).toBe(false);
+  });
+  it("keeps an instant on the correct local day in IST and a negative-offset zone", () => {
+    const script = `import { toLocalDateKey } from "./lib/utils/local-date.ts"; console.log(toLocalDateKey(new Date(process.argv[1])));`;
+    const runInTimezone = (timezone: string, instant: string) => {
+      const result = spawnSync(
+        process.execPath,
+        ["--experimental-strip-types", "--input-type=module", "-e", script, instant],
+        {
+          cwd: process.cwd(),
+          encoding: "utf8",
+          env: { ...process.env, TZ: timezone },
+        },
+      );
+      expect(result.status).toBe(0);
+      return result.stdout.trim();
+    };
+
+    expect(runInTimezone("Asia/Kolkata", "2026-10-14T18:35:00.000Z")).toBe("2026-10-15");
+    expect(runInTimezone("America/Los_Angeles", "2026-10-15T00:30:00.000Z")).toBe("2026-10-14");
+    expect(runInTimezone("UTC", "2026-10-15T00:30:00.000Z")).toBe("2026-10-15");
+  });
+
+  it("measures calendar-day differences independently of DST-length days", () => {
+    const previousTz = process.env.TZ;
+    try {
+      process.env.TZ = "America/Los_Angeles";
+      expect(differenceInCalendarDays("2026-03-09", "2026-03-08")).toBe(1);
+      expect(differenceInCalendarDays("2026-11-02", "2026-11-01")).toBe(1);
+    } finally {
+      if (previousTz === undefined) delete process.env.TZ;
+      else process.env.TZ = previousTz;
+    }
+  });
+
+  it("uses a Sunday-to-Saturday range for weekly summary records", () => {
+    expect(getSundayWeekRange("2026-10-18")).toEqual({
+      start: "2026-10-18",
+      end: "2026-10-24",
+    });
+    expect(getSundayWeekRange("2026-10-19")).toEqual({
+      start: "2026-10-18",
+      end: "2026-10-24",
+    });
+  });
+
+});

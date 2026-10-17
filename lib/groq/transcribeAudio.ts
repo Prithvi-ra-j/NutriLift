@@ -1,81 +1,85 @@
-// @ts-nocheck
-import { groq } from "./client";
-import * as FileSystem from "expo-file-system";
-import { safeGroqCall } from "./safeCall";
+import * as FileSystem from "expo-file-system/legacy";
+import { isSupabaseConfigured, supabase } from "../supabase/client";
+import { recordAIRequestMetrics } from "../observability/telemetry";
 
-/**
- * Transcribe audio file using Groq Whisper API
- * @param audioUri - Local file URI from expo-audio recording
- * @returns Transcribed text
- */
-export async function transcribeAudio(audioUri: string): Promise<string> {
-  return safeGroqCall(async () => {
-    // Read audio file as base64
-    const audioBase64 = await FileSystem.readAsStringAsync(audioUri, {
-      encoding: FileSystem.EncodingType.Base64,
+const MAX_AUDIO_BYTES = 20 * 1024 * 1024;
+const TRANSCRIPTION_MODEL = "whisper-large-v3-turbo";
+
+async function recordTranscriptionMetrics(input: {
+  latencyMs: number;
+  outputValid: boolean;
+  failureCategory?: string;
+}): Promise<void> {
+  try {
+    await recordAIRequestMetrics({
+      provider: "groq-via-supabase",
+      model: TRANSCRIPTION_MODEL,
+      latencyMs: input.latencyMs,
+      outputValid: input.outputValid,
+      ...(input.failureCategory ? { failureCategory: input.failureCategory } : {}),
     });
-
-    // Convert base64 to Blob
-    const blob = base64ToBlob(audioBase64, "audio/m4a");
-    
-    // Create File object for Groq API
-    const file = new File([blob], "audio.m4a", { type: "audio/m4a" });
-
-    // Call Groq Whisper API
-    const transcription = await groq.audio.transcriptions.create({
-      file,
-      model: "whisper-large-v3-turbo",
-      language: "en", // Change to "hi" for Hindi or remove for auto-detect
-      response_format: "text",
-      temperature: 0.0, // More deterministic transcription
-    });
-
-    return transcription as unknown as string;
-  }) as Promise<string>;
+  } catch {
+    // Operational telemetry must never hide the transcription result or its real error.
+  }
 }
 
-/**
- * Convert base64 string to Blob
- */
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const byteCharacters = atob(base64);
-  const byteArrays: Uint8Array[] = [];
-
-  for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-    const slice = byteCharacters.slice(offset, offset + 512);
-    const byteNumbers = new Array(slice.length);
-
-    for (let i = 0; i < slice.length; i++) {
-      byteNumbers[i] = slice.charCodeAt(i);
-    }
-
-    byteArrays.push(new Uint8Array(byteNumbers));
+async function transcribe(audioUri: string, language?: string): Promise<string> {
+  if (!audioUri.trim()) throw new Error("Audio recording is missing.");
+  if (!isSupabaseConfigured) {
+    throw new Error("Voice transcription is unavailable until Supabase is configured.");
   }
 
-  return new Blob(byteArrays, { type: mimeType });
+  const info = await FileSystem.getInfoAsync(audioUri);
+  if (!info.exists || !("size" in info) || !info.size) {
+    throw new Error("The recording is empty or could not be read.");
+  }
+  if (info.size > MAX_AUDIO_BYTES) {
+    throw new Error("Recording is too large. Record a shorter voice note and try again.");
+  }
+
+  const audioBase64 = await FileSystem.readAsStringAsync(audioUri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  const startedAt = Date.now();
+  let failureCategory = "gateway_error";
+  try {
+    const { data, error } = await supabase.functions.invoke("ai-transcribe", {
+      body: {
+        audio_base64: audioBase64,
+        mime_type: "audio/m4a",
+        ...(language ? { language } : {}),
+      },
+    });
+
+    if (error) throw new Error(error.message || "Voice transcription failed.");
+    if (typeof data?.text !== "string" || !data.text.trim()) {
+      failureCategory = "empty_output";
+      throw new Error("The transcription service returned no text. Please try recording again.");
+    }
+
+    const text = data.text.trim();
+    await recordTranscriptionMetrics({
+      latencyMs: Date.now() - startedAt,
+      outputValid: true,
+    });
+    return text;
+  } catch (error) {
+    await recordTranscriptionMetrics({
+      latencyMs: Date.now() - startedAt,
+      outputValid: false,
+      failureCategory,
+    });
+    throw error;
+  }
 }
 
-/**
- * Transcribe audio with language detection
- * Useful for Hinglish (Hindi + English mix)
- */
+/** Transcribe a recording in English. */
+export async function transcribeAudio(audioUri: string): Promise<string> {
+  return transcribe(audioUri, "en");
+}
+
+/** Let Whisper detect the language, including Hindi-English mixed speech. */
 export async function transcribeAudioMultilingual(audioUri: string): Promise<string> {
-  return safeGroqCall(async () => {
-    const audioBase64 = await FileSystem.readAsStringAsync(audioUri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
-    const blob = base64ToBlob(audioBase64, "audio/m4a");
-    const file = new File([blob], "audio.m4a", { type: "audio/m4a" });
-
-    // Remove language parameter for auto-detection
-    const transcription = await groq.audio.transcriptions.create({
-      file,
-      model: "whisper-large-v3-turbo",
-      response_format: "text",
-      temperature: 0.0,
-    });
-
-    return transcription as unknown as string;
-  }) as Promise<string>;
+  return transcribe(audioUri);
 }

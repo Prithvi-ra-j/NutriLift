@@ -51,7 +51,8 @@ CREATE TABLE `body_stats` (
 	`seg_fat_right_leg` real,
 	`seg_fat_left_leg` real,
 	`raw_paste` text,
-	`source` text
+	`source` text,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `custom_exercises` (
@@ -73,7 +74,10 @@ CREATE TABLE `daily_nutrition` (
 	`protein_target_met` integer,
 	`calorie_target_met` integer,
 	`adherence_score` real,
-	`notes` text
+	`notes` text,
+	`updated_at` text,
+	`is_complete` integer DEFAULT 0 NOT NULL,
+	`completed_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `exercise_logs` (
@@ -103,6 +107,10 @@ CREATE TABLE `food_logs` (
 	`sodium_mg` real,
 	`source` text NOT NULL,
 	`raw_input` text,
+	`provenance_type` text DEFAULT 'legacy_unknown' NOT NULL,
+	`provenance_json` text,
+	`estimate_confidence` real,
+	`estimate_reviewed` integer DEFAULT 0 NOT NULL,
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
@@ -156,7 +164,8 @@ CREATE TABLE `personal_records` (
 	`best_volume_single_set` real,
 	`achieved_date` text NOT NULL,
 	`previous_best_kg` real,
-	`improvement_pct` real
+	`improvement_pct` real,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `quarterly_summaries` (
@@ -180,7 +189,8 @@ CREATE TABLE `recovery_logs` (
 	`energy_level` integer,
 	`muscle_soreness` integer,
 	`stress_level` integer,
-	`notes` text
+	`notes` text,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `set_logs` (
@@ -220,12 +230,14 @@ CREATE TABLE `workout_sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`date` text NOT NULL,
 	`day_type` text NOT NULL,
+	`status` text DEFAULT 'planned' NOT NULL,
 	`started_at` integer,
 	`ended_at` integer,
 	`duration_min` integer,
 	`total_volume_kg` real,
 	`notes` text,
-	`rpe` integer
+	`rpe` integer,
+	`updated_at` text
 );
 --> statement-breakpoint
 CREATE TABLE `yearly_summaries` (
@@ -236,3 +248,186 @@ CREATE TABLE `yearly_summaries` (
 	`transformation_story` text,
 	`stats_json` text NOT NULL
 );
+--> statement-breakpoint
+CREATE TABLE `sync_tombstones` (
+	`id` text PRIMARY KEY NOT NULL,
+	`entity_type` text NOT NULL,
+	`entity_id` text NOT NULL,
+	`external_id` text,
+	`deleted_at` text NOT NULL,
+	`created_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `sync_tombstones_entity_type_entity_id_unique` ON `sync_tombstones` (`entity_type`,`entity_id`);
+--> statement-breakpoint
+CREATE TABLE `recommendation_outcomes` (
+	`id` text PRIMARY KEY NOT NULL,
+	`recommendation_id` text NOT NULL,
+	`local_date` text NOT NULL,
+	`outcome` text NOT NULL,
+	`rule_version` text NOT NULL,
+	`evidence_json` text NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_recommendation_outcomes_date_id` ON `recommendation_outcomes` (`local_date`,`recommendation_id`);
+--> statement-breakpoint
+CREATE TABLE `sync_queue` (
+	`id` text PRIMARY KEY NOT NULL,
+	`external_id` text NOT NULL,
+	`payload_json` text NOT NULL,
+	`state` text NOT NULL,
+	`attempt_count` integer DEFAULT 0 NOT NULL,
+	`last_error` text,
+	`next_retry_at` text,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `sync_queue_external_id_unique` ON `sync_queue` (`external_id`);
+--> statement-breakpoint
+CREATE INDEX `idx_sync_queue_state` ON `sync_queue` (`state`,`next_retry_at`);
+--> statement-breakpoint
+CREATE TABLE `sync_state` (
+	`source_app` text PRIMARY KEY NOT NULL,
+	`cursor` text,
+	`last_synced_at` text,
+	`last_success_at` text,
+	`last_error` text,
+	`owner_user_id` text,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `nutrition_profile` (
+  `id` integer PRIMARY KEY NOT NULL,
+  `calorie_target_kcal` integer NOT NULL,
+  `protein_target_g` real NOT NULL,
+  `carbs_target_g` real NOT NULL,
+  `fat_target_g` real NOT NULL,
+  `goal` text DEFAULT 'lose' NOT NULL,
+  `target_mode` text DEFAULT 'manual' NOT NULL,
+  `updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `user_profile` (
+  `id` integer PRIMARY KEY NOT NULL,
+  `age` integer,
+  `sex` text,
+  `height_cm` real,
+  `training_start_date` text,
+  `current_split` text,
+  `training_phase` text,
+  `cardio` text,
+  `equipment` text,
+  `physique_goal` text,
+  `body_fat_goal_pct` real,
+  `body_fat_goal_date` text,
+  `updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `nutrition_target_history` (
+  `id` text PRIMARY KEY NOT NULL,
+  `effective_date` text NOT NULL,
+  `calorie_target_kcal` integer NOT NULL,
+  `protein_target_g` real NOT NULL,
+  `carbs_target_g` real NOT NULL,
+  `fat_target_g` real NOT NULL,
+  `source` text NOT NULL,
+  `goal` text,
+  `maintenance_estimate_kcal` integer,
+  `algorithm_version` integer,
+  `explanation` text,
+  `created_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `idx_nutrition_target_history_effective_date` ON `nutrition_target_history` (`effective_date`, `created_at`);
+--> statement-breakpoint
+CREATE TABLE `domain_events` (
+	`id` text PRIMARY KEY NOT NULL,
+	`event_type` text NOT NULL,
+	`entity_type` text NOT NULL,
+	`entity_id` text NOT NULL,
+	`entity_version` integer NOT NULL,
+	`schema_version` integer DEFAULT 1 NOT NULL,
+	`occurred_at` text NOT NULL,
+	`metadata_json` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_domain_events_entity_version` ON `domain_events` (`entity_type`,`entity_id`,`entity_version`);
+--> statement-breakpoint
+CREATE TABLE `derived_state_invalidations` (
+	`id` text PRIMARY KEY NOT NULL,
+	`event_id` text NOT NULL REFERENCES `domain_events`(`id`),
+	`projection_key` text NOT NULL,
+	`reason` text NOT NULL,
+	`invalidated_at` text NOT NULL,
+	`processed_at` text
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_derived_invalidations_event_projection` ON `derived_state_invalidations` (`event_id`,`projection_key`);
+--> statement-breakpoint
+CREATE INDEX `idx_derived_invalidations_pending` ON `derived_state_invalidations` (`processed_at`,`invalidated_at`);
+--> statement-breakpoint
+CREATE TABLE `app_telemetry_events` (
+	`id` text PRIMARY KEY NOT NULL,
+	`event_type` text NOT NULL,
+	`severity` text NOT NULL,
+	`correlation_id` text,
+	`occurred_at` text NOT NULL,
+	`metadata_json` text NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `idx_app_telemetry_type_time` ON `app_telemetry_events` (`event_type`,`occurred_at`);
+--> statement-breakpoint
+CREATE INDEX `idx_app_telemetry_severity_time` ON `app_telemetry_events` (`severity`,`occurred_at`);
+--> statement-breakpoint
+CREATE TABLE `favorite_foods` (
+	`id` text PRIMARY KEY NOT NULL,
+	`normalized_name` text NOT NULL,
+	`name` text NOT NULL,
+	`meal` text NOT NULL,
+	`quantity_g` real,
+	`calories` real NOT NULL,
+	`protein_g` real NOT NULL,
+	`carbs_g` real NOT NULL,
+	`fat_g` real NOT NULL,
+	`fiber_g` real,
+	`sugar_g` real,
+	`sodium_mg` real,
+	`source` text NOT NULL,
+	`provenance_type` text DEFAULT 'legacy_unknown' NOT NULL,
+	`provenance_json` text,
+	`estimate_confidence` real,
+	`estimate_reviewed` integer DEFAULT 0 NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `idx_favorite_foods_normalized_name` ON `favorite_foods` (`normalized_name`);
+--> statement-breakpoint
+CREATE TABLE `repeatable_meals` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`meal` text NOT NULL,
+	`items_json` text NOT NULL,
+	`created_at` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `idx_repeatable_meals_name` ON `repeatable_meals` (`name`);
+--> statement-breakpoint
+CREATE TABLE `life_os_goal_progress` (
+	`goal_id` text PRIMARY KEY NOT NULL,
+	`status` text NOT NULL,
+	`current_value` real,
+	`target_value` real NOT NULL,
+	`progress_percent` real,
+	`unit` text,
+	`as_of` text NOT NULL,
+	`evidence_json` text NOT NULL,
+	`rule_version` text NOT NULL,
+	`updated_at` text NOT NULL
+);
+--> statement-breakpoint
+CREATE INDEX `idx_life_os_goal_progress_status_updated` ON `life_os_goal_progress` (`status`,`updated_at`);

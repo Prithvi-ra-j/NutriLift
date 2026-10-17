@@ -1,3 +1,9 @@
+jest.mock("react-native", () => ({ Platform: { OS: "android" } }));
+jest.mock("expo-sqlite", () => ({
+  openDatabaseSync: () => ({ execAsync: async () => undefined, getAllAsync: async () => [] }),
+}));
+jest.mock("drizzle-orm/expo-sqlite", () => ({ drizzle: () => ({}) }));
+
 import {
   buildPersonalRecordExternalId,
   mapDailyNutrition,
@@ -27,7 +33,6 @@ describe("NutriLift record mappers", () => {
     const records = mapRecoveryLog({
       date: "2026-09-20",
       sleep_duration_hr: 7.5,
-      hrv: null,
       energy_level: 4,
       updated_at: "2026-09-20T18:00:00.000Z",
     });

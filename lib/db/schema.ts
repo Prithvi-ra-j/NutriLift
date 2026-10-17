@@ -1,4 +1,4 @@
-import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, real, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 // ─── Food Logs ────────────────────────────────────────────────────────────────
 export const foodLogs = sqliteTable("food_logs", {
@@ -14,8 +14,12 @@ export const foodLogs = sqliteTable("food_logs", {
   fiber_g: real("fiber_g"),
   sugar_g: real("sugar_g"),
   sodium_mg: real("sodium_mg"),
-  source: text("source").notNull(), // 'manual' | 'voice' | 'paste'
+  source: text("source").notNull(), // manual | voice | paste | barcode | ai | local | repeat
   raw_input: text("raw_input"), // original text that was parsed
+  provenance_type: text("provenance_type").notNull().default("legacy_unknown"),
+  provenance_json: text("provenance_json"),
+  estimate_confidence: real("estimate_confidence"), // heuristic score, not a calibrated probability
+  estimate_reviewed: integer("estimate_reviewed").notNull().default(0),
   created_at: integer("created_at").notNull(), // unix timestamp
 });
 
@@ -31,6 +35,52 @@ export const dailyNutrition = sqliteTable("daily_nutrition", {
   adherence_score: real("adherence_score"), // 0-100
   notes: text("notes"),
   updated_at: text("updated_at"),
+  is_complete: integer("is_complete").notNull().default(0),
+  completed_at: text("completed_at"),
+});
+
+// ─── Persisted profile and effective-dated nutrition targets ──────────────────
+export const nutritionProfile = sqliteTable("nutrition_profile", {
+  id: integer("id").primaryKey(),
+  calorie_target_kcal: integer("calorie_target_kcal").notNull(),
+  protein_target_g: real("protein_target_g").notNull(),
+  carbs_target_g: real("carbs_target_g").notNull(),
+  fat_target_g: real("fat_target_g").notNull(),
+  goal: text("goal").notNull().default("lose"),
+  target_mode: text("target_mode").notNull().default("manual"),
+  updated_at: text("updated_at").notNull(),
+});
+
+export const nutritionTargetHistory = sqliteTable("nutrition_target_history", {
+  id: text("id").primaryKey(),
+  effective_date: text("effective_date").notNull(),
+  calorie_target_kcal: integer("calorie_target_kcal").notNull(),
+  protein_target_g: real("protein_target_g").notNull(),
+  carbs_target_g: real("carbs_target_g").notNull(),
+  fat_target_g: real("fat_target_g").notNull(),
+  source: text("source").notNull(), // manual | adaptive | migration
+  goal: text("goal"), // effective goal; nullable for legacy versions without historical goal data
+  maintenance_estimate_kcal: integer("maintenance_estimate_kcal"),
+  algorithm_version: integer("algorithm_version"),
+  explanation: text("explanation"),
+  created_at: text("created_at").notNull(),
+});
+
+// ─── User-owned profile context (no personal values baked into source defaults) ──
+export const userProfile = sqliteTable("user_profile", {
+  id: integer("id").primaryKey(),
+  age: integer("age"),
+  sex: text("sex"),
+  height_cm: real("height_cm"),
+  training_start_date: text("training_start_date"),
+  current_split: text("current_split"),
+  training_phase: text("training_phase"),
+  cardio: text("cardio"),
+  equipment: text("equipment"),
+  physique_goal: text("physique_goal"),
+  body_fat_goal_pct: real("body_fat_goal_pct"),
+  body_fat_goal_date: text("body_fat_goal_date"),
+  updated_at: text("updated_at").notNull(),
 });
 
 // ─── Workout Sessions ─────────────────────────────────────────────────────────
@@ -38,6 +88,7 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   id: text("id").primaryKey(),
   date: text("date").notNull(),
   day_type: text("day_type").notNull(), // Push A | Pull A | Legs A | Push B | Pull B | Legs B | Rest
+  status: text("status").notNull().default("planned"), // planned | in_progress | completed | cancelled
   started_at: integer("started_at"),
   ended_at: integer("ended_at"),
   duration_min: integer("duration_min"),
@@ -271,14 +322,23 @@ export const customExercises = sqliteTable("custom_exercises", {
 });
 
 // ─── Sync Metadata ──────────────────────────────────────────────────────────
-export const syncTombstones = sqliteTable("sync_tombstones", {
-  id: text("id").primaryKey(),
-  entity_type: text("entity_type").notNull(),
-  entity_id: text("entity_id").notNull(),
-  external_id: text("external_id"),
-  deleted_at: text("deleted_at").notNull(),
-  created_at: text("created_at").notNull(),
-});
+export const syncTombstones = sqliteTable(
+  "sync_tombstones",
+  {
+    id: text("id").primaryKey(),
+    entity_type: text("entity_type").notNull(),
+    entity_id: text("entity_id").notNull(),
+    external_id: text("external_id"),
+    deleted_at: text("deleted_at").notNull(),
+    created_at: text("created_at").notNull(),
+  },
+  (table) => ({
+    entityUnique: uniqueIndex("sync_tombstones_entity_type_entity_id_unique").on(
+      table.entity_type,
+      table.entity_id,
+    ),
+  }),
+);
 
 export const syncQueue = sqliteTable("sync_queue", {
   id: text("id").primaryKey(),
@@ -298,9 +358,20 @@ export const syncState = sqliteTable("sync_state", {
   last_synced_at: text("last_synced_at"),
   last_success_at: text("last_success_at"),
   last_error: text("last_error"),
+  owner_user_id: text("owner_user_id"),
   updated_at: text("updated_at").notNull(),
 });
 
+export const recommendationOutcomes = sqliteTable("recommendation_outcomes", {
+  id: text("id").primaryKey(),
+  recommendation_id: text("recommendation_id").notNull(),
+  local_date: text("local_date").notNull(),
+  outcome: text("outcome").notNull(),
+  rule_version: text("rule_version").notNull(),
+  evidence_json: text("evidence_json").notNull(),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+}, (table) => [uniqueIndex("idx_recommendation_outcomes_date_id").on(table.local_date, table.recommendation_id)]);
 // ─── Type Exports ─────────────────────────────────────────────────────────────
 export type FoodLog = typeof foodLogs.$inferSelect;
 export type NewFoodLog = typeof foodLogs.$inferInsert;
@@ -364,3 +435,111 @@ export type NewSyncQueueEntry = typeof syncQueue.$inferInsert;
 
 export type SyncState = typeof syncState.$inferSelect;
 export type NewSyncState = typeof syncState.$inferInsert;
+
+
+// ─── Append-only domain events and durable derived-state invalidations ─────────
+export const domainEvents = sqliteTable("domain_events", {
+  id: text("id").primaryKey(),
+  event_type: text("event_type").notNull(),
+  entity_type: text("entity_type").notNull(),
+  entity_id: text("entity_id").notNull(),
+  entity_version: integer("entity_version").notNull(),
+  schema_version: integer("schema_version").notNull().default(1),
+  occurred_at: text("occurred_at").notNull(),
+  metadata_json: text("metadata_json").notNull(),
+}, (table) => ({
+  entityVersionUnique: uniqueIndex("idx_domain_events_entity_version").on(table.entity_type, table.entity_id, table.entity_version),
+}));
+
+export const derivedStateInvalidations = sqliteTable("derived_state_invalidations", {
+  id: text("id").primaryKey(),
+  event_id: text("event_id").notNull().references(() => domainEvents.id),
+  projection_key: text("projection_key").notNull(),
+  reason: text("reason").notNull(),
+  invalidated_at: text("invalidated_at").notNull(),
+  processed_at: text("processed_at"),
+}, (table) => ({
+  eventProjectionUnique: uniqueIndex("idx_derived_invalidations_event_projection").on(table.event_id, table.projection_key),
+}));
+
+export type DomainEvent = typeof domainEvents.$inferSelect;
+export type NewDomainEvent = typeof domainEvents.$inferInsert;
+export type DerivedStateInvalidation = typeof derivedStateInvalidations.$inferSelect;
+export type NewDerivedStateInvalidation = typeof derivedStateInvalidations.$inferInsert;
+
+
+// ─── Privacy-filtered local operational telemetry ─────────────────────────────
+export const appTelemetryEvents = sqliteTable("app_telemetry_events", {
+  id: text("id").primaryKey(),
+  event_type: text("event_type").notNull(),
+  severity: text("severity").notNull(),
+  correlation_id: text("correlation_id"),
+  occurred_at: text("occurred_at").notNull(),
+  metadata_json: text("metadata_json").notNull(),
+}, (table) => ({
+  typeTimeIndex: index("idx_app_telemetry_type_time").on(table.event_type, table.occurred_at),
+  severityTimeIndex: index("idx_app_telemetry_severity_time").on(table.severity, table.occurred_at),
+}));
+export type AppTelemetryEvent = typeof appTelemetryEvents.$inferSelect;
+export type NewAppTelemetryEvent = typeof appTelemetryEvents.$inferInsert;
+
+
+// ─── User-owned quick-log favourites and reusable meal snapshots ───────────────
+export const favoriteFoods = sqliteTable("favorite_foods", {
+  id: text("id").primaryKey(),
+  normalized_name: text("normalized_name").notNull(),
+  name: text("name").notNull(),
+  meal: text("meal").notNull(),
+  quantity_g: real("quantity_g"),
+  calories: real("calories").notNull(),
+  protein_g: real("protein_g").notNull(),
+  carbs_g: real("carbs_g").notNull(),
+  fat_g: real("fat_g").notNull(),
+  fiber_g: real("fiber_g"),
+  sugar_g: real("sugar_g"),
+  sodium_mg: real("sodium_mg"),
+  source: text("source").notNull(),
+  provenance_type: text("provenance_type").notNull().default("legacy_unknown"),
+  provenance_json: text("provenance_json"),
+  estimate_confidence: real("estimate_confidence"),
+  estimate_reviewed: integer("estimate_reviewed").notNull().default(0),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+}, (table) => ({
+  normalizedNameUnique: uniqueIndex("idx_favorite_foods_normalized_name").on(table.normalized_name),
+}));
+
+export const repeatableMeals = sqliteTable("repeatable_meals", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  meal: text("meal").notNull(),
+  items_json: text("items_json").notNull(),
+  created_at: text("created_at").notNull(),
+  updated_at: text("updated_at").notNull(),
+}, (table) => ({
+  nameIndex: index("idx_repeatable_meals_name").on(table.name),
+}));
+
+export type FavoriteFood = typeof favoriteFoods.$inferSelect;
+export type NewFavoriteFood = typeof favoriteFoods.$inferInsert;
+export type RepeatableMeal = typeof repeatableMeals.$inferSelect;
+export type NewRepeatableMeal = typeof repeatableMeals.$inferInsert;
+
+
+// ─── Derived Life OS goal progress snapshots (external goals remain authoritative) ─
+export const lifeOsGoalProgress = sqliteTable("life_os_goal_progress", {
+  goal_id: text("goal_id").primaryKey(),
+  status: text("status").notNull(),
+  current_value: real("current_value"),
+  target_value: real("target_value").notNull(),
+  progress_percent: real("progress_percent"),
+  unit: text("unit"),
+  as_of: text("as_of").notNull(),
+  evidence_json: text("evidence_json").notNull(),
+  rule_version: text("rule_version").notNull(),
+  updated_at: text("updated_at").notNull(),
+}, (table) => ({
+  statusUpdatedIndex: index("idx_life_os_goal_progress_status_updated").on(table.status, table.updated_at),
+}));
+export type LifeOsGoalProgress = typeof lifeOsGoalProgress.$inferSelect;
+export type NewLifeOsGoalProgress = typeof lifeOsGoalProgress.$inferInsert;

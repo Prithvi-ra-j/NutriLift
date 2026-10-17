@@ -11,11 +11,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { generateMonthlyReport } from "../../lib/groq";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getUserProfile } from "../../lib/db/queries/user-profile";
+import { getNutritionTargets } from "../../lib/db/queries/nutrition-targets";
 import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsInRange, getAllPRs } from "../../lib/db/queries/workout";
 import { getAllInBodyRecords, getWeightHistory } from "../../lib/db/queries/body";
 import { getRecentRecoveryLogs, getSupplementAdherence30d } from "../../lib/db/queries/recovery";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 import { insertReport } from "../../lib/db/queries/reports";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
@@ -29,7 +31,7 @@ export default function MonthlyReportModal() {
   const [progress, setProgress] = useState("");
   const [report, setReport] = useState<MonthlyReport | null>(null);
 
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentMonth = toLocalDateKey().slice(0, 7); // YYYY-MM
 
   const generateReport = async () => {
     setIsGenerating(true);
@@ -37,9 +39,9 @@ export default function MonthlyReportModal() {
 
     try {
       const startDate = `${currentMonth}-01`;
-      const endDate = new Date().toISOString().split("T")[0];
+      const endDate = toLocalDateKey();
 
-      const [nutrition, sessions, prs, inBodyRecords, weightHistory, recoveryLogs, supplementAdherence] =
+      const [nutrition, sessions, prs, inBodyRecords, weightHistory, recoveryLogs, supplementAdherence, userProfile, targets] =
         await Promise.all([
           getLast30DaysNutrition(),
           getSessionsInRange(startDate, endDate),
@@ -48,11 +50,34 @@ export default function MonthlyReportModal() {
           getWeightHistory(30),
           getRecentRecoveryLogs(30),
           getSupplementAdherence30d(),
+          getUserProfile(),
+          getNutritionTargets(),
         ]);
 
       setProgress("Generating AI analysis...");
 
-      const reportData = await generateMonthlyReport(USER_PROFILE, {
+      const reportProfile = {
+        age: userProfile?.age ?? null,
+        sex: userProfile?.sex ?? null,
+        height_cm: userProfile?.height_cm ?? null,
+        training_start_date: userProfile?.training_start_date ?? null,
+        goal: userProfile?.physique_goal ?? null,
+        targets: {
+          calories: targets.calories,
+          protein_g: targets.protein_g,
+          carbs_g: targets.carbs_g,
+          fat_g: targets.fat_g,
+          body_fat_goal_pct: userProfile?.body_fat_goal_pct ?? null,
+          body_fat_goal_date: userProfile?.body_fat_goal_date ?? null,
+        },
+        training: {
+          current_split: userProfile?.current_split ?? null,
+          phase: userProfile?.training_phase ?? null,
+          cardio: userProfile?.cardio ?? null,
+          equipment: userProfile?.equipment ?? null,
+        },
+      };
+      const reportData = await generateMonthlyReport(reportProfile, {
         month: currentMonth,
         nutrition_logs: nutrition,
         workout_sessions: sessions,

@@ -1,5 +1,6 @@
 import { Platform } from "react-native";
 import * as schema from "./schema";
+import { ADDITIVE_COLUMN_MIGRATIONS, assertSupportedSchemaVersion, CURRENT_SCHEMA_VERSION, findMissingRequiredColumns, findMissingRequiredTables, REQUIRED_CORE_COLUMNS } from "./migration-contract";
 
 // Platform-specific imports and initialization
 let sqlite: any = null;
@@ -47,7 +48,12 @@ export async function runMigrations(): Promise<void> {
     console.warn("Skipping migrations on web platform");
     return;
   }
-  
+
+  // Read the version before any DDL. A newer database must remain untouched.
+  const versionRows = await sqlite.getAllAsync("PRAGMA user_version");
+  const databaseVersion = Number(versionRows[0]?.user_version ?? 0);
+  assertSupportedSchemaVersion(databaseVersion);
+
   await sqlite.execAsync(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;
@@ -67,6 +73,10 @@ export async function runMigrations(): Promise<void> {
       sodium_mg REAL,
       source TEXT NOT NULL,
       raw_input TEXT,
+      provenance_type TEXT NOT NULL DEFAULT 'legacy_unknown',
+      provenance_json TEXT,
+      estimate_confidence REAL,
+      estimate_reviewed INTEGER NOT NULL DEFAULT 0,
       created_at INTEGER NOT NULL
     );
 
@@ -82,13 +92,25 @@ export async function runMigrations(): Promise<void> {
       protein_target_met INTEGER,
       calorie_target_met INTEGER,
       adherence_score REAL,
-      notes TEXT
+      notes TEXT,
+      is_complete INTEGER NOT NULL DEFAULT 0,
+      completed_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS custom_exercises (
+      id TEXT PRIMARY KEY,
+      exercise_name TEXT NOT NULL UNIQUE,
+      muscle_group TEXT,
+      equipment TEXT,
+      exercise_type TEXT NOT NULL,
+      created_at INTEGER NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS workout_sessions (
       id TEXT PRIMARY KEY,
       date TEXT NOT NULL,
       day_type TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'planned',
       started_at INTEGER,
       ended_at INTEGER,
       duration_min INTEGER,
@@ -307,35 +329,8 @@ export async function runMigrations(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_yearly_summaries_year ON yearly_summaries(year);
   `);
 
-  // ─── Additive column migrations (safe to run on existing DBs) ───────────────
-  // SQLite doesn't support IF NOT EXISTS for ALTER TABLE ADD COLUMN, so we
-  // catch the "duplicate column" error and continue.
-  const addColumnIfMissing = async (table: string, column: string, type: string) => {
-    try {
-      await sqlite.execAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${type};`);
-    } catch {
-      // Column already exists — ignore
-    }
-  };
-
-  await addColumnIfMissing("set_logs", "duration_sec", "INTEGER");
-  await addColumnIfMissing("set_logs", "distance_km", "REAL");
-  await addColumnIfMissing("exercise_logs", "exercise_type", "TEXT");
-  await addColumnIfMissing("daily_nutrition", "updated_at", "TEXT");
-  await addColumnIfMissing("workout_sessions", "updated_at", "TEXT");
-  await addColumnIfMissing("personal_records", "updated_at", "TEXT");
-  await addColumnIfMissing("body_stats", "updated_at", "TEXT");
-  await addColumnIfMissing("recovery_logs", "updated_at", "TEXT");
-  await addColumnIfMissing("sync_tombstones", "external_id", "TEXT");
-
-  const migrationTimestamp = new Date().toISOString();
+  // Ensure the table exists before applying its additive column migration.
   await sqlite.execAsync(`
-    UPDATE daily_nutrition SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
-    UPDATE workout_sessions SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
-    UPDATE personal_records SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
-    UPDATE body_stats SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
-    UPDATE recovery_logs SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
-
     CREATE TABLE IF NOT EXISTS sync_tombstones (
       id TEXT PRIMARY KEY,
       entity_type TEXT NOT NULL,
@@ -345,6 +340,126 @@ export async function runMigrations(): Promise<void> {
       created_at TEXT NOT NULL,
       UNIQUE(entity_type, entity_id)
     );
+
+    CREATE TABLE IF NOT EXISTS recommendation_outcomes (
+      id TEXT PRIMARY KEY,
+      recommendation_id TEXT NOT NULL,
+      local_date TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      rule_version TEXT NOT NULL,
+      evidence_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(local_date, recommendation_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS domain_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      entity_version INTEGER NOT NULL,
+      schema_version INTEGER NOT NULL DEFAULT 1,
+      occurred_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL,
+      UNIQUE(entity_type, entity_id, entity_version)
+    );
+    CREATE INDEX IF NOT EXISTS idx_domain_events_type_time ON domain_events(event_type, occurred_at);
+
+    CREATE TABLE IF NOT EXISTS derived_state_invalidations (
+      id TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL REFERENCES domain_events(id),
+      projection_key TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      invalidated_at TEXT NOT NULL,
+      processed_at TEXT,
+      UNIQUE(event_id, projection_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_derived_invalidations_pending ON derived_state_invalidations(processed_at, invalidated_at);
+
+    CREATE TABLE IF NOT EXISTS app_telemetry_events (
+      id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      correlation_id TEXT,
+      occurred_at TEXT NOT NULL,
+      metadata_json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_app_telemetry_type_time ON app_telemetry_events(event_type, occurred_at);
+    CREATE INDEX IF NOT EXISTS idx_app_telemetry_severity_time ON app_telemetry_events(severity, occurred_at);
+
+    CREATE TABLE IF NOT EXISTS favorite_foods (
+      id TEXT PRIMARY KEY,
+      normalized_name TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      meal TEXT NOT NULL,
+      quantity_g REAL,
+      calories REAL NOT NULL,
+      protein_g REAL NOT NULL,
+      carbs_g REAL NOT NULL,
+      fat_g REAL NOT NULL,
+      fiber_g REAL,
+      sugar_g REAL,
+      sodium_mg REAL,
+      source TEXT NOT NULL,
+      provenance_type TEXT NOT NULL DEFAULT 'legacy_unknown',
+      provenance_json TEXT,
+      estimate_confidence REAL,
+      estimate_reviewed INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_favorite_foods_name ON favorite_foods(name);
+
+    CREATE TABLE IF NOT EXISTS repeatable_meals (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      meal TEXT NOT NULL,
+      items_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_repeatable_meals_name ON repeatable_meals(name);
+
+    CREATE TABLE IF NOT EXISTS life_os_goal_progress (
+      goal_id TEXT PRIMARY KEY,
+      status TEXT NOT NULL,
+      current_value REAL,
+      target_value REAL NOT NULL,
+      progress_percent REAL,
+      unit TEXT,
+      as_of TEXT NOT NULL,
+      evidence_json TEXT NOT NULL,
+      rule_version TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_life_os_goal_progress_status_updated ON life_os_goal_progress(status, updated_at);
+  `);
+
+  // ─── Additive column migrations (safe to run on existing DBs) ───────────────
+  // Inspect table_info before ALTER instead of swallowing arbitrary SQLite errors.
+  for (const migration of ADDITIVE_COLUMN_MIGRATIONS) {
+    const columns = await sqlite.getAllAsync(`PRAGMA table_info(${migration.table})`);
+    // Newer tables are created in later DDL below; skip their additive columns until they exist.
+    if (columns.length === 0) continue;
+    const hasColumn = columns.some(
+      (column: { name: string }) => column.name === migration.column,
+    );
+    if (!hasColumn) {
+      await sqlite.execAsync(
+        `ALTER TABLE ${migration.table} ADD COLUMN ${migration.column} ${migration.type};`,
+      );
+    }
+  }
+
+  const migrationTimestamp = new Date().toISOString();
+  await sqlite.execAsync(`
+    UPDATE daily_nutrition SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+    UPDATE workout_sessions SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+    UPDATE workout_sessions SET status = CASE WHEN ended_at IS NOT NULL THEN 'completed' WHEN started_at IS NOT NULL THEN 'in_progress' ELSE 'planned' END WHERE status IS NULL OR status = '';
+    UPDATE personal_records SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+    UPDATE body_stats SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
+    UPDATE recovery_logs SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
 
     CREATE TABLE IF NOT EXISTS sync_queue (
       id TEXT PRIMARY KEY,
@@ -366,7 +481,114 @@ export async function runMigrations(): Promise<void> {
       last_synced_at TEXT,
       last_success_at TEXT,
       last_error TEXT,
+      owner_user_id TEXT,
       updated_at TEXT NOT NULL
     );
   `);
+
+  // Persist user-selected nutrition targets and preserve every effective-date change.
+  await sqlite.execAsync(`
+    CREATE TABLE IF NOT EXISTS nutrition_profile (
+      id INTEGER PRIMARY KEY,
+      calorie_target_kcal INTEGER NOT NULL,
+      protein_target_g REAL NOT NULL,
+      carbs_target_g REAL NOT NULL,
+      fat_target_g REAL NOT NULL,
+      goal TEXT NOT NULL DEFAULT 'lose',
+      target_mode TEXT NOT NULL DEFAULT 'manual',
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS nutrition_target_history (
+      id TEXT PRIMARY KEY,
+      effective_date TEXT NOT NULL,
+      calorie_target_kcal INTEGER NOT NULL,
+      protein_target_g REAL NOT NULL,
+      carbs_target_g REAL NOT NULL,
+      fat_target_g REAL NOT NULL,
+      source TEXT NOT NULL,
+      goal TEXT,
+      maintenance_estimate_kcal INTEGER,
+      algorithm_version INTEGER,
+      explanation TEXT,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_nutrition_target_history_effective_date
+      ON nutrition_target_history(effective_date, created_at);
+
+    CREATE TABLE IF NOT EXISTS user_profile (
+      id INTEGER PRIMARY KEY,
+      age INTEGER,
+      sex TEXT,
+      height_cm REAL,
+      training_start_date TEXT,
+      current_split TEXT,
+      training_phase TEXT,
+      cardio TEXT,
+      equipment TEXT,
+      physique_goal TEXT,
+      body_fat_goal_pct REAL,
+      body_fat_goal_date TEXT,
+      updated_at TEXT NOT NULL
+    );
+  `);
+
+  // Preserve an existing profile as the first known target version if history is empty.
+  await sqlite.execAsync(`
+    INSERT INTO nutrition_target_history (
+      id, effective_date, calorie_target_kcal, protein_target_g, carbs_target_g,
+      fat_target_g, source, goal, maintenance_estimate_kcal, algorithm_version,
+      explanation, created_at
+    )
+    SELECT
+      'migration:initial-target',
+      COALESCE(date(updated_at), date('now', 'localtime')),
+      calorie_target_kcal, protein_target_g, carbs_target_g, fat_target_g,
+      'migration', goal, NULL, NULL,
+      'Imported the previously saved nutrition target profile during schema migration.',
+      updated_at
+    FROM nutrition_profile
+    WHERE id = 1 AND NOT EXISTS (SELECT 1 FROM nutrition_target_history);
+  `);
+  // Additive profile goal fields keep upgrades safe for installs already at schema v14.
+  // Existing profile values remain untouched; absent numeric goals remain unknown.
+  // Fail fast on incomplete local schema instead of allowing screens to fail later.
+  const rows = await sqlite.getAllAsync("SELECT name FROM sqlite_master WHERE type = 'table'");
+  const existingTables = new Set<string>(rows.map((row: { name: string }) => row.name));
+  const missingTables = findMissingRequiredTables(existingTables);
+  if (missingTables.length > 0) {
+    throw new Error("Local database migration incomplete. Missing tables: " + missingTables.join(", "));
+  }
+
+  // Verify additive migrations too; a table can exist while still being too old
+  // for the current Drizzle queries. All table names come from our static contract.
+  const existingColumns: Record<string, Set<string>> = {};
+  for (const table of Object.keys(REQUIRED_CORE_COLUMNS)) {
+    const columns = await sqlite.getAllAsync(`PRAGMA table_info(${table})`);
+    existingColumns[table] = new Set<string>(
+      columns.map((column: { name: string }) => column.name),
+    );
+  }
+  const missingColumns = findMissingRequiredColumns(existingColumns);
+  if (missingColumns.length > 0) {
+    throw new Error(
+      "Local database migration incomplete. Missing columns: " + missingColumns.join(", "),
+    );
+  }
+
+  // Do not certify a migrated schema while relational invariants are broken.
+  // This is checked before advancing user_version so failed upgrades can be retried.
+  const foreignKeyViolations = await sqlite.getAllAsync("PRAGMA foreign_key_check");
+  if (foreignKeyViolations.length > 0) {
+    throw new Error(
+      "Local database migration found foreign-key violations: " +
+      foreignKeyViolations.slice(0, 10).map((row: { table?: string; rowid?: number; parent?: string; fkid?: number }) =>
+        `${row.table ?? "unknown"} row ${row.rowid ?? "unknown"} references ${row.parent ?? "unknown"} (constraint ${row.fkid ?? "unknown"})`,
+      ).join("; "),
+    );
+  }
+
+  // Mark the schema current only after every required table, column and foreign key passes.
+  await sqlite.execAsync(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION};`);
 }

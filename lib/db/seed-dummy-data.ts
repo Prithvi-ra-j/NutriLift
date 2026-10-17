@@ -25,18 +25,14 @@ import {
 import uuid from "react-native-uuid";
 import { eq } from "drizzle-orm";
 import { USER_PROFILE } from "../constants/user-profile";
+import { addCalendarDays, toLocalDateKey } from "../utils/local-date";
 
 // Get dates for the last 30 days (a full month)
 function getLast30Days(): string[] {
-  const dates: string[] = [];
-  const today = new Date();
-  
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    dates.push(date.toISOString().split("T")[0]);
-  }
-  return dates;
+  const today = toLocalDateKey();
+  return Array.from({ length: 30 }, (_, index) =>
+    addCalendarDays(today, index - 29)
+  );
 }
 
 // Meal templates
