@@ -53,7 +53,7 @@ jobs:
             console.log(`- ${name}: severity=${item.severity}; direct=${item.isDirect}; range=${item.range}; fixAvailable=${JSON.stringify(item.fixAvailable)}`);
           }
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-            `### Runtime dependency audit\n\n${totals}\n\nAudit command exit code: ${audit_exit}. Review package reachability and remediation before release.\n`);
+            `### Runtime dependency audit\n\n${totals}\n\nReview package reachability and remediation before release.\n`);
           NODE
           echo "npm audit exit code: $audit_exit (report retained in job logs; audit is a triage signal, not silently treated as a build failure)"
 
