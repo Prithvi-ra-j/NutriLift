@@ -217,6 +217,17 @@ describe("runtime SQLite migrations", () => {
   it("recovers cleanly when an upgrade is interrupted after earlier DDL has committed", async () => {
     const database = new DatabaseSync(":memory:");
     try {
+      database.exec(`
+        CREATE TABLE food_logs (
+          id TEXT PRIMARY KEY, date TEXT NOT NULL, meal TEXT NOT NULL, name TEXT NOT NULL,
+          quantity_g REAL, calories REAL NOT NULL, protein_g REAL NOT NULL,
+          carbs_g REAL NOT NULL, fat_g REAL NOT NULL, source TEXT NOT NULL,
+          raw_input TEXT, created_at INTEGER NOT NULL
+        );
+        INSERT INTO food_logs
+          (id, date, meal, name, calories, protein_g, carbs_g, fat_g, source, created_at)
+        VALUES ('preserve-on-retry', '2026-10-16', 'breakfast', 'Oats', 150, 5, 27, 3, 'manual', 123);
+      `);
       const adapter = installDatabase(database);
       let failOnce = true;
       (global as any).__nutriLiftSqliteAdapter = {
@@ -242,6 +253,8 @@ describe("runtime SQLite migrations", () => {
       );
       for (const table of REQUIRED_CORE_TABLES) expect(tables.has(table)).toBe(true);
       expect(database.prepare("PRAGMA user_version").get().user_version).toBe(15);
+      expect(database.prepare("SELECT name, calories FROM food_logs WHERE id = ?").get("preserve-on-retry"))
+        .toEqual({ name: "Oats", calories: 150 });
     } finally {
       database.close();
     }
