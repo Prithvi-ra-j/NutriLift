@@ -11,8 +11,6 @@ dist/
 web-build/
 
 # Native
-/android
-/ios
 *.orig.*
 *.jks
 *.p8
@@ -69,6 +67,21 @@ coverage/
 # Debug
 .vscode/launch.json
 
+# Assets and Media
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.ico
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.mp3
+*.wav
+*.m4a
 
 # OS
 Thumbs.db
@@ -80,3 +93,5 @@ Thumbs.db
 expo-env.d.ts
 # @end expo-cli
 
+# Documentation
+docs/

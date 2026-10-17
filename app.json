@@ -8,12 +8,9 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "runtimeVersion": {
-      "policy": "fingerprint"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/4d082b22-8f1b-4d8d-abd2-dfe2c41a172b",
-      "checkAutomatically": "ON_LOAD"
+      "url": "https://u.expo.dev/4d082b22-8f1b-4d8d-abd2-dfe2c41a172b"
     },
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -58,12 +55,6 @@
         "expo-audio",
         {
           "microphonePermission": "Allow NutriLift to access your microphone for voice food logging."
-        }
-      ],
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "NutriLift scans barcodes to look up foods."
         }
       ]
     ],

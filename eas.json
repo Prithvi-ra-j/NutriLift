@@ -8,7 +8,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
       },
       "channel": "development",
       "env": {
@@ -18,7 +19,8 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       },
       "channel": "preview",
       "env": {
@@ -27,13 +29,13 @@
     },
     "production": {
       "android": {
-        "buildType": "app-bundle"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       },
       "channel": "production",
       "env": {
         "EXPO_NO_CAPABILITY_SYNC": "1"
-      },
-      "autoIncrement": true
+      }
     }
   },
   "submit": {
