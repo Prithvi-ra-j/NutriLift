@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "verify": "npm run typecheck && npm run lint && npm test -- --ci",
-    "test:migrations": "jest --runInBand lib/db/__tests__/runtime-migrations.test.ts"
+    "test:migrations": "jest --runInBand lib/db/__tests__/runtime-migrations.test.ts",
+    "postinstall": "node scripts/repair-expo-assets.js"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",
