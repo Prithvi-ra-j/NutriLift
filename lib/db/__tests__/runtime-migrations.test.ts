@@ -214,6 +214,39 @@ describe("runtime SQLite migrations", () => {
     }
   });
 
+  it("recovers cleanly when an upgrade is interrupted after earlier DDL has committed", async () => {
+    const database = new DatabaseSync(":memory:");
+    try {
+      const adapter = installDatabase(database);
+      let failOnce = true;
+      (global as any).__nutriLiftSqliteAdapter = {
+        getAllAsync: adapter.getAllAsync,
+        execAsync: async (sql: string) => {
+          if (failOnce && sql.includes("CREATE TABLE IF NOT EXISTS nutrition_profile")) {
+            failOnce = false;
+            throw new Error("simulated migration interruption");
+          }
+          await adapter.execAsync(sql);
+        },
+      };
+      const runMigrations = await loadMigrations();
+
+      await expect(runMigrations()).rejects.toThrow("simulated migration interruption");
+      // The migration runner is intentionally idempotent: retrying must complete
+      // any partially applied additive DDL without losing existing local records.
+      await runMigrations();
+
+      const tables = new Set<string>(
+        database.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all()
+          .map((row: { name: string }) => row.name),
+      );
+      for (const table of REQUIRED_CORE_TABLES) expect(tables.has(table)).toBe(true);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(15);
+    } finally {
+      database.close();
+    }
+  });
+
   it("does not downgrade a database created by a newer app version", async () => {
     const database = new DatabaseSync(":memory:");
     try {
