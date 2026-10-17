@@ -260,6 +260,37 @@ describe("runtime SQLite migrations", () => {
     }
   });
 
+  it("does not mark a migrated database current when legacy foreign-key violations remain", async () => {
+    const database = new DatabaseSync(":memory:");
+    try {
+      database.exec(`
+        PRAGMA foreign_keys = OFF;
+        CREATE TABLE workout_sessions (
+          id TEXT PRIMARY KEY, date TEXT NOT NULL, day_type TEXT NOT NULL,
+          started_at INTEGER, ended_at INTEGER, duration_min INTEGER,
+          total_volume_kg REAL, notes TEXT, rpe INTEGER
+        );
+        CREATE TABLE exercise_logs (
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL REFERENCES workout_sessions(id),
+          date TEXT NOT NULL,
+          exercise_name TEXT NOT NULL
+        );
+        INSERT INTO exercise_logs (id, session_id, date, exercise_name)
+        VALUES ('orphan-exercise', 'missing-session', '2026-10-16', 'Squat');
+      `);
+      installDatabase(database);
+      const runMigrations = await loadMigrations();
+
+      await expect(runMigrations()).rejects.toThrow(/foreign-key violations/);
+      expect(database.prepare("PRAGMA user_version").get().user_version).toBe(0);
+      expect(database.prepare("SELECT id FROM exercise_logs WHERE id = ?").get("orphan-exercise"))
+        .toEqual({ id: "orphan-exercise" });
+    } finally {
+      database.close();
+    }
+  });
+
   it("does not downgrade a database created by a newer app version", async () => {
     const database = new DatabaseSync(":memory:");
     try {
