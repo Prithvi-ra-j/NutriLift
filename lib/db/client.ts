@@ -577,6 +577,18 @@ export async function runMigrations(): Promise<void> {
     );
   }
 
-  // Mark the schema current only after every required table and column exists.
+  // Do not certify a migrated schema while relational invariants are broken.
+  // This is checked before advancing user_version so failed upgrades can be retried.
+  const foreignKeyViolations = await sqlite.getAllAsync("PRAGMA foreign_key_check");
+  if (foreignKeyViolations.length > 0) {
+    throw new Error(
+      "Local database migration found foreign-key violations: " +
+      foreignKeyViolations.slice(0, 10).map((row: { table?: string; rowid?: number; parent?: string; fkid?: number }) =>
+        `${row.table ?? "unknown"} row ${row.rowid ?? "unknown"} references ${row.parent ?? "unknown"} (constraint ${row.fkid ?? "unknown"})`,
+      ).join("; "),
+    );
+  }
+
+  // Mark the schema current only after every required table, column and foreign key passes.
   await sqlite.execAsync(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION};`);
 }
