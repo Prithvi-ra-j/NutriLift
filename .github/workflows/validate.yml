@@ -30,6 +30,33 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --legacy-peer-deps
 
+      - name: Runtime dependency audit triage
+        shell: bash
+        run: |
+          set +e
+          npm audit --omit=dev --json > "$RUNNER_TEMP/runtime-dependency-audit.json"
+          audit_exit=$?
+          node - "$RUNNER_TEMP/runtime-dependency-audit.json" <<'NODE'
+          const fs = require("node:fs");
+          const reportPath = process.argv[2];
+          let report;
+          try { report = JSON.parse(fs.readFileSync(reportPath, "utf8")); }
+          catch (error) {
+            console.error("Could not parse npm audit output:", error.message);
+            process.exit(1);
+          }
+          const counts = report.metadata?.vulnerabilities ?? {};
+          const totals = ["critical", "high", "moderate", "low", "info"].map((severity) =>
+            `${severity}=${counts[severity] ?? 0}`).join(", ");
+          console.log(`Production dependency advisory summary: ${totals}`);
+          for (const [name, item] of Object.entries(report.vulnerabilities ?? {})) {
+            console.log(`- ${name}: severity=${item.severity}; direct=${item.isDirect}; range=${item.range}; fixAvailable=${JSON.stringify(item.fixAvailable)}`);
+          }
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+            `### Runtime dependency audit\n\n${totals}\n\nAudit command exit code: ${audit_exit}. Review package reachability and remediation before release.\n`);
+          NODE
+          echo "npm audit exit code: $audit_exit (report retained in job logs; audit is a triage signal, not silently treated as a build failure)"
+
       - name: TypeScript check
         run: npm run typecheck
 
