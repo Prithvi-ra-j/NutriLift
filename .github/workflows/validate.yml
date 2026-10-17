@@ -31,7 +31,10 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: TypeScript check
-        run: npx tsc --noEmit --pretty false
+        run: npm run typecheck
+
+      - name: SQLite migration contract and upgrade tests
+        run: npm run test:migrations
 
       - name: Jest tests
         run: npm test -- --passWithNoTests
