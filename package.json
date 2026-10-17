@@ -10,7 +10,10 @@
     "build:web": "expo export -p web",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "verify": "npm run typecheck && npm run lint && npm test -- --ci"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",
