@@ -363,7 +363,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
               <td>${escapeHtml(String(set.reps))}</td>
               <td>${escapeHtml(String(set.rpe || "—"))}</td>
               <td>${escapeHtml(String(volume.toFixed(0)))}kg</td>
-              <td>${type}${set.is_pr ? '<span class="pr-badge">PR</span>' : ''}</td>
+              <td>${escapeHtml(String(type))}${set.is_pr ? '<span class="pr-badge">PR</span>' : ''}</td>
             </tr>`;
         }
         
