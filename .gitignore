@@ -95,3 +95,6 @@ expo-env.d.ts
 
 # Documentation
 docs/
+
+# Local-only PII patterns used by tools/check-no-pii.sh
+tools/pii-patterns.local
