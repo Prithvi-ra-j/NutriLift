@@ -8,9 +8,12 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "runtimeVersion": "1.0.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
     "updates": {
-      "url": "https://u.expo.dev/4d082b22-8f1b-4d8d-abd2-dfe2c41a172b"
+      "url": "https://u.expo.dev/4d082b22-8f1b-4d8d-abd2-dfe2c41a172b",
+      "checkAutomatically": "ON_LOAD"
     },
     "splash": {
       "image": "./assets/splash-icon.png",
