@@ -34,6 +34,9 @@ async function getEncryptionKey(): Promise<Uint8Array> {
   }
 
   const bytes = new Uint8Array(32);
+  if (typeof crypto === "undefined" || typeof crypto.getRandomValues !== "function") {
+    throw new Error("Secure random values are unavailable; cannot create a session encryption key.");
+  }
   crypto.getRandomValues(bytes);
   await SecureStore.setItemAsync(ENCRYPTION_KEY_NAME, btoa(String.fromCharCode(...bytes)));
   return bytes;
