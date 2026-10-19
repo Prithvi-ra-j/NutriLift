@@ -11,7 +11,7 @@ type CompletionRequest = {
 };
 
 async function createCompletion(request: CompletionRequest): Promise<unknown> {
-  if (!isSupabaseConfigured) {
+  if (!isSupabaseConfigured || !supabase) {
     throw new Error("AI is unavailable until Supabase is configured.");
   }
 
