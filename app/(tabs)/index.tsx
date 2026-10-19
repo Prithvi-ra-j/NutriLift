@@ -14,7 +14,7 @@ import { useUIStore } from "../../lib/stores/ui.store";
 import { getDailyNutrition, getFoodLogsForDate, getLast7DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { getRecoveryLog } from "../../lib/db/queries/recovery";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
 import { DAY_TYPES, type DayType } from "../../lib/constants/exercises";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
@@ -22,6 +22,7 @@ import { MacroRing } from "../../components/ui/MacroRing";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -52,11 +53,12 @@ interface AdherenceDot {
 }
 
 export default function DashboardScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
   const { nutrition, session, setNutrition, setSession, setFoodLogs } = useTodayStore();
   const { coachInsight } = useUIStore();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTargets, setActiveTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
   const [refreshing, setRefreshing] = useState(false);
   const [adherenceDots, setAdherenceDots] = useState<AdherenceDot[]>([]);
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
@@ -86,15 +88,17 @@ export default function DashboardScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [nutritionData, foodLogsData, sessionsData, last7Days, recoveryData] =
+      const [nutritionData, foodLogsData, sessionsData, last7Days, recoveryData, targets] =
         await Promise.all([
           getDailyNutrition(today),
           getFoodLogsForDate(today),
           getSessionsForDate(today),
           getLast7DaysNutrition(),
           getRecoveryLog(today),
+          getNutritionTargets(),
         ]);
 
+      setActiveTargets(targets);
       setNutrition(nutritionData);
       setFoodLogs(foodLogsData);
       
@@ -117,7 +121,7 @@ export default function DashboardScreen() {
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split("T")[0];
+        const dateStr = toLocalDateKey(d);
         const dayData = last7Days.find((n) => n.date === dateStr);
 
         let status: AdherenceDot["status"] = "empty";
@@ -161,11 +165,11 @@ export default function DashboardScreen() {
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
 
-  const caloriePct = Math.min(100, (calories / USER_PROFILE.targets.calories) * 100);
+  const caloriePct = Math.min(100, (calories / activeTargets.calories) * 100);
 
   // Protein pace
   const mealsLogged = 2; // simplified — would count distinct meals
-  const proteinRemaining = Math.max(0, USER_PROFILE.targets.protein_g - protein);
+  const proteinRemaining = Math.max(0, activeTargets.protein_g - protein);
   const mealsLeft = Math.max(1, 4 - mealsLogged);
   const proteinPerMeal = proteinRemaining / mealsLeft;
 
@@ -201,7 +205,7 @@ export default function DashboardScreen() {
               {formatDate(new Date())}
             </Text>
             <Text style={{ color: M3.colors.onSurface, fontSize: 26, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-              {getGreeting()}, {USER_PROFILE.name}
+              {getGreeting()}, there
             </Text>
           </View>
           <View
@@ -217,7 +221,7 @@ export default function DashboardScreen() {
             }}
           >
             <Text style={{ color: M3.colors.primary, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
-              {USER_PROFILE.name?.charAt(0).toUpperCase() ?? "N"}
+              {"N"}
             </Text>
           </View>
         </View>
@@ -230,11 +234,11 @@ export default function DashboardScreen() {
               protein={protein}
               carbs={carbs}
               fat={fat}
-              proteinTarget={USER_PROFILE.targets.protein_g}
-              carbsTarget={USER_PROFILE.targets.carbs_g}
-              fatTarget={USER_PROFILE.targets.fat_g}
+              proteinTarget={activeTargets.protein_g}
+              carbsTarget={activeTargets.carbs_g}
+              fatTarget={activeTargets.fat_g}
               calories={calories}
-              caloriesTarget={USER_PROFILE.targets.calories}
+              caloriesTarget={activeTargets.calories}
             />
 
             {/* Macro bars */}
@@ -242,19 +246,19 @@ export default function DashboardScreen() {
               <MacroBar
                 label="Protein"
                 current={protein}
-                target={USER_PROFILE.targets.protein_g}
+                target={activeTargets.protein_g}
                 color={M3.colors.secondary}
               />
               <MacroBar
                 label="Carbs"
                 current={carbs}
-                target={USER_PROFILE.targets.carbs_g}
+                target={activeTargets.carbs_g}
                 color={M3.colors.success}
               />
               <MacroBar
                 label="Fat"
                 current={fat}
-                target={USER_PROFILE.targets.fat_g}
+                target={activeTargets.fat_g}
                 color={M3.macroColors.fat}
               />
             </View>
@@ -264,8 +268,8 @@ export default function DashboardScreen() {
         {/* ── Stats Row ── */}
         <View style={{ flexDirection: "row", gap: 12 }}>
           {[
-            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${USER_PROFILE.targets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
-            { label: "Calories", value: calories.toFixed(0), sub: `/ ${USER_PROFILE.targets.calories}`, color: M3.colors.primary, icon: "zap" as const },
+            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${activeTargets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
+            { label: "Calories", value: calories.toFixed(0), sub: `/ ${activeTargets.calories}`, color: M3.colors.primary, icon: "zap" as const },
             { label: "Volume", value: session?.total_volume_kg ? `${(session.total_volume_kg / 1000).toFixed(1)}t` : "—", sub: "today", color: M3.colors.tertiary, icon: "trending-up" as const },
             { label: "Recovery", value: recoveryScore ? `${recoveryScore}` : "—", sub: "/ 100", color: M3.colors.success, icon: "heart" as const },
           ].map((stat) => (

@@ -4,7 +4,7 @@ import { safeGroqCall } from "../safeCall";
 
 export interface WeeklyContext {
   weekRange: string;
-  goal: string;
+  goal: string | null;
   targetCalories: number;
   targetProtein: number;
   days: {
@@ -14,6 +14,7 @@ export interface WeeklyContext {
     carbs: number;
     fat: number;
     logged: boolean;
+    complete: boolean;
   }[];
   workouts: {
     date: string;
@@ -21,10 +22,10 @@ export interface WeeklyContext {
     completed: boolean;
     exercises?: { name: string; sets: number; reps: number; weight: number }[];
   }[];
-  bodyWeight: { date: string; weight: number }[];
-  currentWeight: number;
-  startWeight: number;
-  targetWeight: number;
+  bodyWeight: { date: string; weight: number | null }[];
+  currentWeight: number | null;
+  startWeight: number | null;
+  targetWeight: number | null;
 }
 
 export interface WeeklyReport {
@@ -65,7 +66,9 @@ Respond with valid JSON only using this exact schema:
 }
 
 Rules:
-- Every claim must reference actual numbers from the data
+- Every claim must reference actual numbers from the data when available
+- If a target, goal, weight, or completion field is null/unknown, explicitly say it is unavailable; never infer a missing value
+- A row being logged does not mean the day was explicitly marked complete; use the complete flag
 - Be specific: "Your protein averaged 138g — 17g short of your 155g target" not "protein was a bit low"
 - Identify the #1 bottleneck clearly
 - No generic advice — everything must be personalized to their data

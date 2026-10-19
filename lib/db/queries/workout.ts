@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { eq, and, gte, lte, desc, sql } from "drizzle-orm";
 import { db } from "../client";
 import {
@@ -17,6 +16,10 @@ import {
   type CustomExercise,
   type NewCustomExercise,
 } from "../schema";
+import { toLocalDateKey } from "../../utils/local-date";
+import { appendDomainEvent } from "./domain-events";
+import { enqueuePersonalRecord, enqueuePersonalRecordTombstone, enqueueWorkoutSession } from "./sync-outbox";
+import { assertWorkoutStatusTransition, validateWorkoutSetInput, type WorkoutSessionStatus } from "../../workout/workout-validation";
 
 // ─── Epley 1RM Formula ────────────────────────────────────────────────────────
 export function calculateEpley1RM(weight_kg: number, reps: number): number {
@@ -58,14 +61,60 @@ export async function getSessionsInRange(
 export const getSessionsForDateRange = getSessionsInRange;
 
 export async function insertSession(session: NewWorkoutSession): Promise<void> {
-  await db.insert(workoutSessions).values({ ...session, updated_at: new Date().toISOString() });
+  const status = session.status ?? "planned";
+  if (status !== "planned" && status !== "in_progress") throw new Error("A new workout session must be planned or in progress.");
+  await db.transaction(async (tx: any) => {
+    const now = new Date().toISOString();
+    await tx.insert(workoutSessions).values({ ...session, status, updated_at: now });
+    await touchAndEnqueueSession(tx, session.id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${session.id}:created`, eventType: status === "in_progress" ? "workout.session.started" : "workout.session.updated", entityType: "workout_session", entityId: session.id, entityVersion: eventVersion, occurredAt: now, metadata: { date: session.date, status } });
+  });
+}
+
+export async function setSessionStatus(id: string, status: WorkoutSessionStatus): Promise<void> {
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(workoutSessions).where(eq(workoutSessions.id, id)).limit(1);
+    const session = rows[0] as WorkoutSession | undefined;
+    if (!session) throw new Error("Workout session not found.");
+    const current = (session.status ?? "planned") as WorkoutSessionStatus;
+    assertWorkoutStatusTransition(current, status);
+    if (current === status) return;
+
+    const now = Math.floor(Date.now() / 1000);
+    const updates: Partial<NewWorkoutSession> = { status, updated_at: new Date().toISOString() };
+    if (status === "in_progress" && session.started_at == null) updates.started_at = now;
+    if (status === "completed" || status === "cancelled") {
+      updates.ended_at = now;
+      updates.duration_min = session.started_at == null ? 0 : Math.max(0, Math.round((now - session.started_at) / 60));
+    }
+    await tx.update(workoutSessions).set(updates).where(eq(workoutSessions.id, id));
+    await touchAndEnqueueSession(tx, id);
+    const eventVersion = Date.now();
+    const eventType = status === "completed" ? "workout.session.completed" : status === "cancelled" ? "workout.session.cancelled" : status === "in_progress" ? "workout.session.started" : "workout.session.updated";
+    await appendDomainEvent(tx, { id: `workout-session:${id}:${status}:${eventVersion}`, eventType, entityType: "workout_session", entityId: id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: session.date, status } });
+  });
 }
 
 export async function updateSession(
   id: string,
   updates: Partial<NewWorkoutSession>
 ): Promise<void> {
-  await db.update(workoutSessions).set({ ...updates, updated_at: new Date().toISOString() }).where(eq(workoutSessions.id, id));
+  const { id: _ignoredId, status: _ignoredStatus, ...mutableUpdates } = updates;
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(workoutSessions).where(eq(workoutSessions.id, id)).limit(1);
+    const session = rows[0] as WorkoutSession | undefined;
+    if (!session) throw new Error("Workout session not found.");
+    const status = (session.status ?? "planned") as WorkoutSessionStatus;
+    if (status === "completed" || status === "cancelled") {
+      throw new Error("This workout is " + status + " and can no longer be edited.");
+    }
+    const updatedAt = new Date().toISOString();
+    await tx.update(workoutSessions).set({ ...mutableUpdates, updated_at: updatedAt }).where(eq(workoutSessions.id, id));
+    await touchAndEnqueueSession(tx, id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${id}:updated:${eventVersion}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: id, entityVersion: eventVersion, occurredAt: updatedAt, metadata: { date: session.date } });
+  });
 }
 
 export async function getSessionById(id: string): Promise<WorkoutSession | null> {
@@ -86,21 +135,73 @@ export async function getExercisesForSession(sessionId: string): Promise<Exercis
     .orderBy(exerciseLogs.order_in_session);
 }
 
+async function assertSessionWritableInTransaction(tx: any, sessionId: string): Promise<WorkoutSession> {
+  const rows = await tx.select().from(workoutSessions).where(eq(workoutSessions.id, sessionId)).limit(1);
+  const session = rows[0] as WorkoutSession | undefined;
+  if (!session) throw new Error("Workout session not found.");
+  const status = session.status ?? "planned";
+  if (status === "completed" || status === "cancelled") {
+    throw new Error("This workout is " + status + " and can no longer be edited.");
+  }
+  return session;
+}
+
 export async function insertExerciseLog(log: NewExerciseLog): Promise<void> {
-  await db.insert(exerciseLogs).values(log);
+  await db.transaction(async (tx: any) => {
+    await assertSessionWritableInTransaction(tx, log.session_id);
+    await tx.insert(exerciseLogs).values(log);
+    await touchAndEnqueueSession(tx, log.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${log.session_id}:exercise-added:${log.id}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: log.session_id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: log.date } });
+  });
 }
 
 export async function updateExerciseLog(
   id: string,
   updates: Partial<NewExerciseLog>
 ): Promise<void> {
-  await db.update(exerciseLogs).set(updates).where(eq(exerciseLogs.id, id));
+  const { id: _ignoredId, session_id: _ignoredSession, date: _ignoredDate, ...mutableUpdates } = updates;
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(exerciseLogs).where(eq(exerciseLogs.id, id)).limit(1);
+    const existing = rows[0] as ExerciseLog | undefined;
+    if (!existing) throw new Error("Exercise log not found.");
+    await assertSessionWritableInTransaction(tx, existing.session_id);
+    const exerciseNameChanged = Boolean(mutableUpdates.exercise_name && mutableUpdates.exercise_name !== existing.exercise_name);
+    const previousOldPRRows = exerciseNameChanged ? await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, existing.exercise_name)).limit(1) : [];
+    const previousNewPRRows = exerciseNameChanged ? await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, mutableUpdates.exercise_name!)).limit(1) : [];
+    await tx.update(exerciseLogs).set(mutableUpdates).where(eq(exerciseLogs.id, id));
+    if (exerciseNameChanged) {
+      await recomputePersonalRecord(tx, existing.exercise_name);
+      await recomputePersonalRecord(tx, mutableUpdates.exercise_name!);
+      await enqueuePersonalRecordState(tx, existing.exercise_name, previousOldPRRows[0] as PersonalRecord | undefined);
+      await enqueuePersonalRecordState(tx, mutableUpdates.exercise_name!, previousNewPRRows[0] as PersonalRecord | undefined);
+    }
+    if (mutableUpdates.exercise_type) {
+      await updateSessionVolumeForSession(tx, existing.session_id);
+    }
+    await touchAndEnqueueSession(tx, existing.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${existing.session_id}:exercise-updated:${id}:${eventVersion}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: existing.session_id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: existing.date } });
+  });
 }
 
 export async function deleteExerciseLog(id: string): Promise<void> {
-  // Delete sets first
-  await db.delete(setLogs).where(eq(setLogs.exercise_log_id, id));
-  await db.delete(exerciseLogs).where(eq(exerciseLogs.id, id));
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(exerciseLogs).where(eq(exerciseLogs.id, id)).limit(1);
+    const existing = rows[0] as ExerciseLog | undefined;
+    if (!existing) return;
+    await assertSessionWritableInTransaction(tx, existing.session_id);
+    const previousPRRows = await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, existing.exercise_name)).limit(1);
+    const previousPR = previousPRRows[0] as PersonalRecord | undefined;
+    await tx.delete(setLogs).where(eq(setLogs.exercise_log_id, id));
+    await tx.delete(exerciseLogs).where(eq(exerciseLogs.id, id));
+    await recomputePersonalRecord(tx, existing.exercise_name);
+    await enqueuePersonalRecordState(tx, existing.exercise_name, previousPR);
+    await updateSessionVolumeForSession(tx, existing.session_id);
+    await touchAndEnqueueSession(tx, existing.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-session:${existing.session_id}:exercise-deleted:${id}:${eventVersion}`, eventType: "workout.session.updated", entityType: "workout_session", entityId: existing.session_id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: existing.date } });
+  });
 }
 
 // ─── Set Log Queries ──────────────────────────────────────────────────────────
@@ -113,20 +214,53 @@ export async function getSetsForExercise(exerciseLogId: string): Promise<SetLog[
     .orderBy(setLogs.set_number);
 }
 
-export async function insertSetLog(set: NewSetLog): Promise<{ isPR: boolean }> {
-  // Check for PR before inserting
-  const isPR = await checkAndUpdatePR(set);
-  await db.insert(setLogs).values({ ...set, is_pr: isPR ? 1 : 0 });
-
-  // Update session volume
-  await updateSessionVolume(set.exercise_log_id);
-
-  return { isPR };
+export async function insertSetLog(set: NewSetLog): Promise<{ isPR: boolean; duplicate?: boolean }> {
+  validateWorkoutSetInput(set);
+  return db.transaction(async (tx: any) => {
+    const exerciseRows = await tx.select().from(exerciseLogs).where(eq(exerciseLogs.id, set.exercise_log_id)).limit(1);
+    const exercise = exerciseRows[0] as ExerciseLog | undefined;
+    if (!exercise) throw new Error("Exercise log not found.");
+    await assertSessionWritableInTransaction(tx, exercise.session_id);
+    const existing = await tx.select().from(setLogs).where(eq(setLogs.id, set.id)).limit(1);
+    if (existing[0]) {
+      if (existing[0].exercise_log_id !== set.exercise_log_id) {
+        throw new Error("Set ID already belongs to a different exercise.");
+      }
+      return { isPR: Boolean(existing[0].is_pr), duplicate: true };
+    }
+    const previousPRRows = await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, exercise.exercise_name)).limit(1);
+    const previousPR = previousPRRows[0] as PersonalRecord | undefined;
+    const isPR = await checkAndUpdatePR(set, tx);
+    await tx.insert(setLogs).values({ ...set, is_pr: isPR ? 1 : 0 });
+    if (isPR) await enqueuePersonalRecordState(tx, exercise.exercise_name, previousPR);
+    await updateSessionVolumeForSession(tx, exercise.session_id);
+    await touchAndEnqueueSession(tx, exercise.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-set:${set.id}:recorded`, eventType: "workout.set.recorded", entityType: "workout_set", entityId: set.id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: exercise.date, sessionId: exercise.session_id } });
+    return { isPR };
+  });
 }
 
 export async function deleteSetLog(id: string, exerciseLogId: string): Promise<void> {
-  await db.delete(setLogs).where(eq(setLogs.id, id));
-  await updateSessionVolume(exerciseLogId);
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(setLogs).where(eq(setLogs.id, id)).limit(1);
+    const set = rows[0] as SetLog | undefined;
+    if (!set) return;
+    if (set.exercise_log_id !== exerciseLogId) throw new Error("Set does not belong to this exercise.");
+    const exerciseRows = await tx.select().from(exerciseLogs).where(eq(exerciseLogs.id, exerciseLogId)).limit(1);
+    const exercise = exerciseRows[0] as ExerciseLog | undefined;
+    if (!exercise) throw new Error("Exercise log not found.");
+    await assertSessionWritableInTransaction(tx, exercise.session_id);
+    const previousPRRows = await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, exercise.exercise_name)).limit(1);
+    const previousPR = previousPRRows[0] as PersonalRecord | undefined;
+    await tx.delete(setLogs).where(eq(setLogs.id, id));
+    await recomputePersonalRecord(tx, exercise.exercise_name);
+    await enqueuePersonalRecordState(tx, exercise.exercise_name, previousPR);
+    await updateSessionVolumeForSession(tx, exercise.session_id);
+    await touchAndEnqueueSession(tx, exercise.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-set:${id}:deleted:${eventVersion}`, eventType: "workout.set.deleted", entityType: "workout_set", entityId: id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: exercise.date, sessionId: exercise.session_id } });
+  });
 }
 
 export async function updateSetLog(
@@ -134,113 +268,139 @@ export async function updateSetLog(
   updates: Partial<NewSetLog>,
   exerciseLogId: string
 ): Promise<void> {
-  await db.update(setLogs).set(updates).where(eq(setLogs.id, id));
-  await updateSessionVolume(exerciseLogId);
+  const { id: _ignoredId, exercise_log_id: _ignoredExerciseId, ...mutableUpdates } = updates;
+  await db.transaction(async (tx: any) => {
+    const rows = await tx.select().from(setLogs).where(eq(setLogs.id, id)).limit(1);
+    const existing = rows[0] as SetLog | undefined;
+    if (!existing) throw new Error("Set log not found.");
+    if (existing.exercise_log_id !== exerciseLogId) throw new Error("Set does not belong to this exercise.");
+    const exerciseRows = await tx.select().from(exerciseLogs).where(eq(exerciseLogs.id, exerciseLogId)).limit(1);
+    const exercise = exerciseRows[0] as ExerciseLog | undefined;
+    if (!exercise) throw new Error("Exercise log not found.");
+    await assertSessionWritableInTransaction(tx, exercise.session_id);
+    const next = { ...existing, ...mutableUpdates } as SetLog;
+    validateWorkoutSetInput(next as NewSetLog);
+    const previousPRRows = await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, exercise.exercise_name)).limit(1);
+    const previousPR = previousPRRows[0] as PersonalRecord | undefined;
+    await tx.update(setLogs).set(mutableUpdates).where(eq(setLogs.id, id));
+    await recomputePersonalRecord(tx, exercise.exercise_name);
+    await enqueuePersonalRecordState(tx, exercise.exercise_name, previousPR);
+    await updateSessionVolumeForSession(tx, exercise.session_id);
+    await touchAndEnqueueSession(tx, exercise.session_id);
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, { id: `workout-set:${id}:updated:${eventVersion}`, eventType: "workout.set.updated", entityType: "workout_set", entityId: id, entityVersion: eventVersion, occurredAt: new Date(eventVersion).toISOString(), metadata: { date: exercise.date, sessionId: exercise.session_id } });
+  });
 }
 
 // ─── Volume Calculation ───────────────────────────────────────────────────────
 
-async function updateSessionVolume(exerciseLogId: string): Promise<void> {
-  const exercise = await db
-    .select()
-    .from(exerciseLogs)
-    .where(eq(exerciseLogs.id, exerciseLogId));
-
-  if (!exercise[0]) return;
-
-  const sessionId = exercise[0].session_id;
-
-  // Get all exercises in session
-  const exercises = await getExercisesForSession(sessionId);
+async function updateSessionVolumeForSession(tx: any, sessionId: string): Promise<void> {
+  const exercises = await tx.select().from(exerciseLogs).where(eq(exerciseLogs.session_id, sessionId));
   let totalVolume = 0;
-
-  for (const ex of exercises) {
-    // Only weight_reps exercises contribute to volume
-    const exType = ex.exercise_type ?? "weight_reps";
-    if (exType !== "weight_reps") continue;
-
-    const sets = await getSetsForExercise(ex.id);
-    for (const set of sets) {
-      if (!set.is_warmup) {
-        totalVolume += set.weight_kg * set.reps;
-      }
+  for (const exercise of exercises as ExerciseLog[]) {
+    if ((exercise.exercise_type ?? "weight_reps") !== "weight_reps") continue;
+    const sets = await tx.select().from(setLogs).where(eq(setLogs.exercise_log_id, exercise.id));
+    for (const set of sets as SetLog[]) {
+      if (!set.is_warmup) totalVolume += set.weight_kg * set.reps;
     }
   }
-
-  await db
-    .update(workoutSessions)
+  await tx.update(workoutSessions)
     .set({ total_volume_kg: totalVolume, updated_at: new Date().toISOString() })
     .where(eq(workoutSessions.id, sessionId));
 }
 
-// ─── PR Detection ─────────────────────────────────────────────────────────────
+async function touchAndEnqueueSession(tx: any, sessionId: string): Promise<void> {
+  const updatedAt = new Date().toISOString();
+  await tx.update(workoutSessions).set({ updated_at: updatedAt }).where(eq(workoutSessions.id, sessionId));
+  const rows = await tx.select().from(workoutSessions).where(eq(workoutSessions.id, sessionId)).limit(1);
+  if (rows[0]) await enqueueWorkoutSession(tx, rows[0] as WorkoutSession);
+}
 
-async function checkAndUpdatePR(set: NewSetLog): Promise<boolean> {
+async function enqueuePersonalRecordState(tx: any, exerciseName: string, previous?: PersonalRecord): Promise<void> {
+  const rows = await tx.select().from(personalRecords).where(eq(personalRecords.exercise_name, exerciseName)).limit(1);
+  const current = rows[0] as PersonalRecord | undefined;
+  if (previous && (!current || previous.achieved_date !== current.achieved_date)) {
+    await enqueuePersonalRecordTombstone(tx, previous, new Date().toISOString());
+  }
+  if (current) await enqueuePersonalRecord(tx, current);
+}
+
+async function checkAndUpdatePR(set: NewSetLog, executor: any = db): Promise<boolean> {
   if (set.is_warmup) return false;
+  const exerciseRows = await executor.select().from(exerciseLogs)
+    .where(eq(exerciseLogs.id, set.exercise_log_id)).limit(1);
+  const exercise = exerciseRows[0] as ExerciseLog | undefined;
+  if (!exercise) return false;
 
-  // Get exercise name
-  const exercise = await db
-    .select()
-    .from(exerciseLogs)
-    .where(eq(exerciseLogs.id, set.exercise_log_id));
-
-  if (!exercise[0]) return false;
-
-  const exerciseName = exercise[0].exercise_name;
   const current1RM = calculateEpley1RM(set.weight_kg, set.reps);
   const currentVolume = set.weight_kg * set.reps;
+  const existing = await executor.select().from(personalRecords)
+    .where(eq(personalRecords.exercise_name, exercise.exercise_name)).limit(1);
+  const isPR = !existing[0] ||
+    set.weight_kg > existing[0].best_weight_kg ||
+    (set.weight_kg === existing[0].best_weight_kg && set.reps > (existing[0].best_reps_at_best_weight ?? 0));
+  if (!isPR) return false;
 
-  const existing = await db
-    .select()
-    .from(personalRecords)
-    .where(eq(personalRecords.exercise_name, exerciseName));
-
-  const today = new Date().toISOString().split("T")[0];
-
-  if (!existing[0]) {
-    // First time logging this exercise — it's a PR by default
-    await db.insert(personalRecords).values({
-      exercise_name: exerciseName,
-      best_weight_kg: set.weight_kg,
-      best_reps_at_best_weight: set.reps,
-      best_1rm_estimated: current1RM,
-      best_volume_single_set: currentVolume,
-      achieved_date: today,
-      previous_best_kg: null,
-      improvement_pct: null,
-      updated_at: new Date().toISOString(),
-    });
-    return true;
+  const previous = existing[0] as PersonalRecord | undefined;
+  const record = {
+    exercise_name: exercise.exercise_name,
+    best_weight_kg: set.weight_kg,
+    best_reps_at_best_weight: set.reps,
+    best_1rm_estimated: current1RM,
+    best_volume_single_set: currentVolume,
+    achieved_date: exercise.date,
+    previous_best_kg: previous?.best_weight_kg ?? null,
+    improvement_pct: previous && previous.best_weight_kg > 0
+      ? ((set.weight_kg - previous.best_weight_kg) / previous.best_weight_kg) * 100
+      : null,
+    updated_at: new Date().toISOString(),
+  };
+  if (previous) {
+    await executor.update(personalRecords).set(record)
+      .where(eq(personalRecords.exercise_name, exercise.exercise_name));
+  } else {
+    await executor.insert(personalRecords).values(record);
   }
+  return true;
+}
 
-  const pr = existing[0];
-  const isPR =
-    set.weight_kg > pr.best_weight_kg ||
-    (set.weight_kg === pr.best_weight_kg &&
-      set.reps > (pr.best_reps_at_best_weight ?? 0));
-
-  if (isPR) {
-    const improvementPct =
-      pr.best_weight_kg > 0
-        ? ((set.weight_kg - pr.best_weight_kg) / pr.best_weight_kg) * 100
-        : 0;
-
-    await db
-      .update(personalRecords)
-      .set({
-        best_weight_kg: set.weight_kg,
-        best_reps_at_best_weight: set.reps,
-        best_1rm_estimated: current1RM,
-        best_volume_single_set: currentVolume,
-        achieved_date: today,
-        previous_best_kg: pr.best_weight_kg,
-        improvement_pct: improvementPct,
-        updated_at: new Date().toISOString(),
-      })
-      .where(eq(personalRecords.exercise_name, exerciseName));
+/** Rebuild the current best from surviving sets after a correction or deletion. */
+async function recomputePersonalRecord(tx: any, exerciseName: string): Promise<void> {
+  const exerciseRows = await tx.select().from(exerciseLogs)
+    .where(eq(exerciseLogs.exercise_name, exerciseName));
+  const candidates: Array<{ exercise: ExerciseLog; set: SetLog }> = [];
+  for (const exercise of exerciseRows as ExerciseLog[]) {
+    const sets = await tx.select().from(setLogs).where(eq(setLogs.exercise_log_id, exercise.id));
+    for (const set of sets as SetLog[]) {
+      if (!set.is_warmup) candidates.push({ exercise, set });
+    }
   }
-
-  return isPR;
+  const oldRows = await tx.select().from(personalRecords)
+    .where(eq(personalRecords.exercise_name, exerciseName)).limit(1);
+  const old = oldRows[0] as PersonalRecord | undefined;
+  if (candidates.length === 0) {
+    if (old) await tx.delete(personalRecords).where(eq(personalRecords.exercise_name, exerciseName));
+    return;
+  }
+  candidates.sort((a, b) =>
+    b.set.weight_kg - a.set.weight_kg ||
+    b.set.reps - a.set.reps ||
+    a.exercise.date.localeCompare(b.exercise.date),
+  );
+  const best = candidates[0];
+  const record = {
+    exercise_name: exerciseName,
+    best_weight_kg: best.set.weight_kg,
+    best_reps_at_best_weight: best.set.reps,
+    best_1rm_estimated: calculateEpley1RM(best.set.weight_kg, best.set.reps),
+    best_volume_single_set: best.set.weight_kg * best.set.reps,
+    achieved_date: best.exercise.date,
+    previous_best_kg: old?.best_weight_kg ?? null,
+    improvement_pct: null,
+    updated_at: new Date().toISOString(),
+  };
+  if (old) await tx.update(personalRecords).set(record).where(eq(personalRecords.exercise_name, exerciseName));
+  else await tx.insert(personalRecords).values(record);
 }
 
 // ─── PR Queries ───────────────────────────────────────────────────────────────
@@ -269,16 +429,28 @@ export async function checkDoubleProgression(
   exerciseName: string
 ): Promise<DoubleProgressionStatus> {
   // Get last 2 sessions where this exercise was logged
-  const recentExercises = await db
+  const exerciseRows = await db
     .select({
       session_id: exerciseLogs.session_id,
       date: exerciseLogs.date,
       exercise_log_id: exerciseLogs.id,
     })
     .from(exerciseLogs)
-    .where(eq(exerciseLogs.exercise_name, exerciseName))
+    .innerJoin(workoutSessions, eq(exerciseLogs.session_id, workoutSessions.id))
+    .where(and(
+      eq(exerciseLogs.exercise_name, exerciseName),
+      eq(workoutSessions.status, "completed"),
+    ))
     .orderBy(desc(exerciseLogs.date))
-    .limit(2);
+    .limit(50);
+  // One exercise can appear more than once in a session; progression needs two
+  // distinct completed sessions, not two rows from the same session.
+  const seenSessions = new Set<string>();
+  const recentExercises = exerciseRows.filter((row: { session_id: string }) => {
+    if (seenSessions.has(row.session_id)) return false;
+    seenSessions.add(row.session_id);
+    return true;
+  }).slice(0, 2);
 
   if (recentExercises.length < 2) {
     return {
@@ -289,7 +461,7 @@ export async function checkDoubleProgression(
   }
 
   const sessionData = await Promise.all(
-    recentExercises.map(async (ex) => {
+    recentExercises.map(async (ex: { exercise_log_id: string; date: string }) => {
       const sets = await getSetsForExercise(ex.exercise_log_id);
       const workingSets = sets.filter((s) => !s.is_warmup);
       const allHit12 = workingSets.length >= 3 && workingSets.every((s) => s.reps >= 12);
@@ -316,7 +488,11 @@ export async function getLastWeightForExercise(
   const recent = await db
     .select({ exercise_log_id: exerciseLogs.id })
     .from(exerciseLogs)
-    .where(eq(exerciseLogs.exercise_name, exerciseName))
+    .innerJoin(workoutSessions, eq(exerciseLogs.session_id, workoutSessions.id))
+    .where(and(
+      eq(exerciseLogs.exercise_name, exerciseName),
+      eq(workoutSessions.status, "completed"),
+    ))
     .orderBy(desc(exerciseLogs.date))
     .limit(1);
 
@@ -350,6 +526,7 @@ export async function getPreviousSessionForDayType(
     .where(
       and(
         eq(workoutSessions.day_type, dayType),
+        eq(workoutSessions.status, "completed"),
         sql`${workoutSessions.date} < ${beforeDate}`
       )
     )

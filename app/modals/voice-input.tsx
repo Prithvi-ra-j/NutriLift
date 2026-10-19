@@ -3,15 +3,16 @@ import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } fr
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useAudioRecorder, RecordingPresets } from "expo-audio";
+import { AudioModule, useAudioRecorder, RecordingPresets } from "expo-audio";
 import { transcribeAudioMultilingual } from "../../lib/groq/transcribeAudio";
 import { parseFoodFromVoice } from "../../lib/groq/parseFood";
 import { isGroqConfigured } from "../../lib/groq/client";
-import { insertFoodLog } from "../../lib/db/queries/nutrition";
+import { insertFoodLogs } from "../../lib/db/queries/nutrition";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 
 export default function VoiceInputModal() {
   const [isRecording, setIsRecording] = useState(false);
@@ -27,13 +28,13 @@ export default function VoiceInputModal() {
       if (!isGroqConfigured()) {
         Alert.alert(
           "API Key Required",
-          "Groq API key is not configured. Please add GROQ_API_KEY to your .env file.",
+          "The AI voice service is not configured. Please sign in and check the app’s Supabase configuration.",
           [{ text: "OK" }]
         );
         return;
       }
 
-      const { granted } = await (audioRecorder as any).requestPermissions();
+      const { granted } = await AudioModule.requestRecordingPermissionsAsync();
       if (!granted) {
         Alert.alert(
           "Permission Required",
@@ -46,7 +47,8 @@ export default function VoiceInputModal() {
       setError(null);
       setTranscript("");
       setParsedFood(null);
-      await audioRecorder.record();
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
       setIsRecording(true);
     } catch (err: any) {
       console.error("Recording error:", err);
@@ -60,9 +62,10 @@ export default function VoiceInputModal() {
     setIsProcessing(true);
 
     try {
-      const uri = await audioRecorder.stop();
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
       
-      if (uri === undefined || uri === null) {
+      if (!uri) {
         throw new Error("No audio recorded");
       }
 
@@ -92,29 +95,30 @@ export default function VoiceInputModal() {
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const today = toLocalDateKey();
       const meal = parsedFood.meal_suggestion || "snack";
 
-      // Save each food item
-      for (const item of parsedFood.items) {
-        await insertFoodLog({
-          id: uuid.v4() as string,
-          date: today,
-          meal,
-          name: item.name,
-          quantity_g: item.quantity_g,
-          calories: item.calories,
-          protein_g: item.protein_g,
-          carbs_g: item.carbs_g,
-          fat_g: item.fat_g,
-          fiber_g: item.fiber_g,
-          sugar_g: null,
-          sodium_mg: null,
-          source: "voice",
-          raw_input: transcript,
-          created_at: Date.now(),
-        });
-      }
+      // Save all recognized items together to prevent partial meal writes.
+      await insertFoodLogs(parsedFood.items.map((item: {
+        name: string; quantity_g: number | null; calories: number; protein_g: number;
+        carbs_g: number; fat_g: number; fiber_g: number | null;
+      }) => ({
+        id: uuid.v4() as string,
+        date: today,
+        meal,
+        name: item.name,
+        quantity_g: item.quantity_g,
+        calories: item.calories,
+        protein_g: item.protein_g,
+        carbs_g: item.carbs_g,
+        fat_g: item.fat_g,
+        fiber_g: item.fiber_g,
+        sugar_g: null,
+        sodium_mg: null,
+        source: "voice",
+        raw_input: transcript,
+        created_at: Math.floor(Date.now() / 1000),
+      })));
 
       Alert.alert(
         "Success!",

@@ -22,32 +22,47 @@ import { Button } from "../../components/ui/Button";
 import { ListRow } from "../../components/ui/ListRow";
 import type { SupplementLog, MonthlyReport } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
-import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
+import { processSyncQueue } from "../../lib/integrations/life-os/syncClient";
+import { getLocalHealthSummary, type LocalHealthSummary } from "../../lib/observability/telemetry";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/auth";
 import { M3 } from "../../design-system/tokens";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { toLocalDateKey } from "../../lib/utils/local-date";
+import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, saveNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
+import { getAdaptiveTargetSuggestion } from "../../lib/nutrition/adaptive-target-service";
+import { getUserProfile, updateUserProfile, type PersistedUserProfile, type ProfileSex } from "../../lib/db/queries/user-profile";
 
 type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "account" | "settings";
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
 
 export default function MoreScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
   const params = useLocalSearchParams<{ section?: string }>();
   const [activeSection, setActiveSection] = useState<MoreSection>("menu");
   // Body stats
   const [weightInput, setWeightInput] = useState("");
   const [latestWeight, setLatestWeight] = useState<number | null>(null);
+  const [nutritionTargets, setNutritionTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
+  const [targetInputs, setTargetInputs] = useState({ calories: String(DEFAULT_NUTRITION_TARGETS.calories), protein: String(DEFAULT_NUTRITION_TARGETS.protein_g), carbs: String(DEFAULT_NUTRITION_TARGETS.carbs_g), fat: String(DEFAULT_NUTRITION_TARGETS.fat_g) });
+  const [targetsSaving, setTargetsSaving] = useState(false);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [persistedProfile, setPersistedProfile] = useState<PersistedUserProfile | null>(null);
+  const [profileInputs, setProfileInputs] = useState({
+    age: "", sex: "", height_cm: "", training_start_date: "", current_split: "",
+    training_phase: "", cardio: "", equipment: "", physique_goal: "", body_fat_goal_pct: "", body_fat_goal_date: "",
+  });
 
   // Supplements
   const [supplementLogs, setSupplementLogs] = useState<SupplementLog[]>([]);
 
   // Recovery
-  const [sleepHr, setSleepHr] = useState("7");
-  const [sleepQuality, setSleepQuality] = useState(3);
-  const [energyLevel, setEnergyLevel] = useState(3);
-  const [soreness, setSoreness] = useState(3);
-  const [stressLevel, setStressLevel] = useState(3);
+  const [sleepHr, setSleepHr] = useState("");
+  const [sleepQuality, setSleepQuality] = useState<number | null>(null);
+  const [energyLevel, setEnergyLevel] = useState<number | null>(null);
+  const [soreness, setSoreness] = useState<number | null>(null);
+  const [stressLevel, setStressLevel] = useState<number | null>(null);
   const [recoveryNotes, setRecoveryNotes] = useState("");
   const [recoverySaved, setRecoverySaved] = useState(false);
 
@@ -55,6 +70,8 @@ export default function MoreScreen() {
   const [reports, setReports] = useState<MonthlyReport[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState("Not synced yet");
+  const [localHealth, setLocalHealth] = useState<LocalHealthSummary | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
@@ -80,11 +97,11 @@ export default function MoreScreen() {
     setReports(reportsData);
 
     if (recoveryLog) {
-      setSleepHr(recoveryLog.sleep_duration_hr?.toString() ?? "7");
-      setSleepQuality(recoveryLog.sleep_quality ?? 3);
-      setEnergyLevel(recoveryLog.energy_level ?? 3);
-      setSoreness(recoveryLog.muscle_soreness ?? 3);
-      setStressLevel(recoveryLog.stress_level ?? 3);
+      setSleepHr(recoveryLog.sleep_duration_hr?.toString() ?? "");
+      setSleepQuality(recoveryLog.sleep_quality ?? null);
+      setEnergyLevel(recoveryLog.energy_level ?? null);
+      setSoreness(recoveryLog.muscle_soreness ?? null);
+      setStressLevel(recoveryLog.stress_level ?? null);
       setRecoveryNotes(recoveryLog.notes ?? "");
       setRecoverySaved(true);
     }
@@ -92,6 +109,28 @@ export default function MoreScreen() {
 
   useEffect(() => {
     loadData();
+    getUserProfile().then((profile) => {
+      setPersistedProfile(profile);
+      setProfileInputs({
+        age: profile?.age == null ? "" : String(profile.age),
+        sex: profile?.sex ?? "",
+        height_cm: profile?.height_cm == null ? "" : String(profile.height_cm),
+        training_start_date: profile?.training_start_date ?? "",
+        current_split: profile?.current_split ?? "",
+        training_phase: profile?.training_phase ?? "",
+        cardio: profile?.cardio ?? "",
+        equipment: profile?.equipment ?? "",
+        physique_goal: profile?.physique_goal ?? "",
+        body_fat_goal_pct: profile?.body_fat_goal_pct == null ? "" : String(profile.body_fat_goal_pct),
+        body_fat_goal_date: profile?.body_fat_goal_date ?? "",
+      });
+    }).catch((error) => Alert.alert("Profile unavailable", error instanceof Error ? error.message : "Could not load saved profile."));
+    getNutritionTargets().then((targets) => {
+      setNutritionTargets(targets);
+      setTargetInputs({ calories: String(targets.calories), protein: String(targets.protein_g), carbs: String(targets.carbs_g), fat: String(targets.fat_g) });
+    }).catch(() => {
+      Alert.alert("Targets unavailable", "Could not load saved nutrition targets. Default targets remain active.");
+    });
   }, [loadData]);
 
   useEffect(() => {
@@ -114,6 +153,51 @@ export default function MoreScreen() {
     });
   }, []);
 
+  const applyAdaptiveTargetSuggestion = async (originalTargets: NutritionTargets, suggestedCalories: number) => {
+    try {
+      const currentTargets = await getNutritionTargets();
+      if (JSON.stringify(currentTargets) !== JSON.stringify(originalTargets)) {
+        Alert.alert("Targets changed", "Saved targets changed after this suggestion was calculated. Review a fresh suggestion before applying it.");
+        return;
+      }
+      const fresh = await getAdaptiveTargetSuggestion();
+      if (fresh.status !== "ready" || fresh.suggestedTargetKcal === null || fresh.maintenanceKcal === null || fresh.suggestedTargetKcal !== suggestedCalories) {
+        Alert.alert("Suggestion changed", fresh.reason);
+        return;
+      }
+      const nextTargets: NutritionTargets = { ...currentTargets, calories: fresh.suggestedTargetKcal, mode: "adaptive" };
+      await saveNutritionTargets(nextTargets, { source: "adaptive", effectiveDate: today, maintenanceEstimateKcal: fresh.maintenanceKcal, algorithmVersion: fresh.algorithmVersion, explanation: fresh.reason });
+      setNutritionTargets(nextTargets);
+      setTargetInputs((current) => ({ ...current, calories: String(nextTargets.calories) }));
+      Alert.alert("Target updated", `Your calorie target is now ${nextTargets.calories} kcal. Other macro targets were left unchanged.`);
+    } catch (error) {
+      Alert.alert("Could not apply suggestion", error instanceof Error ? error.message : "The target was not changed.");
+    }
+  };
+
+  const handleReviewAdaptiveTarget = async () => {
+    setSuggestionLoading(true);
+    try {
+      const currentTargets = await getNutritionTargets();
+      const suggestion = await getAdaptiveTargetSuggestion();
+      if (suggestion.status !== "ready" || suggestion.suggestedTargetKcal === null || suggestion.maintenanceKcal === null) {
+        Alert.alert("More data needed", suggestion.reason);
+        return;
+      }
+      if (suggestion.suggestedTargetKcal === currentTargets.calories) {
+        Alert.alert("No change recommended", suggestion.reason);
+        return;
+      }
+      Alert.alert("Review adaptive target", `Current target: ${currentTargets.calories} kcal\nSuggested target: ${suggestion.suggestedTargetKcal} kcal\nEstimated maintenance: ${suggestion.maintenanceKcal} kcal\n\n${suggestion.reason}`, [
+        { text: "Keep current", style: "cancel" },
+        { text: "Apply suggestion", onPress: () => { void applyAdaptiveTargetSuggestion(currentTargets, suggestion.suggestedTargetKcal!); } },
+      ]);
+    } catch (error) {
+      Alert.alert("Could not calculate suggestion", error instanceof Error ? error.message : "The target suggestion could not be calculated.");
+    } finally {
+      setSuggestionLoading(false);
+    }
+  };
   const handleVerifyGroq = async () => {
     if (!groqKeyInput.trim()) {
       Alert.alert("Missing Key", "Enter a Groq API Key.");
@@ -192,7 +276,7 @@ export default function MoreScreen() {
   const saveRecovery = async () => {
     await upsertRecoveryLog({
       date: today,
-      sleep_duration_hr: parseFloat(sleepHr) || null,
+      sleep_duration_hr: sleepHr.trim() ? Number(sleepHr) : null,
       sleep_quality: sleepQuality,
       bedtime: null,
       wake_time: null,
@@ -207,20 +291,52 @@ export default function MoreScreen() {
     Alert.alert("Saved", "Recovery log saved.");
   };
 
+  const refreshLocalHealth = useCallback(async () => {
+    setHealthLoading(true);
+    try {
+      const summary = await getLocalHealthSummary();
+      setLocalHealth(summary);
+    } catch {
+      // Diagnostics are best-effort and must not interrupt normal app use.
+      setLocalHealth(null);
+    } finally {
+      setHealthLoading(false);
+    }
+  }, []);
+
   const syncNow = async () => {
     setIsSyncing(true);
-    const result = await syncToSupabase();
-    setIsSyncing(false);
+    try {
+      const result = await processSyncQueue();
+      const summary = `Uploaded ${result.uploaded}; ${result.needsAttention} need attention`;
+      setSyncStatus(result.error ? `${summary}. Retryable errors remain queued.` : summary);
 
-    if (result.error) {
-      setSyncStatus(result.error);
-      Alert.alert("Sync unavailable", result.error);
-      return;
+      if (result.error) {
+        Alert.alert(
+          result.uploaded > 0 ? "Sync partially completed" : "Sync needs attention",
+          `${result.uploaded} record(s) uploaded. ${result.needsAttention} invalid record(s) were quarantined. Retryable records remain on this device. ${result.error}`,
+        );
+      } else if (result.needsAttention > 0) {
+        Alert.alert(
+          "Sync completed with records to review",
+          `${result.uploaded} record(s) uploaded. ${result.needsAttention} invalid record(s) were kept locally for attention rather than silently discarded.`,
+        );
+      } else {
+        Alert.alert("Sync complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Sync failed unexpectedly.";
+      setSyncStatus(message);
+      Alert.alert("Sync failed", message);
+    } finally {
+      setIsSyncing(false);
+      void refreshLocalHealth();
     }
-
-    setSyncStatus(`Uploaded ${result.uploaded}, skipped ${result.skipped}`);
-    Alert.alert("Sync complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
   };
+
+  useEffect(() => {
+    if (activeSection === "account") void refreshLocalHealth();
+  }, [activeSection, refreshLocalHealth]);
 
   const handleSignIn = async () => {
     if (!email.trim() || !password) {
@@ -262,11 +378,11 @@ export default function MoreScreen() {
     { key: "settings", label: "Settings", icon: "settings" },
   ];
 
-  const RatingRow = ({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) => (
+  const RatingRow = ({ label, value, onChange }: { label: string; value: number | null; onChange: (v: number | null) => void }) => (
     <View style={{ marginBottom: 14 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
         <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{label}</Text>
-        <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{value} / 5</Text>
+        <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{value == null ? "Not logged" : `${value} / 5`}</Text>
       </View>
       <View style={{ flexDirection: "row", gap: 8 }}>
         {[1, 2, 3, 4, 5].map((v) => (
@@ -278,19 +394,22 @@ export default function MoreScreen() {
               flex: 1,
               height: 36,
               borderRadius: 6,
-              backgroundColor: value >= v ? M3.colors.primary + "22" : M3.colors.surfaceVariant,
+              backgroundColor: value != null && value >= v ? M3.colors.primary + "22" : M3.colors.surfaceVariant,
               borderWidth: 1,
-              borderColor: value >= v ? M3.colors.primary : M3.colors.outline,
+              borderColor: value != null && value >= v ? M3.colors.primary : M3.colors.outline,
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <Text style={{ color: value >= v ? M3.colors.primary : M3.colors.onSurfaceMuted, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+            <Text style={{ color: value != null && value >= v ? M3.colors.primary : M3.colors.onSurfaceMuted, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
               {v}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
+      <TouchableOpacity onPress={() => onChange(null)} accessibilityRole="button" style={{ alignSelf: "flex-end", paddingVertical: 4 }}>
+        <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11 }}>Clear / not logged</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -352,7 +471,11 @@ export default function MoreScreen() {
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
               TODAY'S SUPPLEMENTS
             </Text>
-            {USER_PROFILE.supplements.map((supp) => {
+            {USER_PROFILE.supplements.length === 0 ? (
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18 }}>
+                No supplement defaults are configured. The app will not assume a personal supplement stack.
+              </Text>
+            ) : USER_PROFILE.supplements.map((supp) => {
               const log = supplementLogs.find((l) => l.supplement_name === supp.name);
               const taken = log?.taken === 1;
               return (
@@ -590,6 +713,66 @@ export default function MoreScreen() {
             </Card>
 
             <Card>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>Local health</Text>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 3 }}>
+                    Operational diagnostics only; recent 100 events from the last 24 hours.
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Refresh local health diagnostics"
+                  onPress={() => void refreshLocalHealth()}
+                  disabled={healthLoading}
+                  style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: M3.colors.surfaceVariant }}
+                >
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_700Bold" }}>{healthLoading ? "Checking…" : "Refresh"}</Text>
+                </TouchableOpacity>
+              </View>
+              {localHealth ? (
+                <>
+                  <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                    {[
+                      { label: "Pending sync", value: localHealth.pendingSync },
+                      { label: "Uploading", value: localHealth.uploadingSync },
+                      { label: "Needs attention", value: localHealth.needsAttentionSync },
+                      { label: "Pending refreshes", value: localHealth.pendingDerivedStateInvalidations },
+                      { label: "Errors · recent", value: localHealth.recentErrorCount },
+                    ].map((item) => (
+                      <View key={item.label} style={{ minWidth: "29%", flexGrow: 1, padding: 10, borderRadius: 8, backgroundColor: M3.colors.surfaceVariant }}>
+                        <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_500Medium" }}>{item.label}</Text>
+                        <Text style={{ color: item.value > 0 && (item.label === "Needs attention" || item.label === "Errors · recent") ? M3.colors.error : M3.colors.onSurface, fontSize: 20, fontFamily: "DMSans_700Bold", marginTop: 4 }}>{item.value}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  {localHealth.recentIssues.length > 0 ? (
+                    <View style={{ marginTop: 12, gap: 8 }}>
+                      <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_700Bold" }}>RECENT OPERATIONAL ISSUES</Text>
+                      {localHealth.recentIssues.slice(0, 5).map((issue, index) => (
+                        <View key={`${issue.eventType}:${issue.occurredAt}:${index}`} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <Feather name={issue.severity === "error" ? "alert-circle" : "alert-triangle"} size={14} color={issue.severity === "error" ? M3.colors.error : M3.colors.warning} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>{issue.eventType}</Text>
+                            <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 10, fontFamily: "DMSans_400Regular" }}>{new Date(issue.occurredAt).toLocaleString()}</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 10 }}>
+                      No warnings or errors were found in the recent event window.
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+                  {healthLoading ? "Reading local diagnostics…" : "Diagnostics are unavailable. Refresh to retry."}
+                </Text>
+              )}
+            </Card>
+
+            <Card>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
                   GROQ API KEY
@@ -653,38 +836,117 @@ export default function MoreScreen() {
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 PROFILE
               </Text>
-              {[
-                { label: "Name", value: USER_PROFILE.name },
-                { label: "Age", value: `${USER_PROFILE.age}` },
-                { label: "Height", value: `${USER_PROFILE.height_cm}cm` },
-                { label: "Training Since", value: USER_PROFILE.training_start_date },
-                { label: "Current Split", value: USER_PROFILE.training.current_split },
-              ].map((item) => (
-                <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: M3.colors.outline }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
-                  <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>{item.value}</Text>
+              {([
+                { key: "age", label: "Age", keyboardType: "number-pad" },
+                { key: "sex", label: "Sex (male/female/other/prefer_not_to_say)", keyboardType: "default" },
+                { key: "height_cm", label: "Height (cm)", keyboardType: "decimal-pad" },
+                { key: "training_start_date", label: "Training since (YYYY-MM-DD)", keyboardType: "default" },
+                { key: "current_split", label: "Current split", keyboardType: "default" },
+                { key: "training_phase", label: "Training phase", keyboardType: "default" },
+                { key: "cardio", label: "Cardio routine", keyboardType: "default" },
+                { key: "equipment", label: "Available equipment", keyboardType: "default" },
+                { key: "physique_goal", label: "Physique / training goal", keyboardType: "default" },
+                { key: "body_fat_goal_pct", label: "Body-fat goal (%)", keyboardType: "decimal-pad" },
+                { key: "body_fat_goal_date", label: "Body-fat goal date (YYYY-MM-DD)", keyboardType: "default" },
+              ] as const).map((item) => (
+                <View key={item.key} style={{ gap: 5, paddingVertical: 6 }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
+                  <Input value={profileInputs[item.key]} onChangeText={(value) => setProfileInputs((current) => ({ ...current, [item.key]: value }))} keyboardType={item.keyboardType as any} placeholder="Leave blank if unknown" />
                 </View>
               ))}
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, lineHeight: 16, marginVertical: 8 }}>
+                Profile fields are stored on this device. Unknown values stay blank and are not inferred by Coach.
+                {persistedProfile ? ` Last saved ${new Date(persistedProfile.updated_at).toLocaleDateString()}.` : ""}
+              </Text>
+              <Button label={profileSaving ? "Saving profile…" : "Save profile"} loading={profileSaving} disabled={profileSaving} onPress={async () => {
+                setProfileSaving(true);
+                try {
+                  const saved = await updateUserProfile({
+                    age: profileInputs.age.trim() ? Number(profileInputs.age) : null,
+                    sex: profileInputs.sex.trim() ? profileInputs.sex.trim() as ProfileSex : null,
+                    height_cm: profileInputs.height_cm.trim() ? Number(profileInputs.height_cm) : null,
+                    training_start_date: profileInputs.training_start_date.trim() || null,
+                    current_split: profileInputs.current_split.trim() || null,
+                    training_phase: profileInputs.training_phase.trim() || null,
+                    cardio: profileInputs.cardio.trim() || null,
+                    equipment: profileInputs.equipment.trim() || null,
+                    physique_goal: profileInputs.physique_goal.trim() || null,
+                    body_fat_goal_pct: profileInputs.body_fat_goal_pct.trim() ? Number(profileInputs.body_fat_goal_pct) : null,
+                    body_fat_goal_date: profileInputs.body_fat_goal_date.trim() || null,
+                  });
+                  setPersistedProfile(saved);
+                  Alert.alert("Profile saved", "Coach will use saved values and treat blank fields as unknown.");
+                } catch (error) {
+                  Alert.alert("Invalid profile", error instanceof Error ? error.message : "Check the profile fields and try again.");
+                } finally {
+                  setProfileSaving(false);
+                }
+              }} />
             </Card>
 
             <Card>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-                TARGETS
+                NUTRITION TARGETS
               </Text>
-              {[
-                { label: "Calories", value: `${USER_PROFILE.targets.calories} kcal` },
-                { label: "Protein", value: `${USER_PROFILE.targets.protein_g}g` },
-                { label: "Carbs", value: `${USER_PROFILE.targets.carbs_g}g` },
-                { label: "Fat", value: `${USER_PROFILE.targets.fat_g}g` },
-                { label: "BF% Goal (Dec 2026)", value: `${USER_PROFILE.targets.body_fat_pct_dec2026}%` },
-              ].map((item) => (
-                <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: M3.colors.outline }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
-                  <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>{item.value}</Text>
+              {([
+                { key: "calories", label: "Calories (kcal)", value: targetInputs.calories },
+                { key: "protein", label: "Protein (g)", value: targetInputs.protein },
+                { key: "carbs", label: "Carbs (g)", value: targetInputs.carbs },
+                { key: "fat", label: "Fat (g)", value: targetInputs.fat },
+              ] as const).map((item) => (
+                <View key={item.key} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 7 }}>
+                  <Text style={{ flex: 1, color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
+                  <Input value={item.value} onChangeText={(value) => setTargetInputs((current) => ({ ...current, [item.key]: value }))} keyboardType="decimal-pad" style={{ width: 100, textAlign: "right" }} />
                 </View>
               ))}
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, marginTop: 8, marginBottom: 6 }}>Goal</Text>
+              <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+                {(["lose", "maintain", "gain"] as const).map((goal) => (
+                  <TouchableOpacity key={goal} accessibilityRole="button" accessibilityState={{ selected: nutritionTargets.goal === goal }} onPress={() => setNutritionTargets((current) => ({ ...current, goal }))} style={{ flex: 1, borderRadius: 10, paddingVertical: 9, alignItems: "center", backgroundColor: nutritionTargets.goal === goal ? M3.colors.primaryContainer : M3.colors.surfaceVariant }}>
+                    <Text style={{ color: nutritionTargets.goal === goal ? M3.colors.onPrimaryContainer : M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_500Medium", textTransform: "capitalize" }}>{goal}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, lineHeight: 16, marginBottom: 10 }}>
+                Targets are stored locally. Changes apply from today and previous target history is preserved.
+              </Text>
+              <Button
+                label={suggestionLoading ? "Reviewing history…" : "Review adaptive calorie suggestion"}
+                icon="activity"
+                variant="secondary"
+                loading={suggestionLoading}
+                disabled={suggestionLoading || targetsSaving}
+                onPress={handleReviewAdaptiveTarget}
+                style={{ marginBottom: 10 }}
+              />
+              <Button
+                label={targetsSaving ? "Saving…" : "Save nutrition targets"}
+                loading={targetsSaving}
+                disabled={targetsSaving}
+                onPress={async () => {
+                  const targets: NutritionTargets = {
+                    calories: Number(targetInputs.calories),
+                    protein_g: Number(targetInputs.protein),
+                    carbs_g: Number(targetInputs.carbs),
+                    fat_g: Number(targetInputs.fat),
+                    goal: nutritionTargets.goal,
+                    mode: "manual",
+                  };
+                  setTargetsSaving(true);
+                  try {
+                    await saveNutritionTargets(targets, { source: "manual", effectiveDate: today });
+                    setNutritionTargets(targets);
+                    Alert.alert("Targets saved", "Your nutrition targets are saved and effective today.");
+                  } catch (error) {
+                    Alert.alert("Invalid targets", error instanceof Error ? error.message : "Check the values and try again.");
+                  } finally {
+                    setTargetsSaving(false);
+                  }
+                }}
+              />
             </Card>
 
+            {USER_PROFILE.structural_notes.length > 0 && (
             <Card>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 STRUCTURAL NOTES
@@ -698,6 +960,7 @@ export default function MoreScreen() {
                 </View>
               ))}
             </Card>
+            )}
 
             <ListRow
               icon="download"

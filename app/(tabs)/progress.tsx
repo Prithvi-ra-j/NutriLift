@@ -8,14 +8,15 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { getAllPRs } from "../../lib/db/queries/workout";
 import { getWeightHistory, getAllInBodyRecords } from "../../lib/db/queries/body";
 import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getRecentRecoveryLogs } from "../../lib/db/queries/recovery";
 import { computeNutritionSummary } from "../../lib/analytics/nutrition-analytics";
 import { computeBodySummary } from "../../lib/analytics/body-analytics";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getUserProfile, type PersistedUserProfile } from "../../lib/db/queries/user-profile";
+import { DEFAULT_NUTRITION_TARGETS, getNutritionTargetsForDate, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
@@ -23,40 +24,49 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { addCalendarDays, fromLocalDateKey, getMondayWeekRange, toLocalDateKey } from "../../lib/utils/local-date";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
+const PROGRESS_SECTIONS: ProgressSection[] = ["strength", "body", "nutrition", "recovery"];
 
 export default function ProgressScreen() {
-  const [activeSection, setActiveSection] = useState<ProgressSection>("body");
+  const params = useLocalSearchParams<{ section?: string; date?: string }>();
+  const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date;
+  const requestedSection = Array.isArray(params.section) ? params.section[0] : params.section;
+  const [activeSection, setActiveSection] = useState<ProgressSection>(() =>
+    PROGRESS_SECTIONS.includes(requestedSection as ProgressSection) ? requestedSection as ProgressSection : "body"
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
+
   // Week navigation state
-  const todayStr = new Date().toISOString().split("T")[0];
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const todayStr = toLocalDateKey();
+  const [selectedDate, setSelectedDate] = useState(() => {
+    try { if (requestedDate) fromLocalDateKey(requestedDate); return requestedDate || todayStr; }
+    catch { return todayStr; }
+  });
+  useEffect(() => {
+    if (requestedDate) {
+      try { fromLocalDateKey(requestedDate); setSelectedDate(requestedDate); } catch { /* Ignore unsupported deep-link dates. */ }
+    }
+    if (PROGRESS_SECTIONS.includes(requestedSection as ProgressSection)) setActiveSection(requestedSection as ProgressSection);
+  }, [requestedDate, requestedSection]);
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
   const [weightHistory, setWeightHistory] = useState<BodyStat[]>([]);
   const [inBodyRecords, setInBodyRecords] = useState<BodyStat[]>([]);
   const [nutritionHistory, setNutritionHistory] = useState<DailyNutrition[]>([]);
   const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>([]);
+  const [userProfile, setUserProfile] = useState<PersistedUserProfile | null>(null);
+  const [activeTargets, setActiveTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
 
-  // Get week range for selected date
+  // Date-only keys are parsed as local calendar dates; week bounds are inclusive.
   const getWeekRange = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const dayOfWeek = date.getDay();
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust to Monday
-    const monday = new Date(date);
-    monday.setDate(date.getDate() + diff);
-    
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    
+    const range = getMondayWeekRange(dateStr);
     return {
-      start: monday.toISOString().split("T")[0],
-      end: sunday.toISOString().split("T")[0],
-      monday,
-      sunday,
+      ...range,
+      monday: fromLocalDateKey(range.start),
+      sunday: fromLocalDateKey(range.end),
     };
   };
 
@@ -65,18 +75,20 @@ export default function ProgressScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const [prsData, weightData, inBodyData, nutritionData, recoveryData] = await Promise.all([
+      const [prsData, weightData, inBodyData, nutritionData, recoveryData, profileData] = await Promise.all([
         getAllPRs(),
         getWeightHistory(90), // Get 90 days to cover multiple weeks
         getAllInBodyRecords(),
         getLast30DaysNutrition(),
         getRecentRecoveryLogs(30), // Get 30 days to cover multiple weeks
+        getUserProfile(),
       ]);
       setPRs(prsData);
       setWeightHistory(weightData);
       setInBodyRecords(inBodyData);
       setNutritionHistory(nutritionData);
       setRecoveryLogs(recoveryData);
+      setUserProfile(profileData);
     } catch (err) {
       console.error("Progress load error:", err);
     } finally {
@@ -88,6 +100,13 @@ export default function ProgressScreen() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    getNutritionTargetsForDate(selectedDate).then(setActiveTargets).catch((error) => {
+      console.error("Target history load error:", error);
+      setActiveTargets(DEFAULT_NUTRITION_TARGETS);
+    });
+  }, [selectedDate]);
 
   // Filter data for selected week
   const weekWeightHistory = weightHistory.filter(
@@ -106,20 +125,16 @@ export default function ProgressScreen() {
     (pr) => pr.achieved_date >= weekRange.start && pr.achieved_date <= weekRange.end
   );
 
-  const nutritionSummary = computeNutritionSummary(weekNutritionHistory);
+  const nutritionSummary = computeNutritionSummary(weekNutritionHistory, activeTargets);
   const latestInBody = inBodyRecords[inBodyRecords.length - 1] ?? null;
-  const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
+  const bodySummary = computeBodySummary(weekWeightHistory, latestInBody, userProfile?.body_fat_goal_pct != null && userProfile.body_fat_goal_date ? { targetBodyFatPct: userProfile.body_fat_goal_pct, goalDate: userProfile.body_fat_goal_date } : null);
 
   const goToPreviousWeek = () => {
-    const prev = new Date(selectedDate);
-    prev.setDate(prev.getDate() - 7);
-    setSelectedDate(prev.toISOString().split("T")[0]);
+    setSelectedDate(addCalendarDays(selectedDate, -7));
   };
 
   const goToNextWeek = () => {
-    const next = new Date(selectedDate);
-    next.setDate(next.getDate() + 7);
-    setSelectedDate(next.toISOString().split("T")[0]);
+    setSelectedDate(addCalendarDays(selectedDate, 7));
   };
 
   const goToToday = () => {
@@ -245,7 +260,7 @@ export default function ProgressScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
                 <Feather name="target" size={16} color={M3.colors.primary} />
                 <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                  December 2026 Goal
+                  Body Composition Goal
                 </Text>
               </View>
               <View style={{ gap: 8 }}>
@@ -254,7 +269,15 @@ export default function ProgressScreen() {
                     Target Body Fat
                   </Text>
                   <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                    {USER_PROFILE.targets.body_fat_pct_dec2026}%
+                    {userProfile?.body_fat_goal_pct != null ? `${userProfile.body_fat_goal_pct}%` : "Not set"}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
+                    Goal Date
+                  </Text>
+                  <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                    {userProfile?.body_fat_goal_date ?? "Set in Settings"}
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -271,7 +294,7 @@ export default function ProgressScreen() {
                       Projected Date
                     </Text>
                     <Text style={{ color: bodySummary.onTrackForGoal ? M3.colors.success : M3.colors.warning, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                      {new Date(bodySummary.projectedBFDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                      {fromLocalDateKey(bodySummary.projectedBFDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                     </Text>
                   </View>
                 )}
@@ -452,8 +475,8 @@ export default function ProgressScreen() {
                 {isCurrentWeek ? "THIS WEEK" : "WEEK"} NUTRITION SUMMARY
               </Text>
               {[
-                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: `${USER_PROFILE.targets.calories}` },
-                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: `${USER_PROFILE.targets.protein_g}g` },
+                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: `${activeTargets.calories}` },
+                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: `${activeTargets.protein_g}g` },
                 { label: "Protein Hit Rate", value: `${nutritionSummary.proteinHitRate.toFixed(0)}%`, target: "100%" },
                 { label: "Best Streak", value: `${nutritionSummary.bestStreak} days`, target: "" },
                 { label: "Current Streak", value: `${nutritionSummary.currentStreak} days`, target: "" },
@@ -514,7 +537,7 @@ export default function ProgressScreen() {
                         <View key={i} style={{ flex: 1, alignItems: "center", gap: 3 }}>
                           <View style={{ width: "100%", height: Math.max(4, pct * 52), backgroundColor: color, borderRadius: 3 }} />
                           <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 8, fontFamily: "DMSans_400Regular" }}>
-                            {new Date(log.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
+                            {fromLocalDateKey(log.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                           </Text>
                         </View>
                       );

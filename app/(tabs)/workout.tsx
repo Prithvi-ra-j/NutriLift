@@ -9,6 +9,7 @@ import {
   Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useTodayStore } from "../../lib/stores/today.store";
 import {
@@ -16,6 +17,7 @@ import {
   getExercisesForSession,
   getSetsForExercise,
   insertSession,
+  setSessionStatus,
   insertExerciseLog,
   insertSetLog,
   updateSetLog,
@@ -44,11 +46,13 @@ import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { fromLocalDateKey, getMondayWeekRange, toLocalDateKey } from "../../lib/utils/local-date";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface SetForm {
+  pendingSetId: string;
   exerciseLogId: string;
   exerciseName: string;
   exerciseType: ExerciseType;
@@ -96,6 +100,7 @@ function setLabel(set: SetLog, type: ExerciseType): string {
 /** Build a blank SetForm for a new set */
 function blankForm(exerciseLogId: string, exerciseName: string, exerciseType: ExerciseType, lastWeight?: number | null): SetForm {
   return {
+    pendingSetId: uuid.v4() as string,
     exerciseLogId,
     exerciseName,
     exerciseType,
@@ -112,6 +117,7 @@ function blankForm(exerciseLogId: string, exerciseName: string, exerciseType: Ex
 /** Build a SetForm pre-filled from an existing set (for editing) */
 function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, exerciseType: ExerciseType): SetForm {
   return {
+    pendingSetId: set.id,
     exerciseLogId,
     exerciseName,
     exerciseType,
@@ -128,11 +134,20 @@ function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, e
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function WorkoutScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const todayStr = toLocalDateKey();
+  const params = useLocalSearchParams<{ date?: string }>();
+  const requestedDate = Array.isArray(params.date) ? params.date[0] : params.date;
+  const [selectedDate, setSelectedDate] = useState(() => {
+    try { if (requestedDate) fromLocalDateKey(requestedDate); return requestedDate || todayStr; }
+    catch { return todayStr; }
+  });
+  useEffect(() => {
+    if (!requestedDate) return;
+    try { fromLocalDateKey(requestedDate); setSelectedDate(requestedDate); } catch { /* Ignore unsupported deep-link dates. */ }
+  }, [requestedDate]);
 
   const getDefaultDayType = (dateStr: string): DayType => {
-    const date = new Date(dateStr);
+    const date = fromLocalDateKey(dateStr);
     const dayOfWeek = date.getDay();
     if (dayOfWeek === 0) return "Cardio";
     const dayTypeMap: Record<number, DayType> = {
@@ -150,6 +165,7 @@ export default function WorkoutScreen() {
   const [exercises, setExercises] = useState<ExerciseLog[]>([]);
   const [sets, setSets] = useState<Record<string, SetLog[]>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [selectedDayType, setSelectedDayType] = useState<DayType>(getDefaultDayType(todayStr));
   const [showAddExercise, setShowAddExercise] = useState(false);
@@ -185,6 +201,8 @@ export default function WorkoutScreen() {
   // ─── Load ──────────────────────────────────────────────────────────────────
 
   const loadWorkout = useCallback(async () => {
+    setIsLoading(true);
+    setLoadError(null);
     setSession(null);
     setExercises([]);
     setSets({});
@@ -192,35 +210,38 @@ export default function WorkoutScreen() {
     setEditingSetId(null);
     setEditSetForm(null);
 
-    const sessions = await getSessionsForDate(selectedDate);
-    if (sessions[0]) {
-      setSession(sessions[0]);
-      setSelectedDayType(sessions[0].day_type as DayType);
-      const exs = await getExercisesForSession(sessions[0].id);
-      setExercises(exs);
+    try {
+      const sessions = await getSessionsForDate(selectedDate);
+      if (sessions[0]) {
+        setSession(sessions[0]);
+        setSelectedDayType(sessions[0].day_type as DayType);
+        const exs = await getExercisesForSession(sessions[0].id);
+        setExercises(exs);
 
-      const setsData: Record<string, SetLog[]> = {};
-      for (const ex of exs) {
-        const s = await getSetsForExercise(ex.id);
-        setsData[ex.id] = s;
+        const setsData: Record<string, SetLog[]> = {};
+        for (const ex of exs) {
+          const s = await getSetsForExercise(ex.id);
+          setsData[ex.id] = s;
+        }
+        setSets(setsData);
+      } else {
+        setSelectedDayType(getDefaultDayType(selectedDate));
       }
-      setSets(setsData);
-    } else {
-      setSelectedDayType(getDefaultDayType(selectedDate));
+
+      const custom = await getCustomExercises();
+      setCustomExercises(custom);
+
+      await loadCompletedDayTypes();
+    } catch (error) {
+      console.error("Failed to load workout data", error);
+      setLoadError("Workout data could not be loaded. Your saved data has not been changed. Check the database and try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    const custom = await getCustomExercises();
-    setCustomExercises(custom);
-
-    await loadCompletedDayTypes();
-    setIsLoading(false);
   }, [selectedDate]);
 
   const loadCompletedDayTypes = async () => {
-    const curr = new Date(selectedDate);
-    const first = curr.getDate() - curr.getDay() + 1;
-    const monday = new Date(curr.setDate(first));
-    const mondayStr = monday.toISOString().split("T")[0];
+    const { start: mondayStr } = getMondayWeekRange(selectedDate);
     const { getSessionsInRange } = await import("../../lib/db/queries/workout");
     const sessions = await getSessionsInRange(mondayStr, selectedDate);
     setCompletedDayTypes(new Set(sessions.map((s) => s.day_type)));
@@ -232,6 +253,30 @@ export default function WorkoutScreen() {
 
   // ─── Session ───────────────────────────────────────────────────────────────
 
+  const finishWorkout = async (status: "completed" | "cancelled") => {
+    if (!session) return;
+    const action = status === "completed" ? "finish" : "cancel";
+    const apply = async () => {
+      try {
+        await setSessionStatus(session.id, status);
+        await loadWorkout();
+      } catch (error) {
+        Alert.alert("Workout not updated", error instanceof Error ? error.message : "Please try again.");
+      }
+    };
+    if (status === "cancelled") {
+      Alert.alert("Cancel workout?", "Logged sets will be kept, but this session will be closed.", [
+        { text: "Keep workout", style: "cancel" },
+        { text: "Cancel session", style: "destructive", onPress: () => { void apply(); } },
+      ]);
+    } else {
+      Alert.alert("Finish workout?", "Your logged sets will be saved and this session will be marked complete.", [
+        { text: "Keep training", style: "cancel" },
+        { text: "Finish", onPress: () => { void apply(); } },
+      ]);
+    }
+  };
+
   const ensureSession = async (): Promise<string> => {
     if (session) return session.id;
     const sessionId = uuid.v4() as string;
@@ -239,6 +284,7 @@ export default function WorkoutScreen() {
       id: sessionId,
       date: selectedDate,
       day_type: selectedDayType,
+      status: "in_progress",
       started_at: Math.floor(Date.now() / 1000),
       ended_at: null,
       duration_min: null,
@@ -255,6 +301,10 @@ export default function WorkoutScreen() {
   // ─── Add Exercise ──────────────────────────────────────────────────────────
 
   const addExercise = async (exerciseName: string, muscleGroup: string, equipment: string, exerciseType: ExerciseType) => {
+    if (session && (session.status === "completed" || session.status === "cancelled")) {
+      Alert.alert("Workout closed", "Start a new session on another date to log more sets.");
+      return;
+    }
     const sessionId = await ensureSession();
     const exerciseId = uuid.v4() as string;
     const newExercise: ExerciseLog = {
@@ -433,6 +483,10 @@ export default function WorkoutScreen() {
 
   const logSet = async () => {
     if (!addSetForm) return;
+    if (session && (session.status === "completed" || session.status === "cancelled")) {
+      Alert.alert("Workout closed", "This session no longer accepts set changes.");
+      return;
+    }
     const { exerciseType, weight: wStr, reps: rStr, durationSec: dSecStr, distanceKm: dKmStr, durationMin: dMinStr } = addSetForm;
 
     const validated = validateSetMetrics(exerciseType, wStr, rStr, dSecStr, dKmStr, dMinStr);
@@ -442,7 +496,7 @@ export default function WorkoutScreen() {
     }
     const { weight, reps, durationSec, distanceKm } = validated;
 
-    const setId = uuid.v4() as string;
+    const setId = addSetForm.pendingSetId;
     const existingSets = sets[addSetForm.exerciseLogId] ?? [];
     const newSet: SetLog = {
       id: setId,
@@ -459,7 +513,13 @@ export default function WorkoutScreen() {
       logged_at: Math.floor(Date.now() / 1000),
     };
 
-    const { isPR } = await insertSetLog(newSet);
+    let isPR: boolean;
+    try {
+      ({ isPR } = await insertSetLog(newSet));
+    } catch (error) {
+      Alert.alert("Could not save set", error instanceof Error ? error.message : "Your set was not confirmed as saved. Retry to safely submit the same set.");
+      return;
+    }
 
     setSets((prev) => ({
       ...prev,
@@ -471,7 +531,7 @@ export default function WorkoutScreen() {
 
     // Keep weight, clear variable fields
     setAddSetForm((prev) =>
-      prev ? { ...prev, reps: "", rpe: "", durationSec: "", distanceKm: "", durationMin: "" } : null
+      prev ? { ...prev, pendingSetId: uuid.v4() as string, reps: "", rpe: "", durationSec: "", distanceKm: "", durationMin: "" } : null
     );
 
     loadWorkout();
@@ -550,7 +610,7 @@ export default function WorkoutScreen() {
   ];
 
   const filteredExercises = allExercises.filter((e) => {
-    const isSunday = new Date(selectedDate).getDay() === 0;
+    const isSunday = fromLocalDateKey(selectedDate).getDay() === 0;
     if (isSunday) {
       if (!e.day_types.includes("Cardio")) return false;
     } else {
@@ -792,6 +852,36 @@ export default function WorkoutScreen() {
     );
   }
 
+  if (loadError) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+        <View style={{ flex: 1, justifyContent: "center", padding: 24, gap: 16 }}>
+          <Feather name="alert-circle" size={36} color={M3.colors.error} />
+          <Text style={{ color: M3.colors.onSurface, fontSize: 20, fontFamily: "DMSans_700Bold" }}>
+            Workout unavailable
+          </Text>
+          <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 14, lineHeight: 21 }}>
+            {loadError}
+          </Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading workout"
+            onPress={loadWorkout}
+            style={{
+              alignSelf: "flex-start",
+              backgroundColor: M3.colors.primary,
+              borderRadius: M3.shape.full,
+              paddingHorizontal: 20,
+              paddingVertical: 12,
+            }}
+          >
+            <Text style={{ color: M3.colors.onPrimary, fontFamily: "DMSans_700Bold" }}>Try again</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
       <ScrollView
@@ -812,7 +902,7 @@ export default function WorkoutScreen() {
         <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />
 
         {/* ── Marathon Day Notice ── */}
-        {new Date(selectedDate).getDay() === 0 && (
+        {fromLocalDateKey(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
               <Feather name="activity" size={20} color={M3.colors.error} />
@@ -829,7 +919,7 @@ export default function WorkoutScreen() {
         )}
 
         {/* ── Sunday Cardio Selector ── */}
-        {!session && new Date(selectedDate).getDay() === 0 && (
+        {!session && fromLocalDateKey(selectedDate).getDay() === 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
@@ -856,7 +946,7 @@ export default function WorkoutScreen() {
         )}
 
         {/* ── Day Type Selector ── */}
-        {!session && new Date(selectedDate).getDay() !== 0 && (
+        {!session && fromLocalDateKey(selectedDate).getDay() !== 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
@@ -955,6 +1045,34 @@ export default function WorkoutScreen() {
                   ({(session.total_volume_kg ?? 0).toFixed(0)}kg)
                 </Text>
               </View>
+            </View>
+            <View style={{ marginTop: 14, gap: 8 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                STATUS: {(session.status ?? "planned").replace("_", " ").toUpperCase()}
+              </Text>
+              {session.status !== "completed" && session.status !== "cancelled" && (
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => finishWorkout("completed")}
+                    style={{ flex: 1, backgroundColor: M3.colors.primary, borderRadius: 10, padding: 12, alignItems: "center" }}
+                  >
+                    <Text style={{ color: M3.colors.onPrimary, fontFamily: "DMSans_700Bold" }}>Finish Workout</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    onPress={() => finishWorkout("cancelled")}
+                    style={{ borderWidth: 1, borderColor: M3.colors.outline, borderRadius: 10, padding: 12, alignItems: "center" }}
+                  >
+                    <Text style={{ color: M3.colors.onSurfaceVariant, fontFamily: "DMSans_700Bold" }}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {(session.status === "completed" || session.status === "cancelled") && (
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12 }}>
+                  Session closed. Logged sets remain saved.
+                </Text>
+              )}
             </View>
           </Card>
         )}
@@ -1166,12 +1284,12 @@ export default function WorkoutScreen() {
         {exercises.length === 0 && !session && (
           <Card>
             <View style={{ alignItems: "center", paddingVertical: 20, gap: 12 }}>
-              <Feather name={new Date(selectedDate).getDay() === 0 ? "activity" : "zap"} size={48} color={M3.colors.onSurfaceMuted} />
+              <Feather name={fromLocalDateKey(selectedDate).getDay() === 0 ? "activity" : "zap"} size={48} color={M3.colors.onSurfaceMuted} />
               <Text style={{ color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
                 No exercises yet
               </Text>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" }}>
-                {new Date(selectedDate).getDay() === 0
+                {fromLocalDateKey(selectedDate).getDay() === 0
                   ? "Select Cardio & Recovery above and add exercises"
                   : "Select a day type above and use the template to get started"}
               </Text>

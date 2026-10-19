@@ -1,4 +1,4 @@
-export type SyncQueueState = "pending" | "uploading" | "uploaded" | "failed";
+export type SyncQueueState = "pending" | "uploading" | "uploaded" | "failed" | "needs_attention";
 
 export type SyncQueueEntry = {
   id: string;
@@ -9,7 +9,7 @@ export type SyncQueueEntry = {
   updatedAt: string;
 };
 
-export const SYNC_QUEUE_STATES: SyncQueueState[] = ["pending", "uploading", "uploaded", "failed"];
+export const SYNC_QUEUE_STATES: SyncQueueState[] = ["pending", "uploading", "uploaded", "failed", "needs_attention"];
 
 export function createSyncQueueEntry(externalId: string): SyncQueueEntry {
   const now = new Date().toISOString();

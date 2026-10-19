@@ -13,13 +13,14 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { parseFoodInput, type ParsedFoodItem } from "../../lib/ai/parsers";
-import { insertFoodLog } from "../../lib/db/queries/nutrition";
+import { insertFoodLogs } from "../../lib/db/queries/nutrition";
 import { useUIStore } from "../../lib/stores/ui.store";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { toLocalDateKey } from "../../lib/utils/local-date";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -36,10 +37,11 @@ export default function LogFoodModal() {
   const [input, setInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
   const [parsedItems, setParsedItems] = useState<ParsedFoodItem[] | null>(null);
+  const [parseSource, setParseSource] = useState<"local" | "ai">("local");
   const [parseNotes, setParseNotes] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateKey();
 
   const handleParse = async () => {
     if (!input.trim()) return;
@@ -47,32 +49,22 @@ export default function LogFoodModal() {
     setParsedItems(null);
     try {
       const result = await parseFoodInput(input);
+      setParseSource(result.source === "ai" ? "ai" : "local");
       setParsedItems(result.items);
       setParseNotes(result.parse_notes);
       if (result.meal_suggestion) {
         setSelectedMeal(result.meal_suggestion);
       }
     } catch (err) {
-      // Fallback: show raw input as editable
+      // Never create a saveable zero-calorie placeholder for an unparsed meal.
+      setParsedItems(null);
+      const message = err instanceof Error ? err.message : "Unknown parsing error";
+      setParseNotes("Could not estimate this meal. Your text is preserved; retry when the AI service is available or simplify the food description. " + message);
       Alert.alert(
         "Parse Failed",
-        "Could not parse food automatically. You can add items manually.",
+        "No nutrition values were estimated, so nothing can be saved yet. Your input is preserved for retry.",
         [{ text: "OK" }]
       );
-      // Create a basic item from the input
-      setParsedItems([
-        {
-          name: input,
-          quantity: "1 serving",
-          quantity_g: null,
-          calories: 0,
-          protein_g: 0,
-          carbs_g: 0,
-          fat_g: 0,
-          fiber_g: null,
-          confidence: "low",
-        },
-      ]);
     } finally {
       setIsParsing(false);
     }
@@ -101,25 +93,27 @@ export default function LogFoodModal() {
     setIsSaving(true);
     try {
       const now = Math.floor(Date.now() / 1000);
-      for (const item of parsedItems) {
-        await insertFoodLog({
-          id: uuid.v4() as string,
-          date: today,
-          meal: selectedMeal,
-          name: item.name,
-          quantity_g: item.quantity_g,
-          calories: item.calories,
-          protein_g: item.protein_g,
-          carbs_g: item.carbs_g,
-          fat_g: item.fat_g,
-          fiber_g: item.fiber_g,
-          sugar_g: null,
-          sodium_mg: null,
-          source: mode,
-          raw_input: input,
-          created_at: now,
-        });
-      }
+      await insertFoodLogs(parsedItems.map((item) => ({
+        id: uuid.v4() as string,
+        date: today,
+        meal: selectedMeal,
+        name: item.name,
+        quantity_g: item.quantity_g,
+        calories: item.calories,
+        protein_g: item.protein_g,
+        carbs_g: item.carbs_g,
+        fat_g: item.fat_g,
+        fiber_g: item.fiber_g,
+        sugar_g: null,
+        sodium_mg: null,
+        source: parseSource === "ai" ? "ai" : "local",
+        raw_input: input,
+        provenance_type: parseSource === "ai" ? "ai_estimated" : "verified_reference",
+        provenance_json: JSON.stringify({ parserSource: parseSource, confidenceLabel: item.confidence, confidenceScoreBasis: "categorical_heuristic" }),
+        estimate_confidence: parseSource === "ai" ? (item.confidence === "high" ? 0.85 : item.confidence === "medium" ? 0.6 : 0.3) : null,
+        estimate_reviewed: parseSource === "ai" ? 0 : 1,
+        created_at: now,
+      })));
       router.back();
     } catch (err) {
       Alert.alert("Save Failed", "Could not save food log. Please try again.");
@@ -227,7 +221,7 @@ export default function LogFoodModal() {
           </View>
 
           <Button
-            label={isParsing ? "Parsing..." : "Parse with AI"}
+            label={isParsing ? "Parsing..." : "Parse Meal"}
             icon="cpu"
             loading={isParsing}
             disabled={!input.trim()}

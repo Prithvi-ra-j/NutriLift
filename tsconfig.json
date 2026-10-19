@@ -54,6 +54,10 @@
     ".expo/types/**/*.ts"
   ],
   "exclude": [
-    "supabase/functions/**"
+    "supabase/functions/**",
+    "apex/**",
+    "tools/**",
+    "android/**",
+    "ios/**"
   ]
 }

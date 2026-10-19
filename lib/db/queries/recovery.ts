@@ -1,33 +1,75 @@
-// @ts-nocheck
 import { eq, gte, lte, and, desc } from "drizzle-orm";
 import { db } from "../client";
 import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, type SupplementLog } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
+import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
+import { validateRecoveryInput, summarizeRecoveryCheckIn, type RecoverySummary } from "../../recovery/validation";
+import { appendDomainEvent } from "./domain-events";
+import { enqueueRecoveryLog } from "./sync-outbox";
 
 // ─── Recovery Queries ─────────────────────────────────────────────────────────
 
+function assertCalendarDate(date: string): void {
+  try {
+    fromLocalDateKey(date);
+  } catch {
+    throw new Error("Recovery date must be a valid YYYY-MM-DD calendar date.");
+  }
+}
+
 export async function getRecoveryLog(date: string): Promise<RecoveryLog | null> {
+  assertCalendarDate(date);
   const result = await db
     .select()
     .from(recoveryLogs)
-    .where(eq(recoveryLogs.date, date));
+    .where(eq(recoveryLogs.date, date))
+    .limit(1);
   return result[0] ?? null;
 }
 
 export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
+  assertCalendarDate(log.date);
+  validateRecoveryInput(log);
   const record = { ...log, updated_at: new Date().toISOString() };
-  const existing = await getRecoveryLog(log.date);
-  if (existing) {
-    await db.update(recoveryLogs).set(record).where(eq(recoveryLogs.date, log.date));
-  } else {
-    await db.insert(recoveryLogs).values(record);
-  }
+
+  // Canonical recovery row, event journal and invalidation queue commit together.
+  await db.transaction(async (tx: any) => {
+    await tx.insert(recoveryLogs).values(record).onConflictDoUpdate({
+      target: recoveryLogs.date,
+      set: {
+        sleep_duration_hr: log.sleep_duration_hr ?? null,
+        sleep_quality: log.sleep_quality ?? null,
+        bedtime: log.bedtime ?? null,
+        wake_time: log.wake_time ?? null,
+        hrv: log.hrv ?? null,
+        resting_hr: log.resting_hr ?? null,
+        energy_level: log.energy_level ?? null,
+        muscle_soreness: log.muscle_soreness ?? null,
+        stress_level: log.stress_level ?? null,
+        notes: log.notes ?? null,
+        updated_at: record.updated_at,
+      },
+    });
+    await appendDomainEvent(tx, {
+      id: `recovery-check-in:${log.date}:${record.updated_at}`,
+      eventType: "recovery.check-in.saved",
+      entityType: "recovery_log",
+      entityId: log.date,
+      entityVersion: Date.now(),
+      occurredAt: record.updated_at,
+      metadata: { date: log.date, hasSleepDuration: log.sleep_duration_hr != null },
+    });
+    const persistedRows = await tx.select().from(recoveryLogs).where(eq(recoveryLogs.date, log.date)).limit(1);
+    if (persistedRows[0]) await enqueueRecoveryLog(tx, persistedRows[0]);
+  });
 }
 
 export async function getRecentRecoveryLogs(days: number = 7): Promise<RecoveryLog[]> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  if (!Number.isInteger(days) || days < 1 || days > 365) {
+    throw new Error("Recovery history days must be an integer from 1 to 365.");
+  }
+  // Inclusive range: seven days means today plus the six preceding dates.
+  const cutoffStr = addCalendarDays(toLocalDateKey(), -(days - 1));
 
   return db
     .select()
@@ -40,6 +82,9 @@ export async function getRecoveryLogsForDateRange(
   startDate: string,
   endDate: string
 ): Promise<RecoveryLog[]> {
+  assertCalendarDate(startDate);
+  assertCalendarDate(endDate);
+  if (startDate > endDate) throw new Error("Recovery range start must not be after its end.");
   return db
     .select()
     .from(recoveryLogs)
@@ -66,40 +111,56 @@ export async function upsertSupplementLog(
   supplementName: string,
   taken: boolean
 ): Promise<void> {
-  const existing = await db
-    .select()
-    .from(supplementLogs)
-    .where(
-      eq(supplementLogs.date, date)
-    );
-
-  const existingForSupplement = existing.find(
-    (s) => s.supplement_name === supplementName
-  );
+  assertCalendarDate(date);
+  if (!supplementName.trim()) throw new Error("Supplement name is required.");
 
   const now = Math.floor(Date.now() / 1000);
+  const { default: uuid } = await import("react-native-uuid");
 
-  if (existingForSupplement) {
-    await db
-      .update(supplementLogs)
-      .set({ taken: taken ? 1 : 0, logged_at: now })
-      .where(eq(supplementLogs.id, existingForSupplement.id));
-  } else {
-    const { default: uuid } = await import("react-native-uuid");
-    await db.insert(supplementLogs).values({
-      id: uuid.v4() as string,
-      date,
-      supplement_name: supplementName,
-      taken: taken ? 1 : 0,
-      logged_at: now,
+  // Serialize the read/write pair so rapid repeated taps cannot create duplicate
+  // date/name records in the local database.
+  await db.transaction(async (tx: any) => {
+    const existing = await tx
+      .select()
+      .from(supplementLogs)
+      .where(eq(supplementLogs.date, date));
+
+    const existingForSupplement = existing.find(
+      (s: SupplementLog) => s.supplement_name === supplementName
+    );
+
+    let recordId: string;
+    if (existingForSupplement) {
+      recordId = existingForSupplement.id;
+      await tx
+        .update(supplementLogs)
+        .set({ taken: taken ? 1 : 0, logged_at: now })
+        .where(eq(supplementLogs.id, existingForSupplement.id));
+    } else {
+      recordId = uuid.v4() as string;
+      await tx.insert(supplementLogs).values({
+        id: recordId,
+        date,
+        supplement_name: supplementName,
+        taken: taken ? 1 : 0,
+        logged_at: now,
+      });
+    }
+    const eventVersion = Date.now();
+    await appendDomainEvent(tx, {
+      id: `supplement-log:${recordId}:${eventVersion}`,
+      eventType: "recovery.supplement.updated",
+      entityType: "supplement_log",
+      entityId: recordId,
+      entityVersion: eventVersion,
+      occurredAt: new Date(eventVersion).toISOString(),
+      metadata: { date, taken: Boolean(taken) },
     });
-  }
+  });
 }
 
 export async function getSupplementAdherence30d(): Promise<Record<string, number>> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 29);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = addCalendarDays(toLocalDateKey(), -29);
 
   const logs = await db
     .select()
@@ -125,4 +186,21 @@ export async function getSupplementAdherence30d(): Promise<Record<string, number
   }
 
   return result;
+}
+
+
+/** Blueprint contract alias: save one validated, user-reported check-in atomically. */
+export async function saveRecoveryCheckIn(input: NewRecoveryLog): Promise<void> {
+  return upsertRecoveryLog(input);
+}
+
+/** Return history with explicit inclusive date bounds. */
+export async function getRecoveryHistory(startDate: string, endDate: string): Promise<RecoveryLog[]> {
+  return getRecoveryLogsForDateRange(startDate, endDate);
+}
+
+/** Missing fields stay unknown; this function intentionally does not create a numeric readiness score. */
+export async function getRecoverySummary(date: string): Promise<RecoverySummary> {
+  const checkIn = await getRecoveryLog(date);
+  return summarizeRecoveryCheckIn(checkIn, date);
 }
