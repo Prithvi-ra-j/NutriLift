@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Typecheck, lint, test and security checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Verify (typecheck + lint + tests)
+        run: npm run verify
+
+      - name: PII tripwire
+        env:
+          PII_PATTERNS_FILE: /tmp/pii-patterns.local
+        run: |
+          if [ -z "${{ secrets.PII_PATTERNS_BASE64 }}" ]; then
+            echo "PII_PATTERNS_BASE64 repository secret is required to run the PII tripwire." >&2
+            exit 1
+          fi
+          printf '%s' "${{ secrets.PII_PATTERNS_BASE64 }}" | base64 --decode > "$PII_PATTERNS_FILE"
+          chmod 600 "$PII_PATTERNS_FILE"
+          bash tools/check-no-pii.sh
+
+      - name: Dependency audit (non-blocking)
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high
