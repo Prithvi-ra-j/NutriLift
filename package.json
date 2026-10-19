@@ -10,7 +10,8 @@
     "build:web": "expo export -p web",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "audit": "npm audit --omit=dev --audit-level=high || echo 'Non-blocking dependency audit found vulnerabilities; inspect the log.'"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",
