@@ -71,8 +71,7 @@ const storage = {
     if (stored === null) return null;
     if (!stored.startsWith("enc:v1:")) {
       const encryptionKey = await getEncryptionKey();
-      const encrypted = encryptSession(stored, encryptionKey);
-      await AsyncStorage.setItem(key, encrypted);
+      await AsyncStorage.setItem(key, encryptSession(stored, encryptionKey));
       return stored;
     }
     const encryptionKey = await getEncryptionKey();
