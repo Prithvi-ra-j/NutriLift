@@ -19,7 +19,7 @@ function isValidSupabaseUrl(value: string | undefined): boolean {
 }
 
 function isValidSupabaseAnonKey(value: string | undefined): boolean {
-  return Boolean(value && value !== "public-anon-key" && value !== "your_supabase_anon_key");
+  return Boolean(value && value !== "your_supabase_anon_key");
 }
 
 export const isSupabaseConfigured =
