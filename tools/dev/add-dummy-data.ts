@@ -1,7 +1,7 @@
 // Utility to add dummy data for testing
 // Run this once to populate the database with sample data
 
-import { addDummyWeekData } from "../db/seed-dummy-data";
+import { addDummyWeekData } from "./seed-dummy-data";
 
 export async function addDummyNutritionData() {
   // Deprecated - use addDummyWeekData instead

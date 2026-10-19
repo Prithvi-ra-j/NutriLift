@@ -19,8 +19,7 @@
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "buildType": "apk"
       },
       "channel": "preview",
       "env": {
@@ -29,9 +28,9 @@
     },
     "production": {
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "buildType": "app-bundle"
       },
+      "autoIncrement": true,
       "channel": "production",
       "env": {
         "EXPO_NO_CAPABILITY_SYNC": "1"
