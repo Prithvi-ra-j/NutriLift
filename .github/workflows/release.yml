@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  verify:
+    name: Verify before release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify
+        run: npm run verify
+      - name: PII tripwire
+        env:
+          PII_PATTERNS_FILE: /tmp/pii-patterns.local
+        run: |
+          if [ -z "${{ secrets.PII_PATTERNS_BASE64 }}" ]; then
+            echo "PII_PATTERNS_BASE64 repository secret is required to run the PII tripwire." >&2
+            exit 1
+          fi
+          printf '%s' "${{ secrets.PII_PATTERNS_BASE64 }}" | base64 --decode > "$PII_PATTERNS_FILE"
+          chmod 600 "$PII_PATTERNS_FILE"
+          bash tools/check-no-pii.sh
+
+  build:
+    name: Build production AAB (EAS)
+    runs-on: ubuntu-latest
+    needs: verify
+    timeout-minutes: 60
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: 25.1.1
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Build production AAB
+        run: eas build --platform android --profile production --non-interactive
