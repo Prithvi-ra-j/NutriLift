@@ -21,6 +21,7 @@ import {
 } from "../db/schema";
 import { desc, gte, sql } from "drizzle-orm";
 import { USER_PROFILE } from "../constants/user-profile";
+import { escapeHtml } from "./html";
 
 interface ExportOptions {
   startDate?: string; // YYYY-MM-DD
@@ -200,7 +201,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
 <body>
   <div class="header">
     <h1>NUTRILIFT PROGRESS REPORT</h1>
-    <div class="subtitle">${USER_PROFILE.name} · ${start} to ${end}</div>
+    <div class="subtitle">${escapeHtml(USER_PROFILE.name)} · ${escapeHtml(start)} to ${escapeHtml(end)}</div>
     <div class="meta">
       <span>Generated: ${new Date().toLocaleString()}</span>
       <span>NutriLift v1.0</span>
