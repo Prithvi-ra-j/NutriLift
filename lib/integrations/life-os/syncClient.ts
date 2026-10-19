@@ -53,6 +53,10 @@ export async function syncToSupabase(batchSize = 100): Promise<SyncResult> {
     return { uploaded: 0, queued: 0, skipped: 0, cursor: null, error: "Sign in before syncing NutriLift." };
   }
 
+  if (!supabase) {
+    return { uploaded: 0, queued: 0, skipped: 0, cursor: null, error: "Supabase is not configured." };
+  }
+
   const repository = await import("./syncRepository");
   const cursor = await repository.getSyncCursor();
   const changedRecords = await repository.getChangedRecords(cursor);
