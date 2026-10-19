@@ -1,5 +1,5 @@
 import type { DailyNutrition, FoodLog } from "../db/schema";
-import { USER_PROFILE } from "../constants/user-profile";
+import { DEFAULT_NUTRITION_TARGETS } from "../nutrition/target-validation";
 
 export interface NutritionSummary {
   avgDailyCalories: number;
@@ -15,7 +15,10 @@ export interface NutritionSummary {
   proteinGapAnalysis: string;
 }
 
-export function computeNutritionSummary(days: DailyNutrition[]): NutritionSummary {
+export function computeNutritionSummary(
+  days: DailyNutrition[],
+  proteinTargetG: number = DEFAULT_NUTRITION_TARGETS.protein_g,
+): NutritionSummary {
   if (days.length === 0) {
     return {
       avgDailyCalories: 0,
@@ -75,12 +78,12 @@ export function computeNutritionSummary(days: DailyNutrition[]): NutritionSummar
       : null;
 
   // Protein gap analysis
-  const proteinGap = USER_PROFILE.targets.protein_g - avgProtein;
+  const proteinGap = proteinTargetG - avgProtein;
   let proteinGapAnalysis: string;
   if (proteinGap <= 0) {
-    proteinGapAnalysis = `Averaging ${avgProtein.toFixed(0)}g — ${Math.abs(proteinGap).toFixed(0)}g above your ${USER_PROFILE.targets.protein_g}g target. Solid.`;
+    proteinGapAnalysis = `Averaging ${avgProtein.toFixed(0)}g — ${Math.abs(proteinGap).toFixed(0)}g above your ${proteinTargetG}g target. Solid.`;
   } else {
-    proteinGapAnalysis = `Averaged ${avgProtein.toFixed(0)}g — ${proteinGap.toFixed(0)}g short of your ${USER_PROFILE.targets.protein_g}g target.`;
+    proteinGapAnalysis = `Averaged ${avgProtein.toFixed(0)}g — ${proteinGap.toFixed(0)}g short of your ${proteinTargetG}g target.`;
   }
 
   return {
@@ -103,7 +106,7 @@ export function computeProteinPace(
   mealsLogged: number,
   totalMeals: number = 4
 ): { needed: number; perMeal: number; message: string } {
-  const target = USER_PROFILE.targets.protein_g;
+  const target = proteinTargetG;
   const remaining = Math.max(0, target - currentProtein);
   const mealsLeft = Math.max(1, totalMeals - mealsLogged);
   const perMeal = remaining / mealsLeft;
