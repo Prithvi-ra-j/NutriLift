@@ -11,7 +11,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "test": "jest --runInBand",
-    "audit": "npm audit --omit=dev --audit-level=high || echo 'Non-blocking dependency audit found vulnerabilities; inspect the log.'"
+    "audit": "npm audit --omit=dev --audit-level=high || echo 'Non-blocking dependency audit found vulnerabilities; inspect the log.'",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "verify": "npm run typecheck && npm run lint && npm test -- --ci"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",
