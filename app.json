@@ -31,7 +31,16 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.prithvi.nutrilift",
       "permissions": [
+        "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET",
+        "android.permission.VIBRATE"
+      ],
+      "allowBackup": false,
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
@@ -55,6 +64,12 @@
         "expo-audio",
         {
           "microphonePermission": "Allow NutriLift to access your microphone for voice food logging."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "NutriLift scans barcodes to look up foods."
         }
       ]
     ],
