@@ -293,10 +293,16 @@ export async function restoreFromCloud(): Promise<number> {
     remoteRows.push(...page);
     if (page.length < pageSize) break;
   }
+  if (remoteRows.length === 0) {
+    throw new Error("No cloud backup was found for this account.");
+  }
 
   const items = remoteRows
     .map(mapCloudRecordToRestoreItem)
     .filter((item): item is RestoreItem => item !== null);
+  if (items.length === 0) {
+    throw new Error("The cloud backup contains no restorable records.");
+  }
   await inTx(async () => {
     if (!(await hasEmptyLocalDatabase())) {
       throw new Error("Local data appeared while cloud restore was loading; no data was changed.");

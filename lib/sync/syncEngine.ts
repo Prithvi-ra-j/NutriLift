@@ -140,10 +140,11 @@ export function startSyncTriggers(): () => void {
   });
   const unsubscribeNetwork = NetInfo.addEventListener((state) => {
     const online = state.isConnected !== false && state.isInternetReachable !== false;
-    if (wasOnline === false && online) void requestSync("network-restored");
+    const reconnected = wasOnline === false && online;
     wasOnline = online;
     if (!online && !runSync.isRunning) publish({ status: "offline" });
     else if (online && snapshot.status === "offline") publish({ status: "idle" });
+    if (reconnected) void requestSync("network-restored");
   });
   const authListener = supabase?.auth.onAuthStateChange((event) => {
     if (event === "SIGNED_OUT") publish({ status: "signed-out", lastError: null });

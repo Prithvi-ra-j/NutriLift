@@ -36,7 +36,7 @@ function requireNativeSqlite() {
   return sqlite;
 }
 
-type SyncTable = {
+export type SyncTable = {
   name: string;
   idColumn: string;
   map: (row: SyncableRow) => SyncRecord | SyncRecord[];
@@ -147,66 +147,72 @@ async function persistPage(
   rows: SyncableRow[],
 ): Promise<{ queued: number; rejected: number }> {
   const database = requireNativeSqlite();
-  return inTx(async () => {
-    let queued = 0;
-    let rejected = 0;
-    const now = nowIso();
+  return inTx(() => persistPageToDatabase(database, table, rows), false);
+}
 
-    for (const row of rows) {
-      const id = rowId(row, table.idColumn);
-      let records: SyncRecord[];
-      let mappingError: string | null = null;
-      try {
-        const mapped = table.map(row);
-        records = Array.isArray(mapped) ? mapped : [mapped];
-      } catch (error) {
-        records = [];
-        mappingError = error instanceof Error ? error.message : String(error);
-      }
-      if (mappingError) {
-        const externalId = `nutrilift:rejected:${table.name}:${id}`;
-        await database.runAsync(
-          `INSERT INTO sync_queue (
-             id, external_id, payload_json, state, attempt_count, last_error,
-             next_retry_at, next_attempt_at, lease_until, created_at, updated_at
-           ) VALUES (?, ?, ?, 'rejected', 0, ?, NULL, NULL, NULL, ?, ?)
-           ON CONFLICT(external_id) DO UPDATE SET payload_json = excluded.payload_json,
-             state = 'rejected', last_error = excluded.last_error, updated_at = excluded.updated_at`,
-          [
-            `sync:${externalId}`,
-            externalId,
-            JSON.stringify({ sourceTable: table.name, rowId: id, row }),
-            mappingError,
-            now,
-            now,
-          ],
-        );
-        rejected += 1;
-        continue;
-      }
-      await database.runAsync(
-        "DELETE FROM sync_queue WHERE external_id = ? AND state = 'rejected'",
-        [`nutrilift:rejected:${table.name}:${id}`],
-      );
-      for (const record of records) {
-        if (await persistRecord(database, record, now)) queued += 1;
-        else rejected += 1;
-      }
-    }
+export async function persistPageToDatabase(
+  database: QueueDatabase,
+  table: SyncTable,
+  rows: SyncableRow[],
+  now = nowIso(),
+): Promise<{ queued: number; rejected: number }> {
+  let queued = 0;
+  let rejected = 0;
 
-    const last = rows.at(-1);
-    if (last) {
-      await database.runAsync(
-        `INSERT INTO sync_checkpoint (source_table, last_updated_at, last_id)
-         VALUES (?, COALESCE(?, ''), ?)
-         ON CONFLICT(source_table) DO UPDATE SET
-           last_updated_at = excluded.last_updated_at,
-           last_id = excluded.last_id`,
-        [table.name, last.updated_at ?? "", rowId(last, table.idColumn)],
-      );
+  for (const row of rows) {
+    const id = rowId(row, table.idColumn);
+    let records: SyncRecord[];
+    let mappingError: string | null = null;
+    try {
+      const mapped = table.map(row);
+      records = Array.isArray(mapped) ? mapped : [mapped];
+    } catch (error) {
+      records = [];
+      mappingError = error instanceof Error ? error.message : String(error);
     }
-    return { queued, rejected };
-  }, false);
+    if (mappingError) {
+      const externalId = `nutrilift:rejected:${table.name}:${id}`;
+      await database.runAsync(
+        `INSERT INTO sync_queue (
+           id, external_id, payload_json, state, attempt_count, last_error,
+           next_retry_at, next_attempt_at, lease_until, created_at, updated_at
+         ) VALUES (?, ?, ?, 'rejected', 0, ?, NULL, NULL, NULL, ?, ?)
+         ON CONFLICT(external_id) DO UPDATE SET payload_json = excluded.payload_json,
+           state = 'rejected', last_error = excluded.last_error, updated_at = excluded.updated_at`,
+        [
+          `sync:${externalId}`,
+          externalId,
+          JSON.stringify({ sourceTable: table.name, rowId: id, row }),
+          mappingError,
+          now,
+          now,
+        ],
+      );
+      rejected += 1;
+      continue;
+    }
+    await database.runAsync(
+      "DELETE FROM sync_queue WHERE external_id = ? AND state = 'rejected'",
+      [`nutrilift:rejected:${table.name}:${id}`],
+    );
+    for (const record of records) {
+      if (await persistRecord(database, record, now)) queued += 1;
+      else rejected += 1;
+    }
+  }
+
+  const last = rows.at(-1);
+  if (last) {
+    await database.runAsync(
+      `INSERT INTO sync_checkpoint (source_table, last_updated_at, last_id)
+       VALUES (?, COALESCE(?, ''), ?)
+       ON CONFLICT(source_table) DO UPDATE SET
+         last_updated_at = excluded.last_updated_at,
+         last_id = excluded.last_id`,
+      [table.name, last.updated_at ?? "", rowId(last, table.idColumn)],
+    );
+  }
+  return { queued, rejected };
 }
 
 export async function enqueueChangedRecords(): Promise<{ queued: number; rejected: number }> {
@@ -337,40 +343,46 @@ export async function finishQueueBatch(
 ): Promise<void> {
   if (rows.length === 0) return;
   const database = requireNativeSqlite();
-  await inTx(async () => {
-    const now = nowIso();
-    for (const row of rows) {
-      const dead = !outcome.success && row.attempt_count >= 8;
-      const nextAttemptAt = !outcome.success && !dead
-        ? new Date(Date.parse(now) + Math.min(30_000 * (2 ** row.attempt_count), 6 * 60 * 60 * 1000)).toISOString()
-        : null;
-      if (outcome.success) {
-        const record = JSON.parse(row.payload_json) as SyncRecord;
-        if (record.deleted) {
-          await database.runAsync(
-            `INSERT INTO sync_uploaded_deletions (external_id, uploaded_at)
-             VALUES (?, ?)
-             ON CONFLICT(external_id) DO UPDATE SET uploaded_at = excluded.uploaded_at`,
-            [row.external_id, now],
-          );
-        }
+  await inTx(() => finishQueueRows(database, rows, outcome, nowIso()), false);
+}
+
+export async function finishQueueRows(
+  database: QueueDatabase,
+  rows: SyncQueueRow[],
+  outcome: { success: true } | { success: false; error: string },
+  now: string,
+): Promise<void> {
+  for (const row of rows) {
+    const dead = !outcome.success && row.attempt_count >= 8;
+    const nextAttemptAt = !outcome.success && !dead
+      ? new Date(Date.parse(now) + Math.min(30_000 * (2 ** row.attempt_count), 6 * 60 * 60 * 1000)).toISOString()
+      : null;
+    if (outcome.success) {
+      const record = JSON.parse(row.payload_json) as SyncRecord;
+      if (record.deleted) {
+        await database.runAsync(
+          `INSERT INTO sync_uploaded_deletions (external_id, uploaded_at)
+           VALUES (?, ?)
+           ON CONFLICT(external_id) DO UPDATE SET uploaded_at = excluded.uploaded_at`,
+          [row.external_id, now],
+        );
       }
-      await database.runAsync(
-        `UPDATE sync_queue
-         SET state = ?, lease_until = NULL, last_error = ?, next_attempt_at = ?,
-             next_retry_at = ?, updated_at = ?
-         WHERE id = ? AND state = 'uploading'`,
-        [
-          outcome.success ? "uploaded" : dead ? "dead" : "failed",
-          outcome.success ? null : outcome.error,
-          nextAttemptAt,
-          nextAttemptAt,
-          now,
-          row.id,
-        ],
-      );
     }
-  }, false);
+    await database.runAsync(
+      `UPDATE sync_queue
+       SET state = ?, lease_until = NULL, last_error = ?, next_attempt_at = ?,
+           next_retry_at = ?, updated_at = ?
+       WHERE id = ? AND state = 'uploading'`,
+      [
+        outcome.success ? "uploaded" : dead ? "dead" : "failed",
+        outcome.success ? null : outcome.error,
+        nextAttemptAt,
+        nextAttemptAt,
+        now,
+        row.id,
+      ],
+    );
+  }
 }
 
 export async function retryRejectedRecords(): Promise<number> {

@@ -13,6 +13,7 @@ import {
 import { migrations } from "../db/migrations";
 import { migrate, type MigrationDatabase } from "../db/migrations/runner";
 import { mapCloudRecordToRestoreItem, writeRestoreItems, type CloudSyncRow } from "./restore";
+import { toSupabaseSyncRow } from "../integrations/life-os/syncClient";
 
 jest.mock("../db/client", () => ({ sqlite: null }));
 
@@ -159,15 +160,23 @@ describe("cloud restore records", () => {
         updated_at: updatedAt,
       }),
     ];
-    const cloudRows: CloudSyncRow[] = rows.map((record) => ({
-      external_id: record.externalId,
-      record_type: record.recordType,
-      source_app: record.sourceApp,
-      occurred_at: record.occurredAt,
-      source_updated_at: record.sourceUpdatedAt,
+    const fakeCloud = new Map<string, ReturnType<typeof toSupabaseSyncRow>>();
+    for (const record of rows) {
+      const uploaded = toSupabaseSyncRow(record);
+      const stored = fakeCloud.get(uploaded.external_id);
+      if (!stored || uploaded.source_updated_at >= stored.source_updated_at) {
+        fakeCloud.set(uploaded.external_id, uploaded);
+      }
+    }
+    const cloudRows: CloudSyncRow[] = [...fakeCloud.values()].map((record) => ({
+      external_id: record.external_id,
+      record_type: record.record_type,
+      source_app: record.source_app,
+      occurred_at: record.occurred_at,
+      source_updated_at: record.source_updated_at,
       payload: record.payload,
-      schema_version: record.schemaVersion,
-      deleted_at: record.deleted ? record.sourceUpdatedAt : null,
+      schema_version: record.schema_version,
+      deleted_at: record.deleted_at,
     }));
     const items = cloudRows
       .map(mapCloudRecordToRestoreItem)

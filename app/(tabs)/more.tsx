@@ -26,7 +26,7 @@ import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/auth";
 import { supabase } from "../../lib/supabase/client";
 import { requestSync, retryRejectedAndSync, useSyncStatus } from "../../lib/sync/syncEngine";
-import { restoreFromCloud } from "../../lib/sync/restore";
+import { hasCloudBackup, hasEmptyLocalDatabase, restoreFromCloud } from "../../lib/sync/restore";
 import { M3 } from "../../design-system/tokens";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { logger } from "../../lib/logger";
@@ -37,6 +37,7 @@ import { exportDatabaseBackup } from "../../lib/data/exportAll";
 import { rebuildAllDerived } from "../../lib/db/queries/rebuild";
 
 type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "account" | "settings";
+type RestoreAvailability = "checking" | "available" | "local-data" | "no-backup" | "unavailable" | "error";
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
 
 export default function MoreScreen() {
@@ -69,6 +70,8 @@ export default function MoreScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
+  const [restoreAvailability, setRestoreAvailability] = useState<RestoreAvailability>("unavailable");
+  const [restoreAvailabilityError, setRestoreAvailabilityError] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -134,6 +137,34 @@ export default function MoreScreen() {
     });
     return () => subscription?.data.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!signedInEmail || isWeb || !isSupabaseConfigured) {
+      setRestoreAvailability("unavailable");
+      return;
+    }
+
+    let active = true;
+    setRestoreAvailability("checking");
+    setRestoreAvailabilityError(null);
+    Promise.all([hasEmptyLocalDatabase(), hasCloudBackup()])
+      .then(([localDatabaseIsEmpty, cloudBackupExists]) => {
+        if (!active) return;
+        if (!localDatabaseIsEmpty) setRestoreAvailability("local-data");
+        else if (!cloudBackupExists) setRestoreAvailability("no-backup");
+        else setRestoreAvailability("available");
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error("Could not check cloud restore availability", { error: message });
+        setRestoreAvailabilityError(message);
+        setRestoreAvailability("error");
+      });
+    return () => {
+      active = false;
+    };
+  }, [isWeb, signedInEmail]);
 
   useEffect(() => {
     if (params.section && VALID_SECTIONS.includes(params.section as MoreSection)) {
@@ -248,6 +279,7 @@ export default function MoreScreen() {
     try {
       const count = await restoreFromCloud();
       setSyncStatus(`Restored ${count} records`);
+      setRestoreAvailability("local-data");
       await loadData();
       Alert.alert("Restore complete", `Restored ${count} records from your cloud backup.`);
     } catch (error) {
@@ -676,7 +708,28 @@ export default function MoreScreen() {
                 <Button label="Retry rejected records" variant="secondary" onPress={retryRejected} disabled={isSyncing} style={{ marginTop: 12 }} />
               )}
               {signedInEmail && (
-                <Button label="Restore from cloud" variant="secondary" onPress={restoreCloudBackup} disabled={isWeb || isSyncing} style={{ marginTop: 8 }} />
+                <>
+                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 10 }}>
+                    {isWeb
+                      ? "Cloud restore is available in the Android app."
+                      : restoreAvailability === "checking"
+                        ? "Checking cloud backup availability…"
+                        : restoreAvailability === "available"
+                          ? "A cloud backup is ready to restore to this empty database."
+                          : restoreAvailability === "local-data"
+                            ? "Restore is available only when this device has no saved logs."
+                            : restoreAvailability === "no-backup"
+                              ? "No cloud backup was found for this account."
+                              : `Could not check cloud backup availability: ${restoreAvailabilityError ?? "unknown error"}`}
+                  </Text>
+                  <Button
+                    label="Restore from cloud"
+                    variant="secondary"
+                    onPress={restoreCloudBackup}
+                    disabled={isWeb || isSyncing || restoreAvailability !== "available"}
+                    style={{ marginTop: 8 }}
+                  />
+                </>
               )}
             </Card>
 

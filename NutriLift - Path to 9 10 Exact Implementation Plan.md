@@ -18,11 +18,11 @@ This living roadmap records the original audit findings, target outcomes, implem
 
 | Area | Status | Evidence and remaining proof |
 | --- | --- | --- |
-| Local quality gate | Passed locally | `npm run verify`: TypeScript and lint completed with no errors; Jest passed 49/49 suites and 304/304 tests. ESLint still reports 1,101 warnings. The integration test also passed in isolation. |
+| Local quality gate | Passed locally | `npm run verify`: TypeScript and lint completed with no errors; Jest passed 51/51 suites and 310/310 tests. The latest full lint run reports 1,103 warnings and zero errors. |
 | Expo dependency alignment | Passed | `npx expo install --check` reports dependencies are up to date. |
-| Supabase local test setup | Passed locally | Project-local CLI and local config are committed. `npm run test:supabase` passed all 5 pgTAP assertions; local Supabase was stopped after testing. |
+| Supabase local test setup | Passed locally | Project-local CLI and local config are committed. `npm run test:supabase` passed all 9 pgTAP assertions; local Supabase was stopped after testing. |
 | Section 1: CI and release readiness | In progress | CI and release workflows exist and include `npm ci`, verification/security checks, and Android prebuild/manifest validation. A successful hosted run, required GitHub branch protection, clean-install proof, and signed production AAB are not recorded here. `android/` still has 44 tracked files. |
-| Section 6: sync and restore | Implemented; acceptance is not fully closed | Queue/checkpoint, single-flight, and restore implementations have tests. Restore coverage includes food, supplements, sessions, exercises, sets, PRs, body, nutrition, and recovery. Queue lease recovery and conditional server upsert have tests; local SQL tests passed. User-facing offline/sync-status flows and full restore behavior still need acceptance verification on the supported runtime. |
+| Section 6: sync and restore | Implemented; on-device acceptance remains open | Queue/checkpoint, reconnect triggers, offline/status reporting, restore eligibility, and conditional server upsert have focused tests. Restore coverage includes food, supplements, sessions, exercises, sets, PRs, body, nutrition, and recovery. Nine local pgTAP assertions pass. A signed-in Android round trip against a configured Supabase project is not yet recorded. |
 | Root-directory policy | Clarified; cleanup remains | `design-system/` and `src/` are active roots and should remain allowed. `features/`, `drizzle/`, and `scripts/` have no tracked files; `android/` remains tracked and needs an explicit CNG disposition. |
 | Sections 2-5 and 7-12 | Not re-scored | Their scores below remain Oct 17 historical baselines; reassess against acceptance evidence before reporting current scores. |
 
@@ -423,7 +423,7 @@ Replace every `parseFloat(x) || null` in `lib/services/barcodeScanner.ts` with `
 
 **Target state:** sync is a real backup: every event table syncs, deletes propagate, uploads survive crashes, older data can never overwrite newer data, and a wiped phone restores completely. All of it is observable in Settings.
 
-**Implementation status (verified Oct 24, 2026):** the local-first queue, per-table checkpoints, single-flight sync engine, restore path, and server-side conditional upsert are implemented. Automated coverage exists for queue lease recovery, single-flight requests, restore round-tripping, and conditional SQL upserts. The local Supabase pgTAP run passed all 5 assertions. Treat the implementation steps below as the intended behavior and acceptance specification; do not recreate work that is already present. The remaining acceptance gap is to verify the user-facing offline/sync-status flows and complete restore behavior on the supported runtime. The destructive one-time legacy PR cleanup remains a separately reviewed hosted-database operation.
+**Implementation status (updated after the Section 6 acceptance review):** the local-first queue, per-table checkpoints, single-flight engine, restore path, and conditional server upsert are implemented. Recent regression tests now cover invalid-row checkpoint advancement, crash/lease recovery through duplicate delivery, offline-before-auth behavior, automatic sync after reconnect, tombstone serialization, and Settings status aggregation. Restore availability is gated on an empty local database and an existing backup; empty or unsupported backups now report an error instead of a success-shaped zero-record restore. The focused Jest suites and TypeScript check pass; the expanded local Supabase pgTAP suite passes all 9 assertions. A signed-in Android run against a configured Supabase project is still needed for runtime acceptance. The destructive one-time legacy PR cleanup remains a separately reviewed hosted-database operation.
 
 **1. Sync every event table.** In `lib/integrations/life-os/exportSchema.ts` add record types for `food_log`, `exercise_log` and `set_log` following the existing naming pattern there. External IDs: `nutrilift:food_log:<id>`, `nutrilift:exercise_log:<id>`, `nutrilift:set_log:<id>`. Payloads carry parent IDs (`session_id`, `exercise_log_id`), `updated_at`, and `deleted: boolean`.
 
@@ -483,15 +483,17 @@ The client replaces its direct `upsert` with `supabase.rpc('upsert_sync_records'
 
 **10. Prove it is a backup: restore.** Create `lib/sync/restore.ts`: when the local DB is empty and a session exists, page through `sync_records` ordered by `source_updated_at, external_id`, map each record back to rows with inverse mappers, and insert everything in one `inTx`, then set `app_settings.restore_completed`. Add a 'Restore from cloud' action to Settings and to the first-run flow.
 
-**11. Tests.** Engine with a fake transport: kill mid-upload then relaunch reclaims the lease and uploads once; duplicate delivery is idempotent; an invalid record is `rejected` and the checkpoint still advances; delete propagates as `deleted: true`; a slower older update does not overwrite a newer server row (SQL test in `supabase/tests/sync_records.test.sql`, run with `supabase test db`); round trip: seed DB, sync to fake server, wipe, restore, and assert every table equals the original.
+**11. Tests.** Queue tests simulate a server-accepted upload followed by a process crash, lease reclaim, duplicate delivery, and completion without a duplicate cloud record. Other focused tests cover rejected-row checkpoint advancement, offline/reconnect status, tombstone upload serialization, and Settings snapshot counts. The restore test passes all supported record families through the production upload envelope, a fake cloud map, and the restore mapper/writer. `supabase/tests/sync_records.test.sql` additionally verifies conditional updates, duplicate IDs, and deletion timestamps; rerun it with `npm run test:supabase` when local Postgres is healthy. The fake transport tests do not replace a signed-in Android/hosted-Supabase round trip.
 
 **Done when:**
 
 - [x] Restore round-trip test passes for food, supplements, sessions, exercises, sets, PRs, body, nutrition and recovery rows (automated local test suite).
-- [ ] Kill-mid-upload test: zero stranded rows after relaunch.
-- [ ] Offline sync attempt shows 'offline', never 'sign in'.
-- [ ] Deleting a meal, exercise or workout appears as `deleted: true` server-side within one sync.
-- [ ] Settings shows pending, rejected, last-success and last-error accurately.
+- [x] Crash recovery reclaims the leased row, tolerates the duplicate cloud delivery, and marks the queue item uploaded.
+- [x] Offline sync reports `offline` before auth is checked; reconnect triggers a new sync attempt.
+- [x] Soft-deleted records serialize with a server deletion timestamp and the fake transport stores one row per external ID.
+- [x] Settings snapshot aggregates pending/rejected queue states and exposes last-success and last-error values.
+- [x] Expanded pgTAP run passes locally (9 assertions), including stale-update protection, duplicate IDs, and deletion timestamps.
+- [ ] Signed-in Android round trip against a configured Supabase project is verified on-device.
 
 ## 7. AI layer and edge functions (4 to 9)
 
