@@ -38,8 +38,8 @@ describe('Menu Component', () => {
     { key: '2', label: 'Item 2', onPress: jest.fn() },
   ];
 
-  it('renders correctly when visible', () => {
-    const { getByText } = render(
+  it('renders correctly when visible', async () => {
+    const { getByText } = await render(
       <Menu
         visible={true}
         onDismiss={jest.fn()}
@@ -53,8 +53,8 @@ describe('Menu Component', () => {
     expect(getByText('Item 2')).toBeTruthy();
   });
 
-  it('does not render items when not visible', () => {
-    const { getByText, queryByText } = render(
+  it('does not render items when not visible', async () => {
+    const { getByText, queryByText } = await render(
       <Menu
         visible={false}
         onDismiss={jest.fn()}
@@ -67,9 +67,9 @@ describe('Menu Component', () => {
     expect(queryByText('Item 1')).toBeNull();
   });
 
-  it('calls onDismiss when pressing outside (overlay)', () => {
+  it('calls onDismiss when pressing outside (overlay)', async () => {
     const onDismissMock = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <Menu
         visible={true}
         onDismiss={onDismissMock}
@@ -79,14 +79,14 @@ describe('Menu Component', () => {
     );
 
     const overlay = getByLabelText('Close menu');
-    fireEvent.press(overlay);
+    await fireEvent.press(overlay);
 
     expect(onDismissMock).toHaveBeenCalledTimes(1);
   });
 
-  it('calls item onPress and onDismiss when an item is pressed', () => {
+  it('calls item onPress and onDismiss when an item is pressed', async () => {
     const onDismissMock = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <Menu
         visible={true}
         onDismiss={onDismissMock}
@@ -96,12 +96,12 @@ describe('Menu Component', () => {
     );
 
     const item1 = getByText('Item 1');
-    fireEvent.press(item1);
+    await fireEvent.press(item1);
 
     expect(onDismissMock).toHaveBeenCalledTimes(1);
 
     // Fast-forward timeout for item action
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(150);
     });
 

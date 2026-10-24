@@ -1,6 +1,8 @@
 import { eq, desc, and, gte, lte } from "drizzle-orm";
 import { db } from "../client";
 import { monthlyReports, aiConversations, weeklySummaries, quarterlySummaries, yearlySummaries, type MonthlyReport, type NewMonthlyReport, type AiConversation, type NewAiConversation, type WeeklySummary, type NewWeeklySummary, type QuarterlySummary, type NewQuarterlySummary, type YearlySummary, type NewYearlySummary } from "../schema";
+import { inTx } from "../tx";
+import { addDays, localDateString, startOfWeekMonday } from "../../time/localDate";
 
 // ─── Monthly Report Queries ───────────────────────────────────────────────────
 
@@ -20,14 +22,18 @@ export async function getReportForMonth(month: string): Promise<MonthlyReport | 
 }
 
 export async function insertReport(report: NewMonthlyReport): Promise<void> {
-  await db.insert(monthlyReports).values(report);
+  await inTx(async () => {
+    await db.insert(monthlyReports).values(report);
+  });
 }
 
 export async function updateReport(
   id: string,
   updates: Partial<NewMonthlyReport>
 ): Promise<void> {
-  await db.update(monthlyReports).set(updates).where(eq(monthlyReports.id, id));
+  await inTx(async () => {
+    await db.update(monthlyReports).set(updates).where(eq(monthlyReports.id, id));
+  });
 }
 
 // ─── AI Conversation Queries ──────────────────────────────────────────────────
@@ -41,11 +47,15 @@ export async function getConversationHistory(limit: number = 50): Promise<AiConv
 }
 
 export async function insertConversationMessage(msg: NewAiConversation): Promise<void> {
-  await db.insert(aiConversations).values(msg);
+  await inTx(async () => {
+    await db.insert(aiConversations).values(msg);
+  });
 }
 
 export async function clearConversationHistory(): Promise<void> {
-  await db.delete(aiConversations);
+  await inTx(async () => {
+    await db.delete(aiConversations);
+  });
 }
 
 // ─── Weekly Summary Queries ───────────────────────────────────────────────────
@@ -59,22 +69,13 @@ export async function getWeeklySummary(weekStart: string): Promise<WeeklySummary
 }
 
 export async function getPreviousWeeklySummaries(limit: number = 3): Promise<WeeklySummary[]> {
-  const today = new Date();
-  const currentDayOfWeek = today.getDay();
-  
-  // Calculate start of current week (Sunday)
-  const currentWeekStart = new Date(today);
-  currentWeekStart.setDate(today.getDate() - currentDayOfWeek);
-  currentWeekStart.setHours(0, 0, 0, 0);
-  
+  const currentWeekStart = startOfWeekMonday(localDateString());
   const summaries: WeeklySummary[] = [];
   
   // Get previous N weeks
   for (let weekOffset = 1; weekOffset <= limit; weekOffset++) {
-    const weekStart = new Date(currentWeekStart);
-    weekStart.setDate(currentWeekStart.getDate() - weekOffset * 7);
-    
-    const summary = await getWeeklySummary(weekStart.toISOString().split("T")[0]);
+    const weekStart = addDays(currentWeekStart, -weekOffset * 7);
+    const summary = await getWeeklySummary(weekStart);
     if (summary) {
       summaries.push(summary);
     }
@@ -89,8 +90,8 @@ export async function getWeeklySummariesForMonth(month: string): Promise<WeeklyS
   const startDate = new Date(year, monthNum - 1, 1);
   const endDate = new Date(year, monthNum, 0); // Last day of month
   
-  const startStr = startDate.toISOString().split('T')[0];
-  const endStr = endDate.toISOString().split('T')[0];
+  const startStr = localDateString(startDate);
+  const endStr = localDateString(endDate);
   
   return db
     .select()
@@ -105,14 +106,18 @@ export async function getWeeklySummariesForMonth(month: string): Promise<WeeklyS
 }
 
 export async function insertWeeklySummary(summary: NewWeeklySummary): Promise<void> {
-  await db.insert(weeklySummaries).values(summary);
+  await inTx(async () => {
+    await db.insert(weeklySummaries).values(summary);
+  });
 }
 
 export async function updateWeeklySummary(
   id: string,
   updates: Partial<NewWeeklySummary>
 ): Promise<void> {
-  await db.update(weeklySummaries).set(updates).where(eq(weeklySummaries.id, id));
+  await inTx(async () => {
+    await db.update(weeklySummaries).set(updates).where(eq(weeklySummaries.id, id));
+  });
 }
 
 // ─── Monthly Summary Queries ──────────────────────────────────────────────────
@@ -215,14 +220,18 @@ export async function getQuarterlySummariesForYear(year: string): Promise<Quarte
 }
 
 export async function insertQuarterlySummary(summary: NewQuarterlySummary): Promise<void> {
-  await db.insert(quarterlySummaries).values(summary);
+  await inTx(async () => {
+    await db.insert(quarterlySummaries).values(summary);
+  });
 }
 
 export async function updateQuarterlySummary(
   id: string,
   updates: Partial<NewQuarterlySummary>
 ): Promise<void> {
-  await db.update(quarterlySummaries).set(updates).where(eq(quarterlySummaries.id, id));
+  await inTx(async () => {
+    await db.update(quarterlySummaries).set(updates).where(eq(quarterlySummaries.id, id));
+  });
 }
 
 // ─── Yearly Summary Queries ───────────────────────────────────────────────────
@@ -252,12 +261,16 @@ export async function getPreviousYearlySummaries(limit: number = 5): Promise<Yea
 }
 
 export async function insertYearlySummary(summary: NewYearlySummary): Promise<void> {
-  await db.insert(yearlySummaries).values(summary);
+  await inTx(async () => {
+    await db.insert(yearlySummaries).values(summary);
+  });
 }
 
 export async function updateYearlySummary(
   id: string,
   updates: Partial<NewYearlySummary>
 ): Promise<void> {
-  await db.update(yearlySummaries).set(updates).where(eq(yearlySummaries.id, id));
+  await inTx(async () => {
+    await db.update(yearlySummaries).set(updates).where(eq(yearlySummaries.id, id));
+  });
 }

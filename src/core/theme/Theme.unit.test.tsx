@@ -29,7 +29,7 @@ describe('ThemeProvider & useTheme', () => {
   });
 
   it('renders children with default theme', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ThemeProvider>
         <ThemeConsumer />
       </ThemeProvider>
@@ -43,7 +43,7 @@ describe('ThemeProvider & useTheme', () => {
   });
 
   it('toggles dark mode and persists to AsyncStorage', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ThemeProvider initialDark={false}>
         <ThemeConsumer />
       </ThemeProvider>
@@ -54,7 +54,7 @@ describe('ThemeProvider & useTheme', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByTestId('toggle'));
+      await fireEvent.press(getByTestId('toggle'));
     });
 
     expect(getByTestId('mode').props.children).toBe('dark');
@@ -67,7 +67,7 @@ describe('ThemeProvider & useTheme', () => {
   it('loads theme preference from AsyncStorage on mount', async () => {
     (AsyncStorage.getItem as jest.Mock).mockResolvedValueOnce('dark');
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ThemeProvider>
         <ThemeConsumer />
       </ThemeProvider>
@@ -82,7 +82,7 @@ describe('ThemeProvider & useTheme', () => {
   });
 
   it('allows overriding custom tokens', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ThemeProvider initialDark={false}>
         <ThemeConsumer />
       </ThemeProvider>
@@ -93,21 +93,23 @@ describe('ThemeProvider & useTheme', () => {
     });
 
     await act(async () => {
-      fireEvent.press(getByTestId('set-custom'));
+      await fireEvent.press(getByTestId('set-custom'));
     });
 
     expect(getByTestId('primary-color').props.children).toBe('#FF0000');
   });
 
-  it('throws error when useTheme is called outside ThemeProvider', () => {
+  it('throws error when useTheme is called outside ThemeProvider', async () => {
     // Suppress console.error for expected throw
     const originalError = console.error;
     console.error = jest.fn();
 
-    expect(() => render(<ThemeConsumer />)).toThrow(
-      'useTheme must be used within a ThemeProvider'
-    );
-
-    console.error = originalError;
+    try {
+      await expect(render(<ThemeConsumer />)).rejects.toThrow(
+        'useTheme must be used within a ThemeProvider'
+      );
+    } finally {
+      console.error = originalError;
+    }
   });
 });

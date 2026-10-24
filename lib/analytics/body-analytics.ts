@@ -1,5 +1,5 @@
 import type { BodyStat } from "../db/schema";
-
+import { addDays, daysBetween, localDateString, parseLocalDate } from "../time/localDate";
 
 export interface BodyCompositionSummary {
   currentWeight: number | null;
@@ -32,9 +32,7 @@ export function computeBodySummary(
 
   // 7-day change
   const sevenDaysAgo = sorted.find((s) => {
-    const diff =
-      (new Date(latest.date).getTime() - new Date(s.date).getTime()) /
-      (1000 * 60 * 60 * 24);
+    const diff = daysBetween(s.date, latest.date);
     return diff >= 6;
   });
   const weightChange7d =
@@ -60,12 +58,15 @@ export function computeBodySummary(
   let projectedBFDate: string | null = null;
   let onTrackForGoal = false;
 
-  if (latestInBody?.body_fat_pct && targetBF !== null) {
+  if (
+    latestInBody?.body_fat_pct !== null &&
+    latestInBody?.body_fat_pct !== undefined &&
+    targetBodyFatPct !== null
+  ) {
     const currentBF = latestInBody.body_fat_pct;
     const targetBF = targetBodyFatPct;
-    const goalDate = new Date("2026-12-31");
+    const goalDate = parseLocalDate("2026-12-31");
     const today = new Date();
-    const daysToGoal = (goalDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24);
 
     // Estimate weekly fat loss rate from weight trend
     const weeklyWeightChange = weightChange7d ?? -0.2; // default conservative
@@ -78,9 +79,8 @@ export function computeBodySummary(
 
     if (weeklyFatLossPct > 0) {
       const weeksNeeded = (currentBF - targetBF) / weeklyFatLossPct;
-      const projectedDate = new Date(today);
-      projectedDate.setDate(today.getDate() + weeksNeeded * 7);
-      projectedBFDate = projectedDate.toISOString().split("T")[0];
+      projectedBFDate = addDays(localDateString(today), Math.ceil(weeksNeeded * 7));
+      const projectedDate = parseLocalDate(projectedBFDate);
       onTrackForGoal = projectedDate <= goalDate;
     }
   }

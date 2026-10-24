@@ -6,7 +6,7 @@ import { DrawerProps } from '../../core/types/component';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_WIDTH = Math.min(SCREEN_WIDTH * 0.8, 360);
 
-export const Drawer = React.forwardRef<View, DrawerProps>(
+export const Drawer = React.forwardRef<React.ComponentRef<typeof View>, DrawerProps>(
   ({ visible, onClose, modal = true, header, children }, ref) => {
     const { tokens } = useTheme();
     const { colors, spacing } = tokens;

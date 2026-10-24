@@ -1,4 +1,10 @@
-import { sqliteTable, text, real, integer } from "drizzle-orm/sqlite-core";
+import {
+  sqliteTable,
+  text,
+  real,
+  integer,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 // ─── Food Logs ────────────────────────────────────────────────────────────────
 export const foodLogs = sqliteTable("food_logs", {
@@ -17,6 +23,8 @@ export const foodLogs = sqliteTable("food_logs", {
   source: text("source").notNull(), // 'manual' | 'voice' | 'paste'
   raw_input: text("raw_input"), // original text that was parsed
   created_at: integer("created_at").notNull(), // unix timestamp
+  updated_at: text("updated_at"),
+  deleted_at: text("deleted_at"),
 });
 
 // ─── Daily Nutrition Summary ──────────────────────────────────────────────────
@@ -31,6 +39,8 @@ export const dailyNutrition = sqliteTable("daily_nutrition", {
   adherence_score: real("adherence_score"), // 0-100
   notes: text("notes"),
   updated_at: text("updated_at"),
+  targets_snapshot: text("targets_snapshot"),
+  food_count: integer("food_count").notNull().default(0),
 });
 
 // ─── Workout Sessions ─────────────────────────────────────────────────────────
@@ -45,6 +55,7 @@ export const workoutSessions = sqliteTable("workout_sessions", {
   notes: text("notes"),
   rpe: integer("rpe"), // 1-10 rate of perceived exertion
   updated_at: text("updated_at"),
+  deleted_at: text("deleted_at"),
 });
 
 // ─── Exercise Logs ────────────────────────────────────────────────────────────
@@ -57,8 +68,10 @@ export const exerciseLogs = sqliteTable("exercise_logs", {
   exercise_name: text("exercise_name").notNull(),
   muscle_group: text("muscle_group"), // chest | back | shoulders | biceps | triceps | quads | hamstrings | glutes | core
   equipment: text("equipment"), // machine | barbell | dumbbell | cable | bodyweight
-  exercise_type: text("exercise_type"), // weight_reps | reps_only | duration | distance_duration
+  exercise_type: text("exercise_type"), // weight_reps | bodyweight_reps | reps_only | duration | distance_duration
   order_in_session: integer("order_in_session"),
+  updated_at: text("updated_at"),
+  deleted_at: text("deleted_at"),
 });
 
 // ─── Set Logs ─────────────────────────────────────────────────────────────────
@@ -77,6 +90,8 @@ export const setLogs = sqliteTable("set_logs", {
   is_warmup: integer("is_warmup"),
   notes: text("notes"),
   logged_at: integer("logged_at").notNull(),
+  updated_at: text("updated_at"),
+  deleted_at: text("deleted_at"),
 });
 
 // ─── Personal Records ─────────────────────────────────────────────────────────
@@ -85,11 +100,13 @@ export const personalRecords = sqliteTable("personal_records", {
   best_weight_kg: real("best_weight_kg").notNull(),
   best_reps_at_best_weight: integer("best_reps_at_best_weight"),
   best_1rm_estimated: real("best_1rm_estimated"), // Epley formula
+  estimated_1rm_kg: real("estimated_1rm_kg"),
   best_volume_single_set: real("best_volume_single_set"), // weight × reps
   achieved_date: text("achieved_date").notNull(),
   previous_best_kg: real("previous_best_kg"),
   improvement_pct: real("improvement_pct"),
   updated_at: text("updated_at"),
+  deleted_at: text("deleted_at"),
 });
 
 // ─── Body Stats ───────────────────────────────────────────────────────────────
@@ -123,6 +140,7 @@ export const bodyStats = sqliteTable("body_stats", {
   raw_paste: text("raw_paste"), // original pasted InBody text
   source: text("source"), // 'manual' | 'inbody_paste'
   updated_at: text("updated_at"),
+  deleted_at: text("deleted_at"),
 });
 
 // ─── Recovery Logs ────────────────────────────────────────────────────────────
@@ -148,6 +166,8 @@ export const supplementLogs = sqliteTable("supplement_logs", {
   supplement_name: text("supplement_name").notNull(),
   taken: integer("taken").notNull(), // boolean
   logged_at: integer("logged_at").notNull(),
+  updated_at: text("updated_at"),
+  deleted_at: text("deleted_at"),
 });
 
 // ─── Monthly Reports ──────────────────────────────────────────────────────────
@@ -210,7 +230,7 @@ export const barcodeCache = sqliteTable("barcode_cache", {
   barcode: text("barcode").primaryKey(),
   name: text("name").notNull(),
   brand: text("brand"),
-  source: text("source").notNull(), // 'openfoodfacts' | 'nutritionix'
+  source: text("source").notNull(), // 'openfoodfacts'
   per100g_calories: real("per100g_calories"),
   per100g_protein: real("per100g_protein"),
   per100g_carbs: real("per100g_carbs"),
@@ -220,10 +240,12 @@ export const barcodeCache = sqliteTable("barcode_cache", {
   per100g_sodium: real("per100g_sodium"),
   serving_size: real("serving_size"),
   serving_unit: text("serving_unit"),
-  data_quality: text("data_quality"), // 'verified' | 'partial' | 'suspect' | 'poor'
+  data_quality: text("data_quality"), // complete | partial | poor | unknown
   warnings: text("warnings"), // JSON array of warning strings
   cached_at: integer("cached_at").notNull(),
   last_used: integer("last_used"),
+  cache_status: text("cache_status").notNull().default("found"),
+  expires_at: integer("expires_at"),
 });
 
 // ─── Personal Foods ───────────────────────────────────────────────────────────
@@ -244,6 +266,7 @@ export const personalFoods = sqliteTable("personal_foods", {
   source: text("source").notNull(), // 'manual' | 'barcode_edited' | 'indian_db_edited'
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
+  deleted_at: text("deleted_at"),
   times_logged: integer("times_logged").notNull().default(0),
   data_quality: text("data_quality").notNull().default("user_entered"),
 });
@@ -266,7 +289,7 @@ export const customExercises = sqliteTable("custom_exercises", {
   exercise_name: text("exercise_name").notNull().unique(),
   muscle_group: text("muscle_group"),
   equipment: text("equipment"),
-  exercise_type: text("exercise_type").notNull(), // weight_reps | reps_only | duration | distance_duration
+  exercise_type: text("exercise_type").notNull(), // weight_reps | bodyweight_reps | reps_only | duration | distance_duration
   created_at: integer("created_at").notNull(),
 });
 
@@ -278,7 +301,12 @@ export const syncTombstones = sqliteTable("sync_tombstones", {
   external_id: text("external_id"),
   deleted_at: text("deleted_at").notNull(),
   created_at: text("created_at").notNull(),
-});
+}, (table) => ({
+  entity: uniqueIndex("ux_sync_tombstones_entity").on(
+    table.entity_type,
+    table.entity_id,
+  ),
+}));
 
 export const syncQueue = sqliteTable("sync_queue", {
   id: text("id").primaryKey(),
@@ -288,8 +316,21 @@ export const syncQueue = sqliteTable("sync_queue", {
   attempt_count: integer("attempt_count").notNull().default(0),
   last_error: text("last_error"),
   next_retry_at: text("next_retry_at"),
+  next_attempt_at: text("next_attempt_at"),
+  lease_until: text("lease_until"),
   created_at: text("created_at").notNull(),
   updated_at: text("updated_at").notNull(),
+});
+
+export const syncCheckpoint = sqliteTable("sync_checkpoint", {
+  source_table: text("source_table").primaryKey(),
+  last_updated_at: text("last_updated_at").notNull(),
+  last_id: text("last_id").notNull(),
+});
+
+export const syncUploadedDeletions = sqliteTable("sync_uploaded_deletions", {
+  external_id: text("external_id").primaryKey(),
+  uploaded_at: text("uploaded_at").notNull(),
 });
 
 export const syncState = sqliteTable("sync_state", {
@@ -298,6 +339,31 @@ export const syncState = sqliteTable("sync_state", {
   last_synced_at: text("last_synced_at"),
   last_success_at: text("last_success_at"),
   last_error: text("last_error"),
+  updated_at: text("updated_at").notNull(),
+});
+
+export const userProfile = sqliteTable("user_profile", {
+  id: text("id").primaryKey(),
+  display_name: text("display_name"),
+  sex: text("sex"),
+  birth_year: integer("birth_year"),
+  height_cm: real("height_cm"),
+  goal_text: text("goal_text"),
+  coach_notes: text("coach_notes"),
+  updated_at: text("updated_at").notNull(),
+});
+
+export const targetHistory = sqliteTable("target_history", {
+  effective_from: text("effective_from").primaryKey(),
+  calories: real("calories").notNull(),
+  protein_g: real("protein_g").notNull(),
+  carbs_g: real("carbs_g").notNull(),
+  fat_g: real("fat_g").notNull(),
+});
+
+export const appSettings = sqliteTable("app_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
   updated_at: text("updated_at").notNull(),
 });
 
@@ -358,6 +424,10 @@ export type NewCustomExercise = typeof customExercises.$inferInsert;
 
 export type SyncTombstone = typeof syncTombstones.$inferSelect;
 export type NewSyncTombstone = typeof syncTombstones.$inferInsert;
+export type UserProfile = typeof userProfile.$inferSelect;
+export type NewUserProfile = typeof userProfile.$inferInsert;
+export type TargetHistory = typeof targetHistory.$inferSelect;
+export type NewTargetHistory = typeof targetHistory.$inferInsert;
 
 export type SyncQueueEntry = typeof syncQueue.$inferSelect;
 export type NewSyncQueueEntry = typeof syncQueue.$inferInsert;

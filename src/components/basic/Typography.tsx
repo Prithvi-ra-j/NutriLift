@@ -4,7 +4,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { TextProps } from '../../core/types/component';
 import { getTypographyStyle } from '../../core/theme/typography';
 
-export const Typography = React.forwardRef<RNText, TextProps>(
+export const Typography = React.forwardRef<React.ComponentRef<typeof RNText>, TextProps>(
   ({ variant = 'body-medium', color, weight, style, children, ...props }, ref) => {
     const { tokens } = useTheme();
     const colors = tokens.colors;

@@ -27,28 +27,28 @@ describe('Progress Component', () => {
     jest.useRealTimers();
   });
 
-  it('renders linear progress by default', () => {
-    const { getByRole } = render(<Progress value={0.5} />);
+  it('renders linear progress by default', async () => {
+    const { getByRole } = await render(<Progress value={0.5} />);
     const progressbar = getByRole('progressbar');
     expect(progressbar).toBeTruthy();
   });
 
-  it('renders circular progress', () => {
-    const { getByRole } = render(<Progress variant="circular" value={0.5} />);
+  it('renders circular progress', async () => {
+    const { getByRole } = await render(<Progress variant="circular" value={0.5} />);
     const progressbar = getByRole('progressbar');
     expect(progressbar).toBeTruthy();
   });
 
-  it('renders label and percentage', () => {
-    const { getByText } = render(
+  it('renders label and percentage', async () => {
+    const { getByText } = await render(
       <Progress value={0.75} label="Loading" showPercentage />
     );
     expect(getByText('Loading')).toBeTruthy();
     expect(getByText('75%')).toBeTruthy();
   });
 
-  it('does not show percentage when indeterminate', () => {
-    const { queryByText } = render(
+  it('does not show percentage when indeterminate', async () => {
+    const { queryByText } = await render(
       <Progress indeterminate label="Loading" showPercentage />
     );
     // Even if showPercentage is true, it shouldn't render 'NaN%' or anything similar when indeterminate

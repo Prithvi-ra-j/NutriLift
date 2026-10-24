@@ -115,7 +115,7 @@ import {
  *   <Text>Custom elevation</Text>
  * </Card>
  */
-export const Card = React.forwardRef<View, CardProps>(
+export const Card = React.forwardRef<React.ComponentRef<typeof View>, CardProps>(
   (
     {
       variant = 'elevated',

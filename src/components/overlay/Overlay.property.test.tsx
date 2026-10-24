@@ -34,8 +34,8 @@ jest.mock('../../hooks/useTheme', () => ({
 
 describe('Overlay Components Accessibility Properties', () => {
   describe('Property 8: Accessibility Tree Completeness', () => {
-    it('Menu has required accessibility roles and labels', () => {
-      const { getByRole, getAllByRole, getByLabelText } = render(
+    it('Menu has required accessibility roles and labels', async () => {
+      const { getByRole, getAllByRole, getByLabelText } = await render(
         <Menu
           visible={true}
           onDismiss={jest.fn()}
@@ -57,8 +57,8 @@ describe('Overlay Components Accessibility Properties', () => {
       expect(items.length).toBeGreaterThan(0);
     });
 
-    it('Tooltip anchor has appropriate accessibility hints', () => {
-      const { getByRole } = render(
+    it('Tooltip anchor has appropriate accessibility hints', async () => {
+      const { getByRole } = await render(
         <Tooltip text="Tooltip info">
           <Text>Anchor</Text>
         </Tooltip>
@@ -68,8 +68,8 @@ describe('Overlay Components Accessibility Properties', () => {
       expect(anchor.props.accessibilityHint).toBe('Tooltip info');
     });
 
-    it('Snackbar has polite live region and alert role', () => {
-      const { getByRole } = render(
+    it('Snackbar has polite live region and alert role', async () => {
+      const { getByRole } = await render(
         <Snackbar visible={true} onDismiss={jest.fn()} message="Alert message" />
       );
 
@@ -82,8 +82,8 @@ describe('Overlay Components Accessibility Properties', () => {
       expect(text).toBeTruthy();
     });
 
-    it('Dialog has correct modal roles and labels', () => {
-      const { getByRole } = render(
+    it('Dialog has correct modal roles and labels', async () => {
+      const { getByRole } = await render(
         <Dialog
           visible={true}
           onDismiss={jest.fn()}

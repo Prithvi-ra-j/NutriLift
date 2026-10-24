@@ -22,6 +22,7 @@ import {
 import { desc, gte, sql } from "drizzle-orm";
 import { USER_PROFILE } from "../constants/user-profile";
 import { escapeHtml } from "./html";
+import { addDays, localDateString } from "../time/localDate";
 
 interface ExportOptions {
   startDate?: string; // YYYY-MM-DD
@@ -47,7 +48,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
     includePRs = true,
   } = options;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateString();
   const start = startDate || getDateDaysAgo(30); // Default 30 days
   const end = endDate || today;
 
@@ -354,13 +355,19 @@ async function generateHTML(options: ExportOptions): Promise<string> {
           <tbody>`;
         
         for (const set of sets) {
-          const volume = set.weight_kg * set.reps;
+          const isStrengthSet =
+            (exercise.exercise_type === "weight_reps" ||
+              exercise.exercise_type === "bodyweight_reps" ||
+              exercise.exercise_type == null) &&
+            !set.is_warmup;
+          const volume = isStrengthSet ? set.weight_kg * set.reps : 0;
+          const displayedReps = isStrengthSet ? set.reps : "—";
           const type = set.is_warmup ? 'Warmup' : 'Working';
           html += `
             <tr>
               <td>${escapeHtml(String(set.set_number))}</td>
               <td>${escapeHtml(String(set.weight_kg))}kg</td>
-              <td>${escapeHtml(String(set.reps))}</td>
+              <td>${escapeHtml(String(displayedReps))}</td>
               <td>${escapeHtml(String(set.rpe || "—"))}</td>
               <td>${escapeHtml(String(volume.toFixed(0)))}kg</td>
               <td>${escapeHtml(String(type))}${set.is_pr ? '<span class="pr-badge">PR</span>' : ''}</td>
@@ -485,9 +492,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
 
 // Helper functions
 function getDateDaysAgo(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().split("T")[0];
+  return addDays(localDateString(), -days);
 }
 
 function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
@@ -601,7 +606,7 @@ export async function generateProgressPDF(options: ExportOptions = {}): Promise<
 export async function exportLast30Days() {
   return generateProgressPDF({
     startDate: getDateDaysAgo(30),
-    endDate: new Date().toISOString().split("T")[0],
+    endDate: localDateString(),
   });
 }
 
@@ -613,8 +618,8 @@ export async function exportCurrentMonth() {
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   
   return generateProgressPDF({
-    startDate: startOfMonth.toISOString().split("T")[0],
-    endDate: now.toISOString().split("T")[0],
+    startDate: localDateString(startOfMonth),
+    endDate: localDateString(now),
   });
 }
 
@@ -624,6 +629,6 @@ export async function exportCurrentMonth() {
 export async function exportAllData() {
   return generateProgressPDF({
     startDate: '2020-01-01', // Far back enough to get all data
-    endDate: new Date().toISOString().split("T")[0],
+    endDate: localDateString(),
   });
 }

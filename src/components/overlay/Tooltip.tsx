@@ -35,7 +35,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
   const typography = tokens.typography;
 
   const [visible, setVisible] = useState(false);
-  const anchorRef = useRef<View>(null);
+  const anchorRef = useRef<React.ComponentRef<typeof Pressable>>(null);
   const [anchorLayout, setAnchorLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
 

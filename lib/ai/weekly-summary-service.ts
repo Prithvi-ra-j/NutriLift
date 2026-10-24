@@ -1,4 +1,3 @@
-// @ts-nocheck
 import uuid from "react-native-uuid";
 import { getDailyNutritionRange } from "../db/queries/nutrition";
 import { getSessionsForDateRange } from "../db/queries/workout";
@@ -7,6 +6,8 @@ import { getBodyStatsForDateRange } from "../db/queries/body";
 import { getWeeklySummary, insertWeeklySummary, getPreviousWeeklySummaries } from "../db/queries/reports";
 import { generateWeeklySummary } from "../groq/generateCoachResponse";
 import type { WeeklySummary } from "../db/schema";
+import { logger } from "../logger";
+import { localDateString } from "../time/localDate";
 
 /**
  * Generate or retrieve AI-powered weekly summary
@@ -20,9 +21,7 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
   }
 
   // Don't generate summary for current week (incomplete data)
-  const today = new Date();
-  const weekEndDate = new Date(weekEnd);
-  if (weekEndDate >= today) {
+  if (weekEnd >= localDateString()) {
     return null; // Current week - don't generate yet
   }
 
@@ -40,7 +39,7 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
       avg_calories: Math.round(nutrition.reduce((sum, d) => sum + d.total_calories, 0) / nutrition.length),
       avg_protein: Math.round(nutrition.reduce((sum, d) => sum + d.total_protein_g, 0) / nutrition.length),
       protein_hit_rate: Math.round((nutrition.filter(d => d.protein_target_met === 1).length / nutrition.length) * 100),
-      adherence_score: Math.round(nutrition.reduce((sum, d) => sum + d.adherence_score, 0) / nutrition.length),
+      adherence_score: Math.round(nutrition.reduce((sum, d) => sum + (d.adherence_score ?? 0), 0) / nutrition.length),
       days_logged: nutrition.length,
     } : {
       avg_calories: 0,
@@ -81,11 +80,16 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
     };
 
     // Calculate body stats
-    const bodyStatsData = bodyStats.length >= 2 ? {
-      weight_change_kg: bodyStats[bodyStats.length - 1].weight_kg! - bodyStats[0].weight_kg!,
-      starting_weight: bodyStats[0].weight_kg,
-      ending_weight: bodyStats[bodyStats.length - 1].weight_kg,
-    } : {};
+    const startingWeight = bodyStats[0]?.weight_kg;
+    const endingWeight = bodyStats[bodyStats.length - 1]?.weight_kg;
+    const bodyStatsData =
+      bodyStats.length >= 2 && startingWeight !== null && endingWeight !== null
+        ? {
+            weight_change_kg: endingWeight - startingWeight,
+            starting_weight: startingWeight,
+            ending_weight: endingWeight,
+          }
+        : {};
 
     // Generate AI summary
     const aiSummary = await generateWeeklySummary({
@@ -115,7 +119,7 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
     await insertWeeklySummary(summary);
     return summary;
   } catch (error) {
-    console.error("Failed to generate weekly summary:", error);
+    logger.error("Failed to generate weekly summary", error);
     return null;
   }
 }

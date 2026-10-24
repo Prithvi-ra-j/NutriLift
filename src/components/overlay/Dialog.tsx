@@ -168,7 +168,7 @@ export const Dialog: React.FC<DialogProps> = ({
   const spacing = tokens.spacing;
   const typography = tokens.typography;
   
-  const dialogRef = useRef<View>(null);
+  const dialogRef = useRef<React.ComponentRef<typeof View>>(null);
   const firstActionRef = useRef<any>(null);
   
   // Get screen dimensions for responsive layout

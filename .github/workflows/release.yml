@@ -6,6 +6,40 @@ on:
       - "v*"
 
 jobs:
+  android-manifest:
+    name: Verify Android release manifest
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install required Android SDK packages
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Android project from Expo config
+        run: npx expo prebuild --platform android --clean --no-install
+      - name: Merge the release Android manifest
+        working-directory: android
+        run: ./gradlew :app:processReleaseMainManifest
+      - name: Verify effective Android permissions and backup policy
+        run: node tools/check-android-manifest.cjs
+
   verify:
     name: Verify before release
     runs-on: ubuntu-latest
@@ -16,7 +50,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - name: Install dependencies
         run: npm ci
@@ -25,19 +59,20 @@ jobs:
       - name: PII tripwire
         env:
           PII_PATTERNS_FILE: /tmp/pii-patterns.local
+          PII_PATTERNS_BASE64: ${{ secrets.PII_PATTERNS_BASE64 }}
         run: |
-          if [ -z "${{ secrets.PII_PATTERNS_BASE64 }}" ]; then
+          if [ -z "$PII_PATTERNS_BASE64" ]; then
             echo "PII_PATTERNS_BASE64 repository secret is required to run the PII tripwire." >&2
             exit 1
           fi
-          printf '%s' "${{ secrets.PII_PATTERNS_BASE64 }}" | base64 --decode > "$PII_PATTERNS_FILE"
+          printf '%s' "$PII_PATTERNS_BASE64" | base64 --decode > "$PII_PATTERNS_FILE"
           chmod 600 "$PII_PATTERNS_FILE"
           bash tools/check-no-pii.sh
 
   build:
     name: Build production AAB (EAS)
     runs-on: ubuntu-latest
-    needs: verify
+    needs: [verify, android-manifest]
     timeout-minutes: 60
     steps:
       - name: Checkout repository
@@ -45,7 +80,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
       - name: Install dependencies
         run: npm ci

@@ -3,7 +3,7 @@ import { View, Pressable, Text } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { NavigationBarProps } from '../../core/types/component';
 
-export const NavigationBar = React.forwardRef<View, NavigationBarProps>(
+export const NavigationBar = React.forwardRef<React.ComponentRef<typeof View>, NavigationBarProps>(
   ({ items, activeKey, onItemPress }, ref) => {
     const { tokens } = useTheme();
     const { colors, spacing } = tokens;

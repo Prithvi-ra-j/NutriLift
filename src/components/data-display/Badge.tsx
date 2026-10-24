@@ -51,47 +51,24 @@ export const Badge: React.FC<BadgeProps> = ({
   const styles = useMemo(() => {
     const isDot = variant === 'dot';
     
+    const offset = isDot ? -2 : -4;
+    const badgePositions: Record<NonNullable<BadgeProps['position']>, ViewStyle> = {
+      'top-right': { top: offset, right: offset },
+      'top-left': { top: offset, left: offset },
+      'bottom-right': { bottom: offset, right: offset },
+      'bottom-left': { bottom: offset, left: offset },
+    };
+
     const badgeStyle: ViewStyle = {
       backgroundColor,
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1,
+      ...(isDot
+        ? { width: 6, height: 6, borderRadius: 3 }
+        : { minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4 }),
+      ...(children ? { position: 'absolute', ...badgePositions[position] } : {}),
     };
-
-    if (isDot) {
-      badgeStyle.width = 6;
-      badgeStyle.height = 6;
-      badgeStyle.borderRadius = 3;
-    } else {
-      badgeStyle.minWidth = 16;
-      badgeStyle.height = 16;
-      badgeStyle.borderRadius = 8;
-      badgeStyle.paddingHorizontal = 4;
-    }
-
-    if (children) {
-      badgeStyle.position = 'absolute';
-      const offset = isDot ? -2 : -4;
-      
-      switch (position) {
-        case 'top-right':
-          badgeStyle.top = offset;
-          badgeStyle.right = offset;
-          break;
-        case 'top-left':
-          badgeStyle.top = offset;
-          badgeStyle.left = offset;
-          break;
-        case 'bottom-right':
-          badgeStyle.bottom = offset;
-          badgeStyle.right = offset;
-          break;
-        case 'bottom-left':
-          badgeStyle.bottom = offset;
-          badgeStyle.left = offset;
-          break;
-      }
-    }
 
     const textStyle: TextStyle = {
       ...typography.label.small,

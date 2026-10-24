@@ -3,7 +3,7 @@ import { View, Pressable, Text, Animated } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { SwitchProps } from '../../core/types/component';
 
-export const Switch = React.forwardRef<View, SwitchProps>(
+export const Switch = React.forwardRef<React.ComponentRef<typeof View>, SwitchProps>(
   ({ value, onChange, disabled = false, label }, ref) => {
     const { tokens } = useTheme();
     const { colors, spacing } = tokens;

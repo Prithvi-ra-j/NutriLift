@@ -2,6 +2,7 @@ import { groq } from "./client";
 import { AI_MODELS } from "./model-config";
 import { safeGroqCall } from "./safeCall";
 import type { CoachContext } from "../ai/context-builder";
+import { dayOfWeek, localDateString } from "../time/localDate";
 
 export type { CoachContext } from "../ai/context-builder";
 
@@ -15,10 +16,10 @@ export interface CoachMessage {
  */
 function getTodayTrainingType(todayWorkout: CoachContext["today_workout"]): { dayName: string; trainingType: string; date: string } {
   const now = new Date();
-  const dayOfWeek = now.getDay();
+  const weekday = dayOfWeek(localDateString(now));
   
   const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const dayName = dayNames[dayOfWeek];
+  const dayName = dayNames[weekday];
   const trainingType = todayWorkout?.day_type ?? "No workout logged for today";
   
   // Format date as "May 10, 2026"

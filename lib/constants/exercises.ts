@@ -39,7 +39,12 @@ export type DayType =
  * - duration       → Duration (seconds) only
  * - distance_duration → Distance (km) + Duration (min)
  */
-export type ExerciseType = "weight_reps" | "reps_only" | "duration" | "distance_duration";
+export type ExerciseType =
+  | "weight_reps"
+  | "bodyweight_reps"
+  | "reps_only"
+  | "duration"
+  | "distance_duration";
 
 export interface Exercise {
   name: string;

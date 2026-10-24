@@ -10,6 +10,7 @@ import { getAllPRs } from "../db/queries/workout";
 import { getBodyStatsForDateRange } from "../db/queries/body";
 import { generateYearlySummary } from "../groq/generateCoachResponse";
 import type { YearlySummary } from "../db/schema";
+import { logger } from "../logger";
 
 /**
  * Generate or retrieve AI-powered yearly summary
@@ -91,7 +92,7 @@ export async function getOrGenerateYearlySummary(year: string): Promise<YearlySu
     await insertYearlySummary(summary);
     return summary;
   } catch (error) {
-    console.error("Failed to generate yearly summary:", error);
+    logger.error("Failed to generate yearly summary", error);
     return null;
   }
 }

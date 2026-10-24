@@ -19,28 +19,28 @@ jest.mock('../../hooks/useTheme', () => ({
 }));
 
 describe('Badge Component', () => {
-  it('renders standard badge with content', () => {
-    const { getByText } = render(<Badge content={5} />);
+  it('renders standard badge with content', async () => {
+    const { getByText } = await render(<Badge content={5} />);
     expect(getByText('5')).toBeTruthy();
   });
 
-  it('renders max value with +', () => {
-    const { getByText } = render(<Badge content={1000} max={999} />);
+  it('renders max value with +', async () => {
+    const { getByText } = await render(<Badge content={1000} max={999} />);
     expect(getByText('999+')).toBeTruthy();
   });
 
-  it('renders dot variant without text', () => {
-    const { queryByText } = render(<Badge variant="dot" content={5} />);
+  it('renders dot variant without text', async () => {
+    const { queryByText } = await render(<Badge variant="dot" content={5} />);
     expect(queryByText('5')).toBeNull();
   });
 
-  it('hides badge when visible is false', () => {
-    const { queryByText } = render(<Badge content={5} visible={false} />);
+  it('hides badge when visible is false', async () => {
+    const { queryByText } = await render(<Badge content={5} visible={false} />);
     expect(queryByText('5')).toBeNull();
   });
 
-  it('renders wrapping children', () => {
-    const { getByText } = render(
+  it('renders wrapping children', async () => {
+    const { getByText } = await render(
       <Badge content={3}>
         <Text>AnchorText</Text>
       </Badge>

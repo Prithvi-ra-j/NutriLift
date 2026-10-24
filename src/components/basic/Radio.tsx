@@ -3,7 +3,7 @@ import { View, Pressable, Text } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { RadioProps, RadioGroupProps } from '../../core/types/component';
 
-export const Radio = React.forwardRef<View, RadioProps>(
+export const Radio = React.forwardRef<React.ComponentRef<typeof View>, RadioProps>(
   ({ selected, onChange, disabled = false, label }, ref) => {
     const { tokens } = useTheme();
     const { colors, spacing } = tokens;

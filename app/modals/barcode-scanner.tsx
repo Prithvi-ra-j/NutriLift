@@ -8,17 +8,22 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { CameraView, Camera } from "expo-camera";
 import { Ionicons } from "@expo/vector-icons";
 import { lookupBarcode } from "../../lib/services/barcodeScanner";
 import { logger } from "../../lib/logger";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
+import { useToday } from "../../lib/time/useToday";
+import { isLocalDateString } from "../../lib/time/localDate";
 
 type ScanState = "scanning" | "detecting" | "found" | "not_found" | "error" | "offline";
 
 export default function BarcodeScannerModal() {
+  const params = useLocalSearchParams<{ date?: string }>();
+  const today = useToday();
+  const logDate = isLocalDateString(params.date) ? params.date : today;
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [scanned, setScanned] = useState(false);
   const [scanState, setScanState] = useState<ScanState>("scanning");
@@ -85,7 +90,8 @@ export default function BarcodeScannerModal() {
             pathname: "/modals/nutrition-card",
             params: {
               foodData: JSON.stringify(result),
-              source: "barcode"
+              source: "barcode",
+              date: logDate,
             }
           });
         }, 500);
@@ -126,7 +132,8 @@ export default function BarcodeScannerModal() {
                   pathname: "/modals/nutrition-card",
                   params: {
                     barcode: manualBarcode.trim(),
-                    source: "manual"
+                    source: "manual",
+                    date: logDate,
                   }
                 });
               }
@@ -140,7 +147,8 @@ export default function BarcodeScannerModal() {
           pathname: "/modals/nutrition-card",
           params: {
             foodData: JSON.stringify(result),
-            source: "barcode"
+            source: "barcode",
+            date: logDate,
           }
         });
       }

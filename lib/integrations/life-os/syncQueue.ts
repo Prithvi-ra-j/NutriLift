@@ -1,4 +1,6 @@
-export type SyncQueueState = "pending" | "uploading" | "uploaded" | "failed";
+import { nowIso } from "../../time/clock";
+
+export type SyncQueueState = "pending" | "uploading" | "uploaded" | "failed" | "rejected" | "dead";
 
 export type SyncQueueEntry = {
   id: string;
@@ -7,12 +9,23 @@ export type SyncQueueEntry = {
   sourceApp: "nutrilift";
   createdAt: string;
   updatedAt: string;
+  attemptCount: number;
+  leaseUntil: string | null;
+  nextAttemptAt: string | null;
+  lastError: string | null;
 };
 
-export const SYNC_QUEUE_STATES: SyncQueueState[] = ["pending", "uploading", "uploaded", "failed"];
+export const SYNC_QUEUE_STATES: SyncQueueState[] = [
+  "pending",
+  "uploading",
+  "uploaded",
+  "failed",
+  "rejected",
+  "dead",
+];
 
 export function createSyncQueueEntry(externalId: string): SyncQueueEntry {
-  const now = new Date().toISOString();
+  const now = nowIso();
 
   return {
     id: `sync:${externalId}`,
@@ -21,6 +34,10 @@ export function createSyncQueueEntry(externalId: string): SyncQueueEntry {
     sourceApp: "nutrilift",
     createdAt: now,
     updatedAt: now,
+    attemptCount: 0,
+    leaseUntil: null,
+    nextAttemptAt: null,
+    lastError: null,
   };
 }
 
@@ -28,6 +45,11 @@ export function updateSyncQueueState(entry: SyncQueueEntry, nextState: SyncQueue
   return {
     ...entry,
     state: nextState,
-    updatedAt: new Date().toISOString(),
+    updatedAt: nowIso(),
   };
+}
+
+export function nextRetryAt(attemptCount: number, now = Date.now()): string {
+  const delayMs = Math.min(30_000 * (2 ** Math.max(0, attemptCount)), 6 * 60 * 60 * 1000);
+  return new Date(now + delayMs).toISOString();
 }

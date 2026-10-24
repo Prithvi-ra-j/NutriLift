@@ -1,17 +1,26 @@
 import { eq, and, desc, lte, gte } from "drizzle-orm";
 import { db } from "../client";
 import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
-import { recordTombstone } from "../../integrations/life-os/syncRepository";
+import { inTx } from "../tx";
+import { alive } from "../alive";
+import { nowIso } from "../../time/clock";
+import { addDays, localDateString } from "../../time/localDate";
 
 export async function insertBodyStat(stat: NewBodyStat): Promise<void> {
-  await db.insert(bodyStats).values({ ...stat, updated_at: new Date().toISOString() });
+  await inTx(async () => {
+    await db.insert(bodyStats).values({
+      ...stat,
+      updated_at: nowIso(),
+      deleted_at: null,
+    });
+  });
 }
 
 export async function getLatestWeight(): Promise<BodyStat | null> {
   const result = await db
     .select()
     .from(bodyStats)
-    .where(eq(bodyStats.type, "weight"))
+    .where(and(eq(bodyStats.type, "weight"), alive(bodyStats)))
     .orderBy(desc(bodyStats.date))
     .limit(1);
   return result[0] ?? null;
@@ -21,7 +30,7 @@ export async function getLatestInBody(): Promise<BodyStat | null> {
   const result = await db
     .select()
     .from(bodyStats)
-    .where(eq(bodyStats.type, "inbody"))
+    .where(and(eq(bodyStats.type, "inbody"), alive(bodyStats)))
     .orderBy(desc(bodyStats.date))
     .limit(1);
   return result[0] ?? null;
@@ -31,19 +40,21 @@ export async function getAllInBodyRecords(): Promise<BodyStat[]> {
   return db
     .select()
     .from(bodyStats)
-    .where(eq(bodyStats.type, "inbody"))
+    .where(and(eq(bodyStats.type, "inbody"), alive(bodyStats)))
     .orderBy(bodyStats.date);
 }
 
 export async function getWeightHistory(days: number = 30): Promise<BodyStat[]> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = addDays(localDateString(), -days);
 
   return db
     .select()
     .from(bodyStats)
-    .where(and(eq(bodyStats.type, "weight"), gte(bodyStats.date, cutoffStr)))
+    .where(and(
+      eq(bodyStats.type, "weight"),
+      gte(bodyStats.date, cutoffStr),
+      alive(bodyStats),
+    ))
     .orderBy(bodyStats.date);
 }
 
@@ -57,7 +68,8 @@ export async function getBodyStatsForDateRange(
     .where(
       and(
         gte(bodyStats.date, startDate),
-        lte(bodyStats.date, endDate)
+        lte(bodyStats.date, endDate),
+        alive(bodyStats),
       )
     )
     .orderBy(bodyStats.date);
@@ -67,13 +79,29 @@ export async function getBodyStatForDate(date: string): Promise<BodyStat | null>
   const result = await db
     .select()
     .from(bodyStats)
-    .where(and(eq(bodyStats.date, date), eq(bodyStats.type, "weight")));
+    .where(and(
+      eq(bodyStats.date, date),
+      eq(bodyStats.type, "weight"),
+      alive(bodyStats),
+    ));
   return result[0] ?? null;
 }
 
 export async function deleteBodyStat(id: string): Promise<void> {
-  await db.delete(bodyStats).where(eq(bodyStats.id, id));
-  await recordTombstone("body_stat", id);
+  await inTx(async () => {
+    const [existing] = await db
+      .select({ id: bodyStats.id })
+      .from(bodyStats)
+      .where(and(eq(bodyStats.id, id), alive(bodyStats)))
+      .limit(1);
+    if (!existing) return;
+
+    const deletedAt = nowIso();
+    await db
+      .update(bodyStats)
+      .set({ deleted_at: deletedAt, updated_at: deletedAt })
+      .where(and(eq(bodyStats.id, id), alive(bodyStats)));
+  });
 }
 
 // ─── 7-day rolling average ────────────────────────────────────────────────────

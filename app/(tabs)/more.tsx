@@ -22,17 +22,25 @@ import { Button } from "../../components/ui/Button";
 import { ListRow } from "../../components/ui/ListRow";
 import type { SupplementLog, MonthlyReport } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
-import { syncToSupabase } from "../../lib/integrations/life-os/syncClient";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/auth";
+import { supabase } from "../../lib/supabase/client";
+import { requestSync, retryRejectedAndSync, useSyncStatus } from "../../lib/sync/syncEngine";
+import { restoreFromCloud } from "../../lib/sync/restore";
 import { M3 } from "../../design-system/tokens";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { logger } from "../../lib/logger";
+import { useToday } from "../../lib/time/useToday";
+import { getProfile, getTargetsForDate } from "../../lib/data/profile";
+import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
+import { exportDatabaseBackup } from "../../lib/data/exportAll";
+import { rebuildAllDerived } from "../../lib/db/queries/rebuild";
 
 type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "account" | "settings";
 const VALID_SECTIONS: MoreSection[] = ["menu", "body", "supplements", "recovery", "reports", "account", "settings"];
 
 export default function MoreScreen() {
-  const today = new Date().toISOString().split("T")[0];
+  const today = useToday();
   const params = useLocalSearchParams<{ section?: string }>();
   const [activeSection, setActiveSection] = useState<MoreSection>("menu");
   // Body stats
@@ -53,31 +61,35 @@ export default function MoreScreen() {
 
   // Reports
   const [reports, setReports] = useState<MonthlyReport[]>([]);
+  const [profile, setProfile] = useState<Awaited<ReturnType<typeof getProfile>>>(null);
+  const [targets, setTargets] = useState<Awaited<ReturnType<typeof getTargetsForDate>> | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState("Not synced yet");
+  const syncSnapshot = useSyncStatus();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [signedInEmail, setSignedInEmail] = useState<string | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const isWeb = Platform.OS === "web";
 
-  // Groq API Key
-  const [groqKeyInput, setGroqKeyInput] = useState("");
-  const [groqKeySaved, setGroqKeySaved] = useState(false);
-  const [isVerifyingGroq, setIsVerifyingGroq] = useState(false);
-
   const loadData = useCallback(async () => {
-    const [weight, suppLogs, recoveryLog, reportsData] = await Promise.all([
+    const [weight, suppLogs, recoveryLog, reportsData, profileData, targetData] = await Promise.all([
       getLatestWeight(),
       getSupplementLogsForDate(today),
       getRecoveryLog(today),
       getAllReports(),
+      getProfile(),
+      getTargetsForDate(today),
     ]);
 
     setLatestWeight(weight?.weight_kg ?? null);
     setSupplementLogs(suppLogs);
     setReports(reportsData);
+    setProfile(profileData);
+    setTargets(targetData);
 
     if (recoveryLog) {
       setSleepHr(recoveryLog.sleep_duration_hr?.toString() ?? "7");
@@ -91,15 +103,36 @@ export default function MoreScreen() {
   }, [today]);
 
   useEffect(() => {
-    loadData();
+    loadData()
+      .then(() => setLoadError(null))
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error("More screen data load failed", { error: message });
+        setLoadError(message);
+      });
   }, [loadData]);
 
   useEffect(() => {
     // Reads the locally persisted session (no network call) so sign-in survives app restarts / pull-to-refresh.
-    getCurrentSession().then(({ data }) => {
-      setSignedInEmail(data.session?.user.email ?? null);
-      setAuthChecked(true);
+    getCurrentSession()
+      .then(({ data }) => {
+        setSignedInEmail(data.session?.user.email ?? null);
+        setAuthChecked(true);
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error("Stored Supabase session lookup failed", { error: message });
+        setAuthError(message);
+        setAuthChecked(true);
+      });
+  }, []);
+
+  useEffect(() => {
+    const subscription = supabase?.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") setSignedInEmail(null);
+      else if (session?.user.email) setSignedInEmail(session.user.email);
     });
+    return () => subscription?.data.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -109,41 +142,10 @@ export default function MoreScreen() {
   }, [params.section]);
 
   useEffect(() => {
-    AsyncStorage.getItem("GROQ_API_KEY").then((key) => {
-      if (key) setGroqKeySaved(true);
+    AsyncStorage.removeItem("GROQ_API_KEY").catch((error) => {
+      logger.error("Failed to remove legacy Groq API key from device storage", { error });
     });
   }, []);
-
-  const handleVerifyGroq = async () => {
-    if (!groqKeyInput.trim()) {
-      Alert.alert("Missing Key", "Enter a Groq API Key.");
-      return;
-    }
-    setIsVerifyingGroq(true);
-    try {
-      const response = await fetch("https://api.groq.com/openai/v1/models", {
-        headers: { Authorization: `Bearer ${groqKeyInput.trim()}` },
-      });
-      if (response.ok) {
-        await AsyncStorage.setItem("GROQ_API_KEY", groqKeyInput.trim());
-        setGroqKeySaved(true);
-        setGroqKeyInput("");
-        Alert.alert("Success", "Groq API Key verified and saved.");
-      } else {
-        Alert.alert("Invalid Key", "Could not verify this API key with Groq.");
-      }
-    } catch (e) {
-      Alert.alert("Error", "Network error while verifying key.");
-    } finally {
-      setIsVerifyingGroq(false);
-    }
-  };
-
-  const handleClearGroq = async () => {
-    await AsyncStorage.removeItem("GROQ_API_KEY");
-    setGroqKeySaved(false);
-    Alert.alert("Removed", "Groq API Key removed from device.");
-  };
 
   const logWeight = async () => {
     const weight = parseFloat(weightInput);
@@ -209,17 +211,51 @@ export default function MoreScreen() {
 
   const syncNow = async () => {
     setIsSyncing(true);
-    const result = await syncToSupabase();
-    setIsSyncing(false);
-
-    if (result.error) {
-      setSyncStatus(result.error);
-      Alert.alert("Sync unavailable", result.error);
-      return;
+    try {
+      const result = await requestSync("settings-manual");
+      if (result.error) {
+        setSyncStatus(result.error);
+        Alert.alert(result.status === "offline" ? "You are offline" : "Sync unavailable", result.error);
+        return;
+      }
+      setSyncStatus(`Uploaded ${result.uploaded}, skipped ${result.skipped}`);
+      Alert.alert("Sync complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setSyncStatus(message);
+      Alert.alert("Sync unavailable", message);
+    } finally {
+      setIsSyncing(false);
     }
+  };
 
-    setSyncStatus(`Uploaded ${result.uploaded}, skipped ${result.skipped}`);
-    Alert.alert("Sync complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
+  const retryRejected = async () => {
+    setIsSyncing(true);
+    try {
+      const result = await retryRejectedAndSync();
+      if (result.error) throw new Error(result.error);
+      Alert.alert("Retry complete", `Uploaded ${result.uploaded} record${result.uploaded === 1 ? "" : "s"}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert("Retry failed", message);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const restoreCloudBackup = async () => {
+    setIsSyncing(true);
+    try {
+      const count = await restoreFromCloud();
+      setSyncStatus(`Restored ${count} records`);
+      await loadData();
+      Alert.alert("Restore complete", `Restored ${count} records from your cloud backup.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      Alert.alert("Restore failed", message);
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const handleSignIn = async () => {
@@ -232,8 +268,12 @@ export default function MoreScreen() {
     const { data, error } = await signInWithEmail(email.trim(), password);
     setIsAuthenticating(false);
 
-    if (error || !data.user) {
+    if (error) {
       Alert.alert("Sign-in failed", error?.message || "Could not start a Supabase session.");
+      return;
+    }
+    if (!data?.user) {
+      Alert.alert("Sign-in failed", "Could not start a Supabase session.");
       return;
     }
 
@@ -301,6 +341,37 @@ export default function MoreScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        {loadError ? (
+          <View
+            accessibilityRole="alert"
+            style={{
+              backgroundColor: M3.colors.errorContainer,
+              borderRadius: 8,
+              padding: 12,
+            }}
+          >
+            <Text style={{ color: M3.colors.onErrorContainer, fontFamily: "DMSans_400Regular" }}>
+              Could not load this screen: {loadError}
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => {
+                loadData()
+                  .then(() => setLoadError(null))
+                  .catch((error: unknown) => {
+                    const message = error instanceof Error ? error.message : String(error);
+                    logger.error("More screen data retry failed", { error: message });
+                    setLoadError(message);
+                  });
+              }}
+              style={{ alignSelf: "flex-start", paddingTop: 8 }}
+            >
+              <Text style={{ color: M3.colors.onErrorContainer, fontFamily: "DMSans_700Bold" }}>
+                Retry
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
         {/* ── Header ── */}
         {activeSection === "menu" ? (
           <ScreenHeader title="MORE" subtitle="Settings, reports, and more" />
@@ -549,6 +620,14 @@ export default function MoreScreen() {
                 </View>
               ) : (
                 <View style={{ gap: 10 }}>
+                  {authError ? (
+                    <Text
+                      accessibilityRole="alert"
+                      style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_400Regular" }}
+                    >
+                      Could not check the saved session: {authError}
+                    </Text>
+                  ) : null}
                   <Input value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" placeholder="Email" />
                   <Input value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" />
                   <Button label={isAuthenticating ? "Signing in…" : "Sign in"} onPress={handleSignIn} disabled={!isSupabaseConfigured || isAuthenticating} loading={isAuthenticating} />
@@ -564,12 +643,12 @@ export default function MoreScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: M3.colors.onSurface, fontSize: 15, fontFamily: "DMSans_700Bold" }}>NutriLift Sync</Text>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 3 }}>
-                    {isWeb ? "Sync is available in the Android app" : isSupabaseConfigured ? syncStatus : "Supabase is not configured"}
+                    {isWeb ? "Sync is available in the Android app" : isSupabaseConfigured ? syncSnapshot.lastError ?? syncStatus : "Supabase is not configured"}
                   </Text>
                 </View>
                 <TouchableOpacity
                   accessibilityLabel="Sync NutriLift data now"
-                  disabled={isWeb || !isSupabaseConfigured || !signedInEmail || isSyncing}
+                  disabled={isWeb || !isSupabaseConfigured || !signedInEmail || isSyncing || syncSnapshot.status === "syncing"}
                   onPress={syncNow}
                   activeOpacity={0.75}
                   style={{
@@ -580,69 +659,27 @@ export default function MoreScreen() {
                   }}
                 >
                   <Text style={{ color: !isWeb && isSupabaseConfigured && signedInEmail ? M3.colors.onPrimary : M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
-                    {isSyncing ? "Syncing…" : isWeb ? "Android only" : "Sync now"}
+                    {isSyncing || syncSnapshot.status === "syncing" ? "Syncing…" : isWeb ? "Android only" : "Sync now"}
                   </Text>
                 </TouchableOpacity>
               </View>
               <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                {`Status: ${syncSnapshot.status} · Pending: ${syncSnapshot.pending} · Rejected/dead: ${syncSnapshot.rejected}`}
+              </Text>
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
+                {syncSnapshot.lastSuccessAt ? `Last success: ${syncSnapshot.lastSuccessAt}` : "No successful sync yet."}
+              </Text>
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 6 }}>
                 {isWeb ? "Web uses a no-op database; use Android for local-first sync." : signedInEmail ? "Sync uploads locally queued changes to your Supabase account." : "Sign in above before syncing."}
               </Text>
-            </Card>
-
-            <Card>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
-                  GROQ API KEY
-                </Text>
-                <View
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 6,
-                    backgroundColor: groqKeySaved ? M3.colors.successContainer : M3.colors.surfaceVariant,
-                    borderRadius: M3.shape.full,
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                  }}
-                >
-                  <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: groqKeySaved ? M3.colors.success : M3.colors.onSurfaceMuted }} />
-                  <Text style={{ color: groqKeySaved ? M3.colors.onSuccessContainer : M3.colors.onSurfaceVariant, fontSize: 10, fontFamily: "DMSans_700Bold", letterSpacing: 0.3 }}>
-                    {groqKeySaved ? "READY" : "NOT CONFIGURED"}
-                  </Text>
-                </View>
-              </View>
-
-              {groqKeySaved ? (
-                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", flex: 1 }}>
-                    API key is securely stored on this device.
-                  </Text>
-                  <TouchableOpacity onPress={handleClearGroq}>
-                    <Text style={{ color: M3.colors.error, fontSize: 13, fontFamily: "DMSans_700Bold" }}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={{ gap: 10 }}>
-                  <Input 
-                    value={groqKeyInput} 
-                    onChangeText={setGroqKeyInput} 
-                    autoCapitalize="none" 
-                    autoCorrect={false} 
-                    secureTextEntry 
-                    placeholder="gsk_..." 
-                  />
-                  <Button 
-                    label={isVerifyingGroq ? "Verifying…" : "Verify & Save"} 
-                    onPress={handleVerifyGroq} 
-                    disabled={isVerifyingGroq} 
-                    loading={isVerifyingGroq} 
-                  />
-                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-                    Your key is stored persistently on-device.
-                  </Text>
-                </View>
+              {syncSnapshot.rejected > 0 && (
+                <Button label="Retry rejected records" variant="secondary" onPress={retryRejected} disabled={isSyncing} style={{ marginTop: 12 }} />
+              )}
+              {signedInEmail && (
+                <Button label="Restore from cloud" variant="secondary" onPress={restoreCloudBackup} disabled={isWeb || isSyncing} style={{ marginTop: 8 }} />
               )}
             </Card>
+
           </>
         )}
 
@@ -654,11 +691,11 @@ export default function MoreScreen() {
                 PROFILE
               </Text>
               {[
-                { label: "Name", value: USER_PROFILE.name },
-                { label: "Age", value: `${USER_PROFILE.age}` },
-                { label: "Height", value: `${USER_PROFILE.height_cm}cm` },
-                { label: "Training Since", value: USER_PROFILE.training_start_date },
-                { label: "Current Split", value: USER_PROFILE.training.current_split },
+                { label: "Name", value: profile?.display_name || "Not set" },
+                { label: "Sex", value: profile?.sex || "Not set" },
+                { label: "Birth year", value: profile?.birth_year ? String(profile.birth_year) : "Not set" },
+                { label: "Height", value: profile?.height_cm ? `${profile.height_cm} cm` : "Not set" },
+                { label: "Goal", value: profile?.goal_text || "Not set" },
               ].map((item) => (
                 <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: M3.colors.outline }}>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
@@ -672,11 +709,10 @@ export default function MoreScreen() {
                 TARGETS
               </Text>
               {[
-                { label: "Calories", value: `${USER_PROFILE.targets.calories} kcal` },
-                { label: "Protein", value: `${USER_PROFILE.targets.protein_g}g` },
-                { label: "Carbs", value: `${USER_PROFILE.targets.carbs_g}g` },
-                { label: "Fat", value: `${USER_PROFILE.targets.fat_g}g` },
-                { label: "BF% Goal (Dec 2026)", value: `${USER_PROFILE.targets.body_fat_pct_dec2026}%` },
+                { label: "Calories", value: `${targets?.calories ?? DEFAULT_TARGETS.calories} kcal` },
+                { label: "Protein", value: `${targets?.protein_g ?? DEFAULT_TARGETS.protein_g}g` },
+                { label: "Carbs", value: `${targets?.carbs_g ?? DEFAULT_TARGETS.carbs_g}g` },
+                { label: "Fat", value: `${targets?.fat_g ?? DEFAULT_TARGETS.fat_g}g` },
               ].map((item) => (
                 <View key={item.label} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: M3.colors.outline }}>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>{item.label}</Text>
@@ -685,19 +721,49 @@ export default function MoreScreen() {
               ))}
             </Card>
 
-            <Card>
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-                STRUCTURAL NOTES
-              </Text>
-              {USER_PROFILE.structural_notes.map((note, i) => (
-                <View key={i} style={{ flexDirection: "row", gap: 8, paddingVertical: 6 }}>
-                  <Feather name="alert-circle" size={12} color={M3.colors.warning} style={{ marginTop: 2 }} />
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1, lineHeight: 18 }}>
-                    {note}
-                  </Text>
-                </View>
-              ))}
-            </Card>
+            <ListRow
+              icon="refresh-cw"
+              title="Repair derived data"
+              subtitle="Recalculate daily totals and personal records from active logs"
+              onPress={() => Alert.alert(
+                "Repair derived data?",
+                "This will rebuild summaries and personal records from your saved logs.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Repair",
+                    onPress: async () => {
+                      try {
+                        await rebuildAllDerived();
+                        await loadData();
+                        Alert.alert("Repair complete", "Derived data was rebuilt successfully.");
+                      } catch (error) {
+                        Alert.alert(
+                          "Repair failed",
+                          error instanceof Error ? error.message : "Derived data could not be rebuilt.",
+                        );
+                      }
+                    },
+                  },
+                ],
+              )}
+            />
+
+            <ListRow
+              icon="database"
+              title="Export all data"
+              subtitle="Share a JSON backup of every local table"
+              onPress={async () => {
+                try {
+                  await exportDatabaseBackup();
+                } catch (error) {
+                  Alert.alert(
+                    "Data export failed",
+                    error instanceof Error ? error.message : "The local data export could not be completed.",
+                  );
+                }
+              }}
+            />
 
             <ListRow
               icon="download"

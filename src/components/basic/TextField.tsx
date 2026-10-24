@@ -12,7 +12,7 @@ import { useTheme } from '../../hooks/useTheme';
 import { TextFieldProps } from '../../core/types/component';
 import { getThemeColor } from '../../core/utils/theme';
 
-export const TextField = React.forwardRef<TextInput, TextFieldProps>(
+export const TextField = React.forwardRef<React.ComponentRef<typeof TextInput>, TextFieldProps>(
   (
     {
       variant = 'filled',

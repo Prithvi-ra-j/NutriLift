@@ -40,7 +40,7 @@ export const Menu: React.FC<MenuProps> = React.memo(({
   const spacing = tokens.spacing;
   const typography = tokens.typography;
 
-  const anchorRef = useRef<View>(null);
+  const anchorRef = useRef<React.ComponentRef<typeof View>>(null);
   const [anchorLayout, setAnchorLayout] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [menuHeight, setMenuHeight] = useState(0);
   const [menuWidth, setMenuWidth] = useState(0);

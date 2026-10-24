@@ -8,6 +8,8 @@ import {
 } from "../db/queries/reports";
 import { generateQuarterlySummary } from "../groq/generateCoachResponse";
 import type { QuarterlySummary } from "../db/schema";
+import { localDateString } from "../time/localDate";
+import { logger } from "../logger";
 
 /**
  * Generate or retrieve AI-powered quarterly summary
@@ -62,8 +64,8 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
     // Generate AI summary
     const aiSummary = await generateQuarterlySummary({
       quarter,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: localDateString(startDate),
+      end_date: localDateString(endDate),
       monthly_summaries: monthlySummaries
         .filter(m => m.ai_summary)
         .map(m => ({
@@ -77,8 +79,8 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
     const summary: QuarterlySummary = {
       id: uuid.v4() as string,
       quarter,
-      start_date: startDate.toISOString().split('T')[0],
-      end_date: endDate.toISOString().split('T')[0],
+      start_date: localDateString(startDate),
+      end_date: localDateString(endDate),
       generated_at: Math.floor(Date.now() / 1000),
       ai_summary: aiSummary,
       stats_json: JSON.stringify(aggregatedStats),
@@ -87,7 +89,7 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
     await insertQuarterlySummary(summary);
     return summary;
   } catch (error) {
-    console.error("Failed to generate quarterly summary:", error);
+    logger.error("Failed to generate quarterly summary", error);
     return null;
   }
 }

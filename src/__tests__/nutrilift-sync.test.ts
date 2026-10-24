@@ -19,7 +19,10 @@ describe("NutriLift sync contract", () => {
       recordType: "body.training.session",
       occurredAt: "2026-09-20T18:30:00Z",
       sourceUpdatedAt: "2026-09-20T19:00:00Z",
-      payload: { durationMin: 52, totalVolumeKg: 3200 },
+      payload: {
+        id: "123",
+        row: { id: "123", duration_min: 52, total_volume_kg: 3200 },
+      },
       deleted: false,
       userId: "user-123",
     };
@@ -35,7 +38,8 @@ describe("NutriLift sync contract", () => {
         externalId: "nutrilift:workout_session:123",
         recordType: "body.training.session",
         occurredAt: "2026-09-20T18:30:00Z",
-        payload: {},
+        sourceUpdatedAt: "2026-09-20T19:00:00Z",
+        payload: { id: "123", row: { id: "123" } },
         deleted: false,
         userId: "user-123",
       })
@@ -48,7 +52,8 @@ describe("NutriLift sync contract", () => {
         externalId: "nutrilift:workout_session:123",
         recordType: "body.unknown",
         occurredAt: "2026-09-20T18:30:00Z",
-        payload: {},
+        sourceUpdatedAt: "2026-09-20T19:00:00Z",
+        payload: { id: "123", row: { id: "123" } },
         deleted: false,
         userId: "user-123",
       })

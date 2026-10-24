@@ -46,12 +46,13 @@ Deno.serve(async (request) => {
   }
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
-  const startOfDay = new Date().toISOString().slice(0, 10);
+  const startOfUtcDay = new Date();
+  startOfUtcDay.setUTCHours(0, 0, 0, 0);
   const { count, error: countError } = await admin
     .from("ai_request_usage")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id)
-    .gte("created_at", `${startOfDay}T00:00:00.000Z`);
+    .gte("created_at", startOfUtcDay.toISOString());
 
   if (countError) {
     return Response.json({ error: "AI usage tracking is unavailable" }, { status: 503, headers: corsHeaders });

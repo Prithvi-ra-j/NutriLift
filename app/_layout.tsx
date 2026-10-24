@@ -1,6 +1,6 @@
 import "../global.css";
-import { useEffect, useState } from "react";
-import { View, Text, ActivityIndicator, Platform } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { View, Text, ActivityIndicator, Platform, Alert } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -12,16 +12,49 @@ import {
   DMSans_500Medium,
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
-import { runMigrations } from "../lib/db/client";
+import { runMigrations, sqlite } from "../lib/db/client";
+import { ensureDerivedDataForV5 } from "../lib/db/queries/rebuild";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
 import { M3 } from "../design-system/tokens";
-import { syncToSupabase } from "../lib/integrations/life-os/syncClient";
+import { MigrationFailureScreen } from "../components/MigrationFailureScreen";
+import { requestSync, startSyncTriggers } from "../lib/sync/syncEngine";
+import { purgeUploadedDeletedRows } from "../lib/db/purge";
+import { purgeUploadedQueue } from "../lib/integrations/life-os/syncRepository";
+import { onBackground, onForeground } from "../lib/lifecycle/foreground";
+import { supabase } from "../lib/supabase/client";
+import { hasCloudBackup, hasEmptyLocalDatabase, markRestorePrompted, restoreFromCloud } from "../lib/sync/restore";
+
+type GlobalErrorUtils = {
+  getGlobalHandler: () => (error: Error, isFatal?: boolean) => void;
+  setGlobalHandler: (handler: (error: Error, isFatal?: boolean) => void) => void;
+};
+
+let globalErrorHandlerInstalled = false;
+
+function installGlobalErrorHandler(): void {
+  if (globalErrorHandlerInstalled) return;
+  const errorUtils = (globalThis as typeof globalThis & { ErrorUtils?: GlobalErrorUtils }).ErrorUtils;
+  if (!errorUtils) return;
+
+  const previousHandler = errorUtils.getGlobalHandler();
+  errorUtils.setGlobalHandler((error, isFatal) => {
+    logger.error("Unhandled JavaScript error", {
+      message: error.message,
+      stack: error.stack,
+      isFatal: Boolean(isFatal),
+    });
+    previousHandler(error, isFatal);
+  });
+  globalErrorHandlerInstalled = true;
+}
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const [migrationAttempt, setMigrationAttempt] = useState(0);
+  const restorePromptStarted = useRef(false);
 
   const [fontsLoaded] = useFonts({
     BebasNeue_400Regular,
@@ -31,31 +64,108 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
+    installGlobalErrorHandler();
+  }, []);
+
+  useEffect(() => {
+    if (!dbReady || Platform.OS === "web") return;
+    supabase?.auth.startAutoRefresh();
+    const unsubscribeSync = startSyncTriggers();
+    const unsubscribeForeground = onForeground(() => supabase?.auth.startAutoRefresh());
+    const unsubscribeBackground = onBackground(() => supabase?.auth.stopAutoRefresh());
+    return () => {
+      unsubscribeSync();
+      unsubscribeForeground();
+      unsubscribeBackground();
+      supabase?.auth.stopAutoRefresh();
+    };
+  }, [dbReady]);
+
+  useEffect(() => {
+    if (!dbReady || Platform.OS === "web" || !supabase || restorePromptStarted.current) return;
+    restorePromptStarted.current = true;
+    void (async () => {
+      const prompted = await sqlite.getFirstAsync<{ value: string }>(
+        "SELECT value FROM app_settings WHERE key = 'restore_prompted'",
+      );
+      if (prompted?.value === "1") return;
+      if (!(await hasEmptyLocalDatabase()) || !(await hasCloudBackup())) return;
+      Alert.alert(
+        "Cloud backup found",
+        "This device has no NutriLift logs. Would you like to restore your backup now?",
+        [
+          {
+            text: "Not now",
+            style: "cancel",
+            onPress: () => {
+              void markRestorePrompted().catch((error: unknown) => {
+                logger.error("Could not save the restore prompt choice", { error });
+              });
+            },
+          },
+          {
+            text: "Restore",
+            onPress: () => {
+              void markRestorePrompted()
+                .then(() => restoreFromCloud())
+                .then((count) => Alert.alert("Restore complete", `Restored ${count} records.`))
+                .catch((error: unknown) => {
+                  const message = error instanceof Error ? error.message : String(error);
+                  logger.error("First-run cloud restore failed", { error: message });
+                  Alert.alert("Restore failed", message);
+                });
+            },
+          },
+        ],
+        { cancelable: false },
+      );
+    })().catch((error: unknown) => {
+      logger.warn("Could not check for a first-run cloud backup", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
+  }, [dbReady]);
+
+  useEffect(() => {
+    let active = true;
     logger.info("App starting - initializing database");
     runMigrations()
+      .then(() => ensureDerivedDataForV5())
       .then(() => {
+        return purgeUploadedDeletedRows();
+      })
+      .then(() => purgeUploadedQueue())
+      .then(() => {
+        if (!active) return;
         logger.info("Database migrations completed successfully");
         setDbReady(true);
-        if (Platform.OS === "web") return;
-
-        syncToSupabase().then((result) => {
-          if (result.error && result.error !== "Supabase is not configured." && result.error !== "Sign in before syncing NutriLift.") {
-            logger.warn("NutriLift sync did not complete", { error: result.error });
-          }
-        }).catch((error) => {
-          logger.warn("NutriLift sync failed", { error: error.message });
-        });
+        if (Platform.OS !== "web") void requestSync("app-start");
       })
       .catch((err) => {
+        if (!active) return;
         logger.error("DB migration failed", {
-          error: err.message,
-          stack: err.stack,
+          error: err instanceof Error ? err.message : String(err),
+          stack: err instanceof Error ? err.stack : undefined,
         });
-        console.error("DB migration failed:", err);
-        setDbError(err.message);
-        setDbReady(true); // Still proceed, show error in UI
+        setDbError(err instanceof Error ? err.message : String(err));
       });
-  }, []);
+    return () => {
+      active = false;
+    };
+  }, [migrationAttempt]);
+
+  if (dbError) {
+    return (
+      <MigrationFailureScreen
+        message={dbError}
+        onRetry={() => {
+          setDbError(null);
+          setDbReady(false);
+          setMigrationAttempt((attempt) => attempt + 1);
+        }}
+      />
+    );
+  }
 
   if (!fontsLoaded || !dbReady) {
     return (
@@ -70,8 +180,8 @@ export default function RootLayout() {
 
   return (
     <ErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <StatusBar style="light" backgroundColor={M3.colors.background} />
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: M3.colors.background }}>
+        <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen

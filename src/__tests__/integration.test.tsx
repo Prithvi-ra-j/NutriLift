@@ -51,7 +51,7 @@ const IntegrationFlow = () => {
 
 describe('End-to-End Component Integration', () => {
   it('handles complex flow: open dialog -> confirm -> show snackbar', async () => {
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <ThemeProvider initialDark={false}>
         <IntegrationFlow />
       </ThemeProvider>
@@ -62,22 +62,22 @@ describe('End-to-End Component Integration', () => {
     expect(queryByText('Action completed successfully')).toBeNull();
 
     // 1. Open Dialog
-    act(() => {
-      fireEvent.press(getByTestId('open-dialog'));
+    await act(async () => {
+      await fireEvent.press(getByTestId('open-dialog'));
     });
     expect(getByText('Confirm Action')).toBeTruthy();
 
     // 2. Confirm Dialog
-    act(() => {
-      fireEvent.press(getByText('Confirm'));
+    await act(async () => {
+      await fireEvent.press(getByText('Confirm'));
     });
     // Dialog should be closed, Snackbar should be visible
     expect(queryByText('Confirm Action')).toBeNull();
     expect(getByText('Action completed successfully')).toBeTruthy();
 
     // 3. Toggle Theme (verify context works alongside UI interactions)
-    act(() => {
-      fireEvent.press(getByTestId('toggle-theme'));
+    await act(async () => {
+      await fireEvent.press(getByTestId('toggle-theme'));
     });
     // Shouldn't crash, and context should update
     expect(getByText(/Light/)).toBeTruthy();

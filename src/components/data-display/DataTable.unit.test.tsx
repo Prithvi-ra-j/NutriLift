@@ -33,8 +33,8 @@ describe('DataTable Component', () => {
     { id: '2', name: 'Banana', calories: 105 },
   ];
 
-  it('renders columns and data', () => {
-    const { getByText } = render(
+  it('renders columns and data', async () => {
+    const { getByText } = await render(
       <DataTable
         columns={mockColumns}
         data={mockData}
@@ -48,9 +48,9 @@ describe('DataTable Component', () => {
     expect(getByText('95')).toBeTruthy();
   });
 
-  it('handles row selection', () => {
+  it('handles row selection', async () => {
     const onSelectionChange = jest.fn();
-    const { getAllByRole } = render(
+    const { getAllByRole } = await render(
       <DataTable
         columns={mockColumns}
         data={mockData}
@@ -64,14 +64,14 @@ describe('DataTable Component', () => {
     // Since Checkbox is custom, we might just look for the first row checkbox
     const checkboxes = getAllByRole('checkbox');
     // First is 'select all', second is 'Apple'
-    fireEvent.press(checkboxes[1]);
+    await fireEvent.press(checkboxes[1]);
 
     expect(onSelectionChange).toHaveBeenCalledWith(['1']);
   });
 
-  it('handles column sorting callbacks', () => {
+  it('handles column sorting callbacks', async () => {
     const onSort = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <DataTable
         columns={mockColumns}
         data={mockData}
@@ -81,11 +81,11 @@ describe('DataTable Component', () => {
     );
 
     const nameHeader = getByText('Name');
-    fireEvent.press(nameHeader);
+    await fireEvent.press(nameHeader);
 
     expect(onSort).toHaveBeenCalledWith('name', true);
 
-    fireEvent.press(nameHeader);
+    await fireEvent.press(nameHeader);
     expect(onSort).toHaveBeenCalledWith('name', false);
   });
 });

@@ -3,7 +3,7 @@ import { View, Pressable, Text, ScrollView, Animated } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { TabsProps } from '../../core/types/component';
 
-export const Tabs = React.forwardRef<View, TabsProps>(
+export const Tabs = React.forwardRef<React.ComponentRef<typeof View>, TabsProps>(
   ({ tabs, activeKey, onTabPress, variant = 'primary', scrollable = false }, ref) => {
     const { tokens } = useTheme();
     const { colors, spacing } = tokens;

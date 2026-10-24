@@ -33,7 +33,7 @@ describe('Theme System Property Tests', () => {
     it('provides consistent token access throughout the tree', async () => {
       let extractedTheme = null;
       
-      render(
+      await render(
         <ThemeProvider initialDark={false}>
           <ThemeController onThemeExtracted={(t) => { extractedTheme = t; }} />
         </ThemeProvider>
@@ -59,7 +59,7 @@ describe('Theme System Property Tests', () => {
     it('updates all components simultaneously when theme changes', async () => {
       let extractedTheme = null;
       
-      const { getByTestId, rerender } = render(
+      const { getByTestId, rerender } = await render(
         <ThemeProvider initialDark={false}>
           <ThemeController onThemeExtracted={(t) => { extractedTheme = t; }} />
         </ThemeProvider>

@@ -17,8 +17,8 @@ export async function safeGroqCall<T>(
     
     // Authentication error
     if (err?.status === 401) {
-      console.error("❌ Groq authentication failed — check API key");
-      throw new Error("API authentication failed. Please check your Groq API key.");
+      console.error("❌ AI service authentication failed — check server configuration");
+      throw new Error("AI service authentication failed. Please check the server configuration.");
     }
     
     // Network error

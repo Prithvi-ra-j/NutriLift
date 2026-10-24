@@ -13,33 +13,65 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { parseFoodInput, type ParsedFoodItem } from "../../lib/ai/parsers";
-import { insertFoodLog } from "../../lib/db/queries/nutrition";
-import { useUIStore } from "../../lib/stores/ui.store";
+import { insertFoodLogs } from "../../lib/db/queries/nutrition";
+import { searchLocalFoods, type IndianFood } from "../../lib/data/indianFoodDB";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { useToday } from "../../lib/time/useToday";
+import { isLocalDateString } from "../../lib/time/localDate";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
 
 export default function LogFoodModal() {
-  const params = useLocalSearchParams();
-  const mealParam = params.meal as MealType | undefined;
+  const params = useLocalSearchParams<{ meal?: string; date?: string }>();
+  const mealParam = MEALS.find((meal) => meal === params.meal);
   
-  const { logFoodMeal, logFoodMode } = useUIStore();
-  const [mode, setMode] = useState<"type" | "voice" | "paste">(logFoodMode);
+  const today = useToday();
+  const [mode, setMode] = useState<"type" | "voice" | "paste">("type");
   const [selectedMeal, setSelectedMeal] = useState<MealType>(
-    mealParam ?? (logFoodMeal as MealType) ?? "breakfast"
+    mealParam ?? "breakfast"
   );
   const [input, setInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
   const [parsedItems, setParsedItems] = useState<ParsedFoodItem[] | null>(null);
+  const [itemSource, setItemSource] = useState<"ai" | "local" | "manual">("manual");
   const [parseNotes, setParseNotes] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const today = new Date().toISOString().split("T")[0];
+  const logDate = isLocalDateString(params.date) ? params.date : today;
+  const localSuggestions = parsedItems ? [] : searchLocalFoods(input);
+
+  const makeManualItem = (name: string): ParsedFoodItem => ({
+    name,
+    quantity: "100 g",
+    quantity_g: 100,
+    calories: 0,
+    protein_g: 0,
+    carbs_g: 0,
+    fat_g: 0,
+    fiber_g: null,
+    confidence: "low",
+  });
+
+  const chooseLocalFood = (food: IndianFood) => {
+    setItemSource("local");
+    setParsedItems([{
+      name: food.name,
+      quantity: "100 g",
+      quantity_g: 100,
+      calories: food.per100g.calories,
+      protein_g: food.per100g.protein,
+      carbs_g: food.per100g.carbs,
+      fat_g: food.per100g.fat,
+      fiber_g: food.per100g.fiber,
+      confidence: food.dataQuality === "verified" ? "high" : "medium",
+    }]);
+    setParseNotes(food.warning ?? null);
+  };
 
   const handleParse = async () => {
     if (!input.trim()) return;
@@ -47,8 +79,15 @@ export default function LogFoodModal() {
     setParsedItems(null);
     try {
       const result = await parseFoodInput(input);
-      setParsedItems(result.items);
-      setParseNotes(result.parse_notes);
+      if (result.items.length === 0) {
+        setItemSource("manual");
+        setParsedItems([makeManualItem(input.trim())]);
+        setParseNotes(result.parse_notes || "No items were identified. Enter the nutrition values to continue.");
+      } else {
+        setItemSource("ai");
+        setParsedItems(result.items);
+        setParseNotes(result.parse_notes);
+      }
       if (result.meal_suggestion) {
         setSelectedMeal(result.meal_suggestion);
       }
@@ -60,19 +99,9 @@ export default function LogFoodModal() {
         [{ text: "OK" }]
       );
       // Create a basic item from the input
-      setParsedItems([
-        {
-          name: input,
-          quantity: "1 serving",
-          quantity_g: null,
-          calories: 0,
-          protein_g: 0,
-          carbs_g: 0,
-          fat_g: 0,
-          fiber_g: null,
-          confidence: "low",
-        },
-      ]);
+      setItemSource("manual");
+      setParsedItems([makeManualItem(input.trim())]);
+      setParseNotes("AI parsing failed. Enter the nutrition values manually before saving.");
     } finally {
       setIsParsing(false);
     }
@@ -85,7 +114,7 @@ export default function LogFoodModal() {
     if (field === "name" || field === "quantity" || field === "confidence") {
       item[field] = value;
     } else {
-      item[field] = parseFloat(value) || 0;
+      item[field] = value.trim() === "" ? 0 : Number(value);
     }
     updated[index] = item as unknown as ParsedFoodItem;
     setParsedItems(updated);
@@ -97,14 +126,15 @@ export default function LogFoodModal() {
   };
 
   const handleSave = async () => {
-    if (!parsedItems || parsedItems.length === 0) return;
+    if (!parsedItems || parsedItems.length === 0 || parsedItems.some((item) =>
+      !item.name.trim() || !Number.isFinite(item.calories) || item.calories <= 0
+    )) return;
     setIsSaving(true);
     try {
       const now = Math.floor(Date.now() / 1000);
-      for (const item of parsedItems) {
-        await insertFoodLog({
+      await insertFoodLogs(parsedItems.map((item) => ({
           id: uuid.v4() as string,
-          date: today,
+          date: logDate,
           meal: selectedMeal,
           name: item.name,
           quantity_g: item.quantity_g,
@@ -115,11 +145,10 @@ export default function LogFoodModal() {
           fiber_g: item.fiber_g,
           sugar_g: null,
           sodium_mg: null,
-          source: mode,
+          source: itemSource,
           raw_input: input,
           created_at: now,
-        });
-      }
+        })));
       router.back();
     } catch (err) {
       Alert.alert("Save Failed", "Could not save food log. Please try again.");
@@ -137,6 +166,17 @@ export default function LogFoodModal() {
     }),
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
+  const canSaveItems =
+    parsedItems !== null &&
+    parsedItems.length > 0 &&
+    parsedItems.every((item) =>
+      item.name.trim().length > 0 &&
+      Number.isFinite(item.calories) &&
+      item.calories > 0 &&
+      [item.protein_g, item.carbs_g, item.fat_g].every(
+        (macro) => Number.isFinite(macro) && macro >= 0,
+      ),
+    );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
@@ -234,6 +274,26 @@ export default function LogFoodModal() {
             onPress={handleParse}
           />
 
+          {localSuggestions.length > 0 && (
+            <View style={{ gap: 8 }}>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
+                OFFLINE FOOD MATCHES
+              </Text>
+              {localSuggestions.map((food) => (
+                <TouchableOpacity
+                  key={food.id}
+                  onPress={() => chooseLocalFood(food)}
+                  style={{ backgroundColor: M3.colors.surface, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: M3.colors.surfaceContainer }}
+                >
+                  <Text style={{ color: M3.colors.onSurface, fontFamily: "DMSans_700Bold" }}>{food.name}</Text>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11 }}>
+                    {food.per100g.calories} kcal · P {food.per100g.protein}g · C {food.per100g.carbs}g · F {food.per100g.fat}g per 100 g
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           {/* ── Parse Notes ── */}
           {parseNotes && (
             <View style={{ backgroundColor: M3.colors.warningContainer, borderRadius: 8, padding: 10, flexDirection: "row", gap: 8 }}>
@@ -255,18 +315,24 @@ export default function LogFoodModal() {
                 <Card key={index} elevated>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                        {item.name}
-                      </Text>
+                      <TextInput
+                        value={item.name}
+                        onChangeText={(value) => updateItem(index, "name", value)}
+                        accessibilityLabel="Food name"
+                        style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold", padding: 0 }}
+                      />
                       <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
                         {item.quantity}
                       </Text>
                     </View>
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      {item.confidence === "low" && (
+                      {itemSource === "ai" && (
                         <View style={{ backgroundColor: M3.colors.warningContainer, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
-                          <Text style={{ color: M3.colors.warning, fontSize: 9, fontFamily: "DMSans_700Bold" }}>LOW CONF</Text>
+                          <Text style={{ color: M3.colors.warning, fontSize: 9, fontFamily: "DMSans_700Bold" }}>AI ESTIMATE · {item.confidence.toUpperCase()}</Text>
                         </View>
+                      )}
+                      {itemSource === "local" && (
+                        <Text style={{ color: M3.colors.success, fontSize: 9, fontFamily: "DMSans_700Bold" }}>LOCAL</Text>
                       )}
                       <TouchableOpacity onPress={() => removeItem(index)}>
                         <Feather name="trash-2" size={14} color={M3.colors.error} />
@@ -286,7 +352,7 @@ export default function LogFoodModal() {
                           {label}
                         </Text>
                         <TextInput
-                          value={String(item[field] ?? 0)}
+                          value={String(item[field] ?? "")}
                           onChangeText={(v) => updateItem(index, field, v)}
                           keyboardType="decimal-pad"
                           style={{
@@ -334,8 +400,14 @@ export default function LogFoodModal() {
                 label={isSaving ? "Saving..." : `Log to ${selectedMeal}`}
                 icon="check"
                 loading={isSaving}
+                disabled={!canSaveItems}
                 onPress={handleSave}
               />
+              {!canSaveItems && (
+                <Text style={{ color: M3.colors.warning, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+                  Enter a name, calories above zero, and valid non-negative macros for every item.
+                </Text>
+              )}
             </>
           )}
         </ScrollView>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -9,19 +9,21 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useTodayStore } from "../../lib/stores/today.store";
 import { useUIStore } from "../../lib/stores/ui.store";
-import { getDailyNutrition, getFoodLogsForDate, getLast7DaysNutrition } from "../../lib/db/queries/nutrition";
+import { getDailyNutrition, getLast7DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { getRecoveryLog } from "../../lib/db/queries/recovery";
 import { USER_PROFILE } from "../../lib/constants/user-profile";
-import { DAY_TYPES, type DayType } from "../../lib/constants/exercises";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { MacroRing } from "../../components/ui/MacroRing";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { useToday } from "../../lib/time/useToday";
+import { addDays, dayOfWeek, parseLocalDate } from "../../lib/time/localDate";
+import { logger } from "../../lib/logger";
+import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -52,21 +54,23 @@ interface AdherenceDot {
 }
 
 export default function DashboardScreen() {
-  const today = new Date().toISOString().split("T")[0];
-  const { nutrition, session, setNutrition, setSession, setFoodLogs } = useTodayStore();
+  const today = useToday();
   const { coachInsight } = useUIStore();
 
+  const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
+  const [session, setSession] = useState<WorkoutSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [adherenceDots, setAdherenceDots] = useState<AdherenceDot[]>([]);
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
+  const requestId = useRef(0);
 
-  // Determine today's day type based on day of week
-  const getTodayDayType = (): string => {
-    const dayOfWeek = new Date().getDay();
+  const getTodayDayType = (date: string): string => {
+    const weekday = dayOfWeek(date);
     
     // Sunday = Cardio (Marathon day)
-    if (dayOfWeek === 0) return "Cardio";
+    if (weekday === 0) return "Cardio";
     
     // Monday = Push A, Tuesday = Pull A, Wednesday = Legs A
     // Thursday = Push B, Friday = Pull B, Saturday = Legs B
@@ -79,45 +83,44 @@ export default function DashboardScreen() {
       6: "Legs B", // Saturday
     };
     
-    return dayTypeMap[dayOfWeek] || "";
+    return dayTypeMap[weekday] || "";
   };
 
-  const [todayDayType, setTodayDayType] = useState<string>(getTodayDayType());
+  const [todayDayType, setTodayDayType] = useState<string>(() => getTodayDayType(today));
 
   const loadData = useCallback(async () => {
+    const request = beginRequest(requestId);
+    setLoadError(null);
     try {
-      const [nutritionData, foodLogsData, sessionsData, last7Days, recoveryData] =
+      const [nutritionData, sessionsData, last7Days, recoveryData] =
         await Promise.all([
           getDailyNutrition(today),
-          getFoodLogsForDate(today),
           getSessionsForDate(today),
           getLast7DaysNutrition(),
           getRecoveryLog(today),
         ]);
 
+      if (!isLatestRequest(requestId, request)) return;
       setNutrition(nutritionData);
-      setFoodLogs(foodLogsData);
       
       // Handle session and day type
       if (sessionsData[0]) {
         setSession(sessionsData[0]);
         // On Sunday, always show "Cardio" regardless of what workout was logged
-        if (new Date().getDay() === 0) {
+        if (dayOfWeek(today) === 0) {
           setTodayDayType("Cardio");
         } else {
           setTodayDayType(sessionsData[0].day_type);
         }
       } else {
         setSession(null);
-        setTodayDayType(getTodayDayType());
+        setTodayDayType(getTodayDayType(today));
       }
 
       // Build 7-day adherence dots
       const dots: AdherenceDot[] = [];
       for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        const dateStr = d.toISOString().split("T")[0];
+        const dateStr = addDays(today, -i);
         const dayData = last7Days.find((n) => n.date === dateStr);
 
         let status: AdherenceDot["status"] = "empty";
@@ -139,16 +142,26 @@ export default function DashboardScreen() {
           3;
         setRecoveryScore(Math.round((score / 5) * 100));
       }
-    } catch (err) {
-      console.error("Dashboard load error:", err);
+    } catch (error) {
+      logger.error("Dashboard load failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      if (isLatestRequest(requestId, request)) {
+        setLoadError("Could not load today's dashboard. Please retry.");
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isLatestRequest(requestId, request)) {
+        setIsLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [today]);
 
   useEffect(() => {
     loadData();
+    return () => {
+      invalidateRequests(requestId);
+    };
   }, [loadData]);
 
   const onRefresh = () => {
@@ -198,12 +211,26 @@ export default function DashboardScreen() {
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
           <View>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-              {formatDate(new Date())}
+              {formatDate(parseLocalDate(today))}
             </Text>
             <Text style={{ color: M3.colors.onSurface, fontSize: 26, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
               {getGreeting()}, {USER_PROFILE.name}
             </Text>
           </View>
+          {loadError && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => {
+                setIsLoading(true);
+                loadData();
+              }}
+              style={{ padding: 14, borderRadius: 10, backgroundColor: M3.colors.errorContainer }}
+            >
+              <Text style={{ color: M3.colors.onErrorContainer, fontFamily: "DMSans_500Medium" }}>
+                {loadError} Tap to retry.
+              </Text>
+            </TouchableOpacity>
+          )}
           <View
             style={{
               width: 44,
@@ -326,7 +353,7 @@ export default function DashboardScreen() {
                   : dot.status === "red"
                   ? M3.colors.error
                   : M3.colors.surfaceContainer;
-              const dayLabel = new Date(dot.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1);
+              const dayLabel = parseLocalDate(dot.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1);
               return (
                 <View key={i} style={{ alignItems: "center", gap: 4 }}>
                   <View

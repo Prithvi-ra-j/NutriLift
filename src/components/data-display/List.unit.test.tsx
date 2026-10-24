@@ -40,8 +40,8 @@ describe('List Component', () => {
     },
   ];
 
-  it('renders all items correctly', () => {
-    const { getByText } = render(<List data={mockData} lines={3} />);
+  it('renders all items correctly', async () => {
+    const { getByText } = await render(<List data={mockData} lines={3} />);
 
     expect(getByText('Item 1')).toBeTruthy();
     expect(getByText('Item 2')).toBeTruthy();
@@ -52,25 +52,25 @@ describe('List Component', () => {
     expect(getByText('TrailingIcon')).toBeTruthy();
   });
 
-  it('handles item presses', () => {
-    const { getByText } = render(<List data={mockData} lines={2} />);
+  it('handles item presses', async () => {
+    const { getByText } = await render(<List data={mockData} lines={2} />);
 
     const item2 = getByText('Item 2');
-    fireEvent.press(item2);
+    await fireEvent.press(item2);
 
     expect(mockData[1].onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('truncates lines based on lines prop', () => {
-    const { queryByText } = render(<List data={mockData} lines={1} />);
+  it('truncates lines based on lines prop', async () => {
+    const { queryByText } = await render(<List data={mockData} lines={1} />);
 
     // description and tertiaryText should not be rendered if lines is 1
     expect(queryByText('Description 2')).toBeNull();
     expect(queryByText('Tertiary 3')).toBeNull();
   });
 
-  it('renders dividers when showDividers is true', () => {
-    const { UNSAFE_getAllByType } = render(
+  it('renders dividers when showDividers is true', async () => {
+    const { UNSAFE_getAllByType } = await render(
       <List data={mockData} showDividers={true} />
     );
 

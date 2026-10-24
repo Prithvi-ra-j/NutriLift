@@ -1,5 +1,5 @@
 import type { DailyNutrition, FoodLog } from "../db/schema";
-import { DEFAULT_NUTRITION_TARGETS } from "../nutrition/target-validation";
+import { DEFAULT_TARGETS } from "../constants/defaults";
 
 export interface NutritionSummary {
   avgDailyCalories: number;
@@ -17,7 +17,7 @@ export interface NutritionSummary {
 
 export function computeNutritionSummary(
   days: DailyNutrition[],
-  proteinTargetG: number = DEFAULT_NUTRITION_TARGETS.protein_g,
+  proteinTargetG: number = DEFAULT_TARGETS.protein_g,
 ): NutritionSummary {
   if (days.length === 0) {
     return {
@@ -104,10 +104,10 @@ export function computeNutritionSummary(
 export function computeProteinPace(
   currentProtein: number,
   mealsLogged: number,
-  totalMeals: number = 4
+  totalMeals: number = 4,
+  proteinTargetG: number = DEFAULT_TARGETS.protein_g,
 ): { needed: number; perMeal: number; message: string } {
-  const target = proteinTargetG;
-  const remaining = Math.max(0, target - currentProtein);
+  const remaining = Math.max(0, proteinTargetG - currentProtein);
   const mealsLeft = Math.max(1, totalMeals - mealsLogged);
   const perMeal = remaining / mealsLeft;
 

@@ -17,9 +17,13 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import type { FoodResult } from "../../lib/services/barcodeScanner";
+import { useToday } from "../../lib/time/useToday";
+import { isLocalDateString } from "../../lib/time/localDate";
 
 export default function NutritionCardModal() {
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<{ date?: string; foodData?: string; source?: string; barcode?: string }>();
+  const today = useToday();
+  const logDate = isLocalDateString(params.date) ? params.date : today;
   
   // Parse food data
   const foodData: FoodResult | null = params.foodData
@@ -78,7 +82,7 @@ export default function NutritionCardModal() {
 
       await insertFoodLog({
         id: uuid.v4() as string,
-        date: new Date().toISOString().split("T")[0],
+        date: logDate,
         meal,
         name: name.trim(),
         quantity_g: qty,
@@ -121,12 +125,12 @@ export default function NutritionCardModal() {
 
   const getQualityBadge = () => {
     switch (dataQuality) {
-      case "verified":
-        return { icon: "checkmark-circle", color: M3.colors.success, label: "Verified" };
+      case "consistent":
+        return { icon: "checkmark-circle", color: M3.colors.success, label: "Consistent" };
+      case "complete":
+        return { icon: "checkmark-circle", color: M3.colors.success, label: "Complete" };
       case "partial":
         return { icon: "alert-circle", color: M3.colors.warning, label: "Partial Data" };
-      case "suspect":
-        return { icon: "warning", color: M3.colors.error, label: "Suspect Data" };
       case "poor":
         return { icon: "close-circle", color: M3.colors.error, label: "Poor Data" };
       default:

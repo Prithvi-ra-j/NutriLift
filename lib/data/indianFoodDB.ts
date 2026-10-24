@@ -60,5 +60,15 @@ export const INDIAN_FOOD_DB: IndianFood[] = [
   // Add more foods here...
 ];
 
+export function searchLocalFoods(query: string): IndianFood[] {
+  const normalized = query.trim().toLocaleLowerCase();
+  if (!normalized) return [];
+  return INDIAN_FOOD_DB.filter((food) =>
+    [food.name, ...food.aliases].some((value) =>
+      value.toLocaleLowerCase().includes(normalized),
+    ),
+  ).slice(0, 8);
+}
+
 export const DATABASE_VERSION = '1.0';
 export const LAST_UPDATED = '2026-05-09';

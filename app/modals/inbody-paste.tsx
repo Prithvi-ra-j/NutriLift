@@ -9,7 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { parseInBodyText, type InBodyParseResult } from "../../lib/ai/parsers";
 import { insertBodyStat } from "../../lib/db/queries/body";
 import { Card } from "../../components/ui/Card";
@@ -17,13 +17,19 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
+import { useToday } from "../../lib/time/useToday";
+import { isLocalDateString } from "../../lib/time/localDate";
 
 export default function InBodyPasteModal() {
+  const params = useLocalSearchParams<{ date?: string }>();
+  const today = useToday();
   const [pasteText, setPasteText] = useState("");
   const [isParsing, setIsParsing] = useState(false);
   const [parsed, setParsed] = useState<InBodyParseResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [dateOverride, setDateOverride] = useState(new Date().toISOString().split("T")[0]);
+  const [dateOverride, setDateOverride] = useState(
+    isLocalDateString(params.date) ? params.date : today,
+  );
 
   const handleParse = async () => {
     if (!pasteText.trim()) return;

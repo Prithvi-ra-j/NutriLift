@@ -12,6 +12,8 @@ import {
 } from "../db/queries/reports";
 import { generateMonthlySummary } from "../groq/generateCoachResponse";
 import type { MonthlyReport } from "../db/schema";
+import { localDateString } from "../time/localDate";
+import { logger } from "../logger";
 
 /**
  * Generate or retrieve AI-powered monthly summary
@@ -44,8 +46,8 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
     // Calculate month date range
     const startDate = new Date(year, monthNum - 1, 1);
     const endDate = new Date(year, monthNum, 0); // Last day of month
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
+    const startStr = localDateString(startDate);
+    const endStr = localDateString(endDate);
 
     // Gather month data
     const [nutrition, workouts, recovery, bodyStats] = await Promise.all([
@@ -125,7 +127,7 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
       return report;
     }
   } catch (error) {
-    console.error("Failed to generate monthly summary:", error);
+    logger.error("Failed to generate monthly summary", error);
     return null;
   }
 }

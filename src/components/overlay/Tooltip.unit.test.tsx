@@ -32,8 +32,8 @@ describe('Tooltip Component', () => {
     jest.useRealTimers();
   });
 
-  it('renders children correctly', () => {
-    const { getByText } = render(
+  it('renders children correctly', async () => {
+    const { getByText } = await render(
       <Tooltip text="Tooltip Text">
         <Text>Anchor</Text>
       </Tooltip>
@@ -42,8 +42,8 @@ describe('Tooltip Component', () => {
     expect(getByText('Anchor')).toBeTruthy();
   });
 
-  it('wires focus and blur handlers to the tooltip anchor', () => {
-    const { getByRole } = render(
+  it('wires focus and blur handlers to the tooltip anchor', async () => {
+    const { getByRole } = await render(
       <Tooltip text="Tooltip Text">
         <Text>Anchor</Text>
       </Tooltip>
@@ -55,8 +55,8 @@ describe('Tooltip Component', () => {
     expect(anchor.props.onBlur).toEqual(expect.any(Function));
   });
 
-  it('reveals the tooltip when the anchor receives focus', () => {
-    const { getByRole, getByText } = render(
+  it('reveals the tooltip when the anchor receives focus', async () => {
+    const { getByRole, getByText } = await render(
       <Tooltip text="Tooltip Text">
         <Text>Anchor</Text>
       </Tooltip>
@@ -65,10 +65,8 @@ describe('Tooltip Component', () => {
     const anchor = getByRole('button');
 
     expect(anchor.props.accessibilityHint).toBe('Tooltip Text');
-    expect(() => {
-      act(() => {
-        anchor.props.onFocus();
-      });
-    }).not.toThrow();
+    await act(async () => {
+      anchor.props.onFocus();
+    });
   });
 });

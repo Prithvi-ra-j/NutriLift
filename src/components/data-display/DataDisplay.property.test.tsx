@@ -32,24 +32,27 @@ function mockTheme(isDark: boolean) {
 
 describe('Data Display Components Property Tests', () => {
   describe('Property 2: Dark Mode Round Trip', () => {
-    it('List component maintains color contrast across theme switch', () => {
+    it('List component maintains color contrast across theme switch', async () => {
       // Mock Light Theme
       mockTheme(false);
-      const lightRender = render(<List data={[{ id: '1', title: 'Title' }]} />).toJSON();
+      const list = <List data={[{ id: '1', title: 'Title' }]} />;
+      const { toJSON, rerender } = await render(list);
+      const lightRender = toJSON();
       expect(lightRender).toBeTruthy();
 
       // Mock Dark Theme
       mockTheme(true);
-      const darkRender = render(<List data={[{ id: '1', title: 'Title' }]} />).toJSON();
+      await rerender(<List data={[{ id: '1', title: 'Title' }]} />);
+      const darkRender = toJSON();
       expect(darkRender).toBeTruthy();
 
       // Ensure they render differently based on theme
       expect(lightRender).not.toEqual(darkRender);
     });
 
-    it('DataTable component maintains structure and changes colors on theme switch', () => {
+    it('DataTable component maintains structure and changes colors on theme switch', async () => {
       mockTheme(false);
-      const { toJSON: toJSONLight } = render(
+      const { toJSON: toJSONLight } = await render(
         <DataTable
           columns={[{ id: '1', label: 'Col 1' }]}
           data={[{ '1': 'Data' }]}
@@ -58,7 +61,7 @@ describe('Data Display Components Property Tests', () => {
       );
       
       mockTheme(true);
-      const { toJSON: toJSONDark } = render(
+      const { toJSON: toJSONDark } = await render(
         <DataTable
           columns={[{ id: '1', label: 'Col 1' }]}
           data={[{ '1': 'Data' }]}

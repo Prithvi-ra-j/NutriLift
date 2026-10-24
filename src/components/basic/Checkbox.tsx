@@ -3,7 +3,7 @@ import { View, Pressable, Text, Animated, ViewStyle } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { CheckboxProps } from '../../core/types/component';
 
-export const Checkbox = React.forwardRef<View, CheckboxProps>(
+export const Checkbox = React.forwardRef<React.ComponentRef<typeof View>, CheckboxProps>(
   ({ checked, onChange, disabled = false, label, indeterminate = false }, ref) => {
     const { tokens } = useTheme();
     const { colors, spacing } = tokens;

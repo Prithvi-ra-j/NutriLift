@@ -49,25 +49,25 @@ describe('Snackbar Component', () => {
     jest.useRealTimers();
   });
 
-  it('renders correctly when visible', () => {
-    const { getByText } = render(
+  it('renders correctly when visible', async () => {
+    const { getByText } = await render(
       <Snackbar visible={true} onDismiss={jest.fn()} message="Test message" />
     );
 
     expect(getByText('Test message')).toBeTruthy();
   });
 
-  it('does not render content when not visible', () => {
-    const { queryByText } = render(
+  it('does not render content when not visible', async () => {
+    const { queryByText } = await render(
       <Snackbar visible={false} onDismiss={jest.fn()} message="Test message" />
     );
 
     expect(queryByText('Test message')).toBeNull();
   });
 
-  it('calls onDismiss after the specified duration', () => {
+  it('calls onDismiss after the specified duration', async () => {
     const onDismissMock = jest.fn();
-    render(
+    await render(
       <Snackbar
         visible={true}
         onDismiss={onDismissMock}
@@ -78,20 +78,20 @@ describe('Snackbar Component', () => {
 
     expect(onDismissMock).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(3999);
     });
     expect(onDismissMock).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(async () => {
       jest.advanceTimersByTime(1);
     });
     expect(onDismissMock).toHaveBeenCalledTimes(1);
   });
 
-  it('renders action button and handles press', () => {
+  it('renders action button and handles press', async () => {
     const actionPressMock = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <Snackbar
         visible={true}
         onDismiss={jest.fn()}
@@ -103,12 +103,12 @@ describe('Snackbar Component', () => {
     const actionButton = getByText('UNDO'); // Uppercase applied in component
     expect(actionButton).toBeTruthy();
 
-    fireEvent.press(actionButton);
+    await fireEvent.press(actionButton);
     expect(actionPressMock).toHaveBeenCalledTimes(1);
   });
 
-  it('announces message to screen reader when visible', () => {
-    render(
+  it('announces message to screen reader when visible', async () => {
+    await render(
       <Snackbar visible={true} onDismiss={jest.fn()} message="Accessibility test" />
     );
 

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -10,13 +10,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { useTodayStore } from "../../lib/stores/today.store";
 import {
   getSessionsForDate,
+  getSessionsInRange,
   getExercisesForSession,
   getSetsForExercise,
   insertSession,
   insertExerciseLog,
+  addTemplateExercises,
   insertSetLog,
   updateSetLog,
   deleteSetLog,
@@ -34,7 +35,7 @@ import {
   type DayType,
   type ExerciseType,
 } from "../../lib/constants/exercises";
-import { WORKOUT_TEMPLATES, type ExerciseTemplate } from "../../lib/constants/workout-templates";
+import { WORKOUT_TEMPLATES } from "../../lib/constants/workout-templates";
 import { Card } from "../../components/ui/Card";
 import { PRBadge } from "../../components/ui/PRBadge";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -44,6 +45,11 @@ import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { useToday } from "../../lib/time/useToday";
+import { addDays, dayOfWeek, startOfWeekMonday } from "../../lib/time/localDate";
+import { logger } from "../../lib/logger";
+import { fireAndLog } from "../../lib/async";
+import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -128,13 +134,13 @@ function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, e
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function WorkoutScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const today = useToday();
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
+  const selectedDate = pickedDate ?? today;
 
   const getDefaultDayType = (dateStr: string): DayType => {
-    const date = new Date(dateStr);
-    const dayOfWeek = date.getDay();
-    if (dayOfWeek === 0) return "Cardio";
+    const weekday = dayOfWeek(dateStr);
+    if (weekday === 0) return "Cardio";
     const dayTypeMap: Record<number, DayType> = {
       1: "Push A",
       2: "Pull A",
@@ -143,15 +149,17 @@ export default function WorkoutScreen() {
       5: "Pull B",
       6: "Legs B",
     };
-    return dayTypeMap[dayOfWeek] || "Push A";
+    return dayTypeMap[weekday] || "Push A";
   };
 
   const [session, setSession] = useState<WorkoutSession | null>(null);
   const [exercises, setExercises] = useState<ExerciseLog[]>([]);
   const [sets, setSets] = useState<Record<string, SetLog[]>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const requestId = useRef(0);
 
-  const [selectedDayType, setSelectedDayType] = useState<DayType>(getDefaultDayType(todayStr));
+  const [selectedDayType, setSelectedDayType] = useState<DayType>(() => getDefaultDayType(today));
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const [selectedTemplateExercises, setSelectedTemplateExercises] = useState<Set<string>>(new Set());
@@ -184,50 +192,66 @@ export default function WorkoutScreen() {
 
   // ─── Load ──────────────────────────────────────────────────────────────────
 
+  const loadCompletedDayTypes = useCallback(async (date: string): Promise<Set<string>> => {
+    const monday = startOfWeekMonday(date);
+    const sunday = addDays(monday, 6);
+    const sessions = await getSessionsInRange(monday, sunday);
+    return new Set(sessions.map((item) => item.day_type));
+  }, []);
+
   const loadWorkout = useCallback(async () => {
-    setSession(null);
-    setExercises([]);
-    setSets({});
-    setAddSetForm(null);
-    setEditingSetId(null);
-    setEditSetForm(null);
+    const request = beginRequest(requestId);
+    setLoadError(null);
+    try {
+      const [sessions, customExercisesData, completed] = await Promise.all([
+        getSessionsForDate(selectedDate),
+        getCustomExercises(),
+        loadCompletedDayTypes(selectedDate),
+      ]);
+      const loadedSession = sessions[0] ?? null;
+      const loadedExercises = loadedSession
+        ? await getExercisesForSession(loadedSession.id)
+        : [];
+      const loadedSetsEntries = await Promise.all(
+        loadedExercises.map(async (exercise) => [
+          exercise.id,
+          await getSetsForExercise(exercise.id),
+        ] as const),
+      );
+      if (!isLatestRequest(requestId, request)) return;
 
-    const sessions = await getSessionsForDate(selectedDate);
-    if (sessions[0]) {
-      setSession(sessions[0]);
-      setSelectedDayType(sessions[0].day_type as DayType);
-      const exs = await getExercisesForSession(sessions[0].id);
-      setExercises(exs);
-
-      const setsData: Record<string, SetLog[]> = {};
-      for (const ex of exs) {
-        const s = await getSetsForExercise(ex.id);
-        setsData[ex.id] = s;
+      setSession(loadedSession);
+      setExercises(loadedExercises);
+      setSets(Object.fromEntries(loadedSetsEntries));
+      setCustomExercises(customExercisesData);
+      setCompletedDayTypes(completed);
+      setSelectedDayType(
+        loadedSession
+          ? loadedSession.day_type as DayType
+          : getDefaultDayType(selectedDate),
+      );
+      setAddSetForm(null);
+      setEditingSetId(null);
+      setEditSetForm(null);
+    } catch (error) {
+      logger.error("Workout load failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      if (isLatestRequest(requestId, request)) {
+        setLoadError("Could not load this workout. Please retry.");
       }
-      setSets(setsData);
-    } else {
-      setSelectedDayType(getDefaultDayType(selectedDate));
+    } finally {
+      if (isLatestRequest(requestId, request)) {
+        setIsLoading(false);
+      }
     }
-
-    const custom = await getCustomExercises();
-    setCustomExercises(custom);
-
-    await loadCompletedDayTypes();
-    setIsLoading(false);
-  }, [selectedDate]);
-
-  const loadCompletedDayTypes = async () => {
-    const curr = new Date(selectedDate);
-    const first = curr.getDate() - curr.getDay() + 1;
-    const monday = new Date(curr.setDate(first));
-    const mondayStr = monday.toISOString().split("T")[0];
-    const { getSessionsInRange } = await import("../../lib/db/queries/workout");
-    const sessions = await getSessionsInRange(mondayStr, selectedDate);
-    setCompletedDayTypes(new Set(sessions.map((s) => s.day_type)));
-  };
+  }, [loadCompletedDayTypes, selectedDate]);
 
   useEffect(() => {
     loadWorkout();
+    return () => {
+      invalidateRequests(requestId);
+    };
   }, [loadWorkout]);
 
   // ─── Session ───────────────────────────────────────────────────────────────
@@ -246,6 +270,7 @@ export default function WorkoutScreen() {
       notes: null,
       rpe: null,
       updated_at: new Date().toISOString(),
+      deleted_at: null,
     };
     await insertSession(newSession);
     setSession(newSession);
@@ -266,6 +291,8 @@ export default function WorkoutScreen() {
       equipment,
       exercise_type: exerciseType,
       order_in_session: exercises.length + 1,
+      updated_at: null,
+      deleted_at: null,
     };
     await insertExerciseLog(newExercise);
     setExercises([...exercises, newExercise]);
@@ -298,8 +325,13 @@ export default function WorkoutScreen() {
     await insertCustomExercise(newEx);
     setShowCreateCustom(false);
     setCustomExName("");
-    loadWorkout();
-    addExercise(newEx.exercise_name, newEx.muscle_group || "other", newEx.equipment || "other", newEx.exercise_type as ExerciseType);
+    await loadWorkout();
+    await addExercise(
+      newEx.exercise_name,
+      newEx.muscle_group || "other",
+      newEx.equipment || "other",
+      customExType,
+    );
   };
 
   // ─── Add Exercises from Template ───────────────────────────────────────────
@@ -313,28 +345,14 @@ export default function WorkoutScreen() {
     const template = WORKOUT_TEMPLATES[selectedDayType] || [];
     const selectedExercises = template.filter((ex) => selectedTemplateExercises.has(ex.name));
 
-    for (const ex of selectedExercises) {
-      const exerciseId = uuid.v4() as string;
-      const libEntry = EXERCISE_LIBRARY.find((e) => e.name === ex.name);
-      const exerciseType: ExerciseType = libEntry?.exercise_type ?? "weight_reps";
-      const newExercise: ExerciseLog = {
-        id: exerciseId,
-        session_id: sessionId,
-        date: selectedDate,
-        exercise_name: ex.name,
-        muscle_group: ex.muscle_group,
-        equipment: ex.equipment,
-        exercise_type: exerciseType,
-        order_in_session: exercises.length + 1,
-      };
-      await insertExerciseLog(newExercise);
-      setExercises((prev) => [...prev, newExercise]);
-      setSets((prev) => ({ ...prev, [exerciseId]: [] }));
-    }
+    await addTemplateExercises(
+      sessionId,
+      selectedExercises.map((exercise) => exercise.name),
+    );
 
     setShowTemplateSelector(false);
     setSelectedTemplateExercises(new Set());
-    loadWorkout();
+    await loadWorkout();
   };
 
   // ─── Delete Exercise ───────────────────────────────────────────────────────
@@ -349,17 +367,24 @@ export default function WorkoutScreen() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await deleteExerciseLog(exerciseId);
-            setExercises((prev) => prev.filter((e) => e.id !== exerciseId));
-            setSets((prev) => {
-              const next = { ...prev };
-              delete next[exerciseId];
-              return next;
-            });
-            if (addSetForm?.exerciseLogId === exerciseId) setAddSetForm(null);
-            if (editSetForm?.exerciseLogId === exerciseId) {
-              setEditSetForm(null);
-              setEditingSetId(null);
+            try {
+              await deleteExerciseLog(exerciseId);
+              setExercises((prev) => prev.filter((e) => e.id !== exerciseId));
+              setSets((prev) => {
+                const next = { ...prev };
+                delete next[exerciseId];
+                return next;
+              });
+              if (addSetForm?.exerciseLogId === exerciseId) setAddSetForm(null);
+              if (editSetForm?.exerciseLogId === exerciseId) {
+                setEditSetForm(null);
+                setEditingSetId(null);
+              }
+            } catch (error) {
+              logger.error("Exercise deletion failed", {
+                error: error instanceof Error ? error.message : String(error),
+              });
+              Alert.alert("Delete Failed", "Could not delete this exercise. Please retry.");
             }
           },
         },
@@ -383,7 +408,7 @@ export default function WorkoutScreen() {
 
     setSwapExerciseId(null);
     setSwapSearch("");
-    loadWorkout();
+    await loadWorkout();
   };
 
   // ─── Edit Exercise Log ─────────────────────────────────────────────────────
@@ -400,7 +425,7 @@ export default function WorkoutScreen() {
       equipment: editExerciseEquip,
     });
     setEditingExerciseId(null);
-    loadWorkout();
+    await loadWorkout();
   };
 
   // ─── Log Set ───────────────────────────────────────────────────────────────
@@ -414,19 +439,24 @@ export default function WorkoutScreen() {
       reps = parseInt(repsStr);
       if (isNaN(weight) || weight < 0.1 || weight > 9999.9) return err("Weight must be between 0.1 and 9999.9 kg");
       if (isNaN(reps) || reps < 1 || reps > 9999) return err("Reps must be between 1 and 9999");
+    } else if (type === "bodyweight_reps") {
+      weight = weightStr.trim() ? parseFloat(weightStr) : 0;
+      reps = parseInt(repsStr);
+      if (!Number.isFinite(weight) || weight < 0 || weight > 9999.9) return err("Added load must be between 0 and 9999.9 kg");
+      if (isNaN(reps) || reps < 1 || reps > 9999) return err("Reps must be between 1 and 9999");
     } else if (type === "reps_only") {
       reps = parseInt(repsStr);
       if (isNaN(reps) || reps < 1 || reps > 9999) return err("Reps must be between 1 and 9999");
     } else if (type === "duration") {
       const sec = parseInt(durSecStr);
       if (isNaN(sec) || sec < 1 || sec > 86400) return err("Duration must be between 1 and 86400 seconds");
-      durationSec = sec; reps = sec;
+      durationSec = sec; reps = 0;
     } else if (type === "distance_duration") {
       distanceKm = parseFloat(distKmStr);
       const min = parseFloat(durMinStr);
       if (isNaN(distanceKm) || distanceKm < 0.01 || distanceKm > 999.99) return err("Distance must be between 0.01 and 999.99 km");
       if (isNaN(min) || min * 60 < 1 || min * 60 > 86400) return err("Duration must be between 1 and 86400 seconds");
-      durationSec = Math.round(min * 60); reps = Math.round(min);
+      durationSec = Math.round(min * 60); reps = 0;
     }
     return { weight, reps, durationSec, distanceKm, error: null };
   };
@@ -457,6 +487,8 @@ export default function WorkoutScreen() {
       is_warmup: addSetForm.isWarmup ? 1 : 0,
       notes: null,
       logged_at: Math.floor(Date.now() / 1000),
+      updated_at: null,
+      deleted_at: null,
     };
 
     const { isPR } = await insertSetLog(newSet);
@@ -474,7 +506,6 @@ export default function WorkoutScreen() {
       prev ? { ...prev, reps: "", rpe: "", durationSec: "", distanceKm: "", durationMin: "" } : null
     );
 
-    loadWorkout();
   };
 
   // ─── Edit Set ──────────────────────────────────────────────────────────────
@@ -513,7 +544,22 @@ export default function WorkoutScreen() {
 
     setEditingSetId(null);
     setEditSetForm(null);
-    loadWorkout();
+    setSets((prev) => ({
+      ...prev,
+      [editSetForm.exerciseLogId]: (prev[editSetForm.exerciseLogId] ?? []).map((set) =>
+        set.id === editingSetId
+          ? {
+              ...set,
+              weight_kg: weight,
+              reps,
+              duration_sec: durationSec,
+              distance_km: distanceKm,
+              rpe: editSetForm.rpe ? parseInt(editSetForm.rpe) : null,
+              is_warmup: editSetForm.isWarmup ? 1 : 0,
+            }
+          : set,
+      ),
+    }));
   };
 
   const confirmDeleteSet = (setId: string, exerciseLogId: string, setNumber: number) => {
@@ -526,10 +572,20 @@ export default function WorkoutScreen() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            await deleteSetLog(setId, exerciseLogId);
-            setEditingSetId(null);
-            setEditSetForm(null);
-            loadWorkout();
+            try {
+              await deleteSetLog(setId, exerciseLogId);
+              setSets((prev) => ({
+                ...prev,
+                [exerciseLogId]: (prev[exerciseLogId] ?? []).filter((set) => set.id !== setId),
+              }));
+              setEditingSetId(null);
+              setEditSetForm(null);
+            } catch (error) {
+              logger.error("Set deletion failed", {
+                error: error instanceof Error ? error.message : String(error),
+              });
+              Alert.alert("Delete Failed", "Could not delete this set. Please retry.");
+            }
           },
         },
       ]
@@ -550,7 +606,7 @@ export default function WorkoutScreen() {
   ];
 
   const filteredExercises = allExercises.filter((e) => {
-    const isSunday = new Date(selectedDate).getDay() === 0;
+    const isSunday = dayOfWeek(selectedDate) === 0;
     if (isSunday) {
       if (!e.day_types.includes("Cardio")) return false;
     } else {
@@ -589,7 +645,7 @@ export default function WorkoutScreen() {
   const renderSetFormFields = (
     form: SetForm,
     onChange: (partial: Partial<SetForm>) => void,
-    onSubmit: () => void,
+    onSubmit: () => Promise<void>,
     onCancel: () => void,
     submitLabel: string,
     extraActions?: React.ReactNode
@@ -600,11 +656,11 @@ export default function WorkoutScreen() {
       <View style={{ gap: 8 }}>
         {/* Fields row */}
         <View style={{ flexDirection: "row", gap: 8 }}>
-          {exerciseType === "weight_reps" && (
+          {(exerciseType === "weight_reps" || exerciseType === "bodyweight_reps") && (
             <>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginBottom: 4 }}>
-                  Weight (kg)
+                  {exerciseType === "bodyweight_reps" ? "Added load (kg)" : "Weight (kg)"}
                 </Text>
                 <TextInput
                   value={form.weight}
@@ -747,7 +803,7 @@ export default function WorkoutScreen() {
           {extraActions}
 
           <TouchableOpacity
-            onPress={onSubmit}
+            onPress={() => fireAndLog(onSubmit(), "Workout set submission failed")}
             style={{
               flex: 2,
               backgroundColor: M3.colors.primary,
@@ -809,10 +865,28 @@ export default function WorkoutScreen() {
         />
 
         {/* ── Date Navigator ── */}
-        <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />
+        <DateNavigator
+          selectedDate={selectedDate}
+          onDateChange={(date) => setPickedDate(date === today ? null : date)}
+          showFullDate={false}
+        />
+        {loadError && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => {
+              setIsLoading(true);
+              loadWorkout();
+            }}
+            style={{ padding: 14, borderRadius: 10, backgroundColor: M3.colors.errorContainer }}
+          >
+            <Text style={{ color: M3.colors.onErrorContainer, fontFamily: "DMSans_500Medium" }}>
+              {loadError} Tap to retry.
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* ── Marathon Day Notice ── */}
-        {new Date(selectedDate).getDay() === 0 && (
+        {dayOfWeek(selectedDate) === 0 && (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
               <Feather name="activity" size={20} color={M3.colors.error} />
@@ -829,7 +903,7 @@ export default function WorkoutScreen() {
         )}
 
         {/* ── Sunday Cardio Selector ── */}
-        {!session && new Date(selectedDate).getDay() === 0 && (
+        {!session && dayOfWeek(selectedDate) === 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
@@ -856,7 +930,7 @@ export default function WorkoutScreen() {
         )}
 
         {/* ── Day Type Selector ── */}
-        {!session && new Date(selectedDate).getDay() !== 0 && (
+        {!session && dayOfWeek(selectedDate) !== 0 && (
           <Card>
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
@@ -964,12 +1038,14 @@ export default function WorkoutScreen() {
           const exerciseSets = sets[exercise.id] ?? [];
           const exType = (exercise.exercise_type as ExerciseType) ?? "weight_reps";
           const workingSets = exerciseSets.filter((s) => !s.is_warmup);
+          const isStrengthType =
+            exType === "weight_reps" || exType === "bodyweight_reps";
           const totalVolume =
-            exType === "weight_reps"
+            isStrengthType
               ? workingSets.reduce((a, s) => a + s.weight_kg * s.reps, 0)
               : 0;
           const topSet =
-            exType === "weight_reps"
+            isStrengthType
               ? workingSets.reduce(
                   (best, s) => (s.weight_kg > (best?.weight_kg ?? 0) ? s : best),
                   workingSets[0]
@@ -1166,12 +1242,12 @@ export default function WorkoutScreen() {
         {exercises.length === 0 && !session && (
           <Card>
             <View style={{ alignItems: "center", paddingVertical: 20, gap: 12 }}>
-              <Feather name={new Date(selectedDate).getDay() === 0 ? "activity" : "zap"} size={48} color={M3.colors.onSurfaceMuted} />
+              <Feather name={dayOfWeek(selectedDate) === 0 ? "activity" : "zap"} size={48} color={M3.colors.onSurfaceMuted} />
               <Text style={{ color: M3.colors.onSurface, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
                 No exercises yet
               </Text>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center" }}>
-                {new Date(selectedDate).getDay() === 0
+                {dayOfWeek(selectedDate) === 0
                   ? "Select Cardio & Recovery above and add exercises"
                   : "Select a day type above and use the template to get started"}
               </Text>
@@ -1244,7 +1320,10 @@ export default function WorkoutScreen() {
                   {filteredExercises.map((ex) => (
                     <TouchableOpacity
                       key={ex.name}
-                      onPress={() => addExercise(ex.name, ex.muscle_group, ex.equipment, ex.exercise_type)}
+                      onPress={() => fireAndLog(
+                        addExercise(ex.name, ex.muscle_group, ex.equipment, ex.exercise_type),
+                        "Exercise add failed",
+                      )}
                       style={{
                         backgroundColor: M3.colors.surface,
                         borderRadius: 10,
@@ -1410,7 +1489,7 @@ export default function WorkoutScreen() {
                   </View>
 
                   <TouchableOpacity
-                    onPress={createCustomExercise}
+                    onPress={() => fireAndLog(createCustomExercise(), "Custom exercise creation failed")}
                     style={{
                       backgroundColor: M3.colors.primary,
                       borderRadius: 8,
@@ -1502,7 +1581,7 @@ export default function WorkoutScreen() {
               </ScrollView>
 
               <TouchableOpacity
-                onPress={addExercisesFromTemplate}
+                onPress={() => fireAndLog(addExercisesFromTemplate(), "Template exercise addition failed")}
                 disabled={selectedTemplateExercises.size === 0}
                 style={{
                   backgroundColor: selectedTemplateExercises.size > 0 ? M3.colors.primary : M3.colors.surfaceVariant,
@@ -1564,7 +1643,7 @@ export default function WorkoutScreen() {
                   {swapFilteredExercises.map((ex) => (
                     <TouchableOpacity
                       key={ex.name}
-                      onPress={() => swapExercise(ex.name)}
+                      onPress={() => fireAndLog(swapExercise(ex.name), "Exercise replacement failed")}
                       style={{
                         backgroundColor: M3.colors.surface,
                         borderRadius: 10,
@@ -1697,7 +1776,7 @@ export default function WorkoutScreen() {
                   </View>
 
                   <TouchableOpacity
-                    onPress={saveEditExercise}
+                    onPress={() => fireAndLog(saveEditExercise(), "Exercise update failed")}
                     style={{
                       backgroundColor: M3.colors.primary,
                       borderRadius: 8,

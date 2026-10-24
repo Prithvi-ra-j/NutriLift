@@ -1,0 +1,58 @@
+# Agent instructions: Execute the Bevel-inspired NutriLift redesign
+
+## Required first read
+Read `docs/BEVEL_UI_UX_REDESIGN_BLUEPRINT.md` in full before changing any code. It is the scope and screen-mapping specification.
+
+## Source references
+- NutriLift: https://github.com/Prithvi-ra-j/NutriLift
+- Bevel screen catalog: https://github.com/ChakshuGautam/bevel-teardown/blob/main/docs/screen-catalog.md
+- Bevel screenshot files: `screens/bevel-NNN.png` in https://github.com/ChakshuGautam/bevel-teardown
+- NutriLift screen routes and core services are under `app/`, `components/`, `lib/`, `design-system/`, and `app/modals/`.
+
+## Mission
+Make NutriLift feel meticulously designed in the same broad visual language as Bevel: measured spacing, precise type hierarchy, light neutral surfaces as the baseline (with coherent dark-mode variants), clear data visualization, polished sheets and meaningful feedback. The NutriLift use case is nutrition + workout logging, body progress and AI coaching, so don't reproduce unrelated Bevel-only health capabilities.
+
+
+## Mandatory all-image visual audit (before coding)
+
+Do not select references from the screen catalog alone. Review all 545 source images in `ChakshuGautam/bevel-teardown/screens/bevel-000.png` through `bevel-544.png`.
+
+- Use `docs/BEVEL_545_SCREEN_REFERENCE_MAP.csv` as the catalog-ID-to-flow index.
+- Open every relevant image at full readable resolution; for this task, “relevant” means the full 545-image set before finalizing the design system and screen selection.
+- Compare adjacent screenshots to infer the transition/state sequence: default, selected, loading, empty, error, editing, confirmation, completion, settings and alternate theme.
+- Record actual image evidence for typography, spacing, surfaces, radii, controls, charts, sheet geometry, CTA hierarchy, navigation and state changes.
+- Do not assume the separate `screen_001.png`–`screen_545.png` archive order maps to `bevel-000.png`–`bevel-544.png`; the archive is shuffled. Match by content, never by number.
+- The screenshot collection is predominantly light theme. Validate colors from the actual images before choosing tokens.
+- Create a per-screen review ledger with: source image ID, purpose, state, visual anatomy, interaction inference, NutriLift destination, reuse/adapt/exclude decision, and confidence.
+- OCR/contact sheets are indexing aids, not final evidence. Do not mark a screen visually reviewed until the full-resolution image has been inspected.
+- Do not start implementation until the shared design-system conclusions and first screen reference are evidence-backed.
+
+## Required workflow
+1. Work on a separate branch named `redesign/bevel-inspired-ui`; don't commit a sweeping rewrite to the default branch.
+2. Inspect root layout, navigation, fonts, theme tokens, shared production components and the exact route before implementing anything.
+3. Capture baseline screenshots for Home, Nutrition, Workout, Coach, Progress and More using a representative Android viewport. Use the reference collection’s light theme as the first visual target. Also capture food-log and barcode confirmation modals.
+4. Inspect the Bevel PNGs identified by the blueprint; use the screen catalog to map exact state/flow. Record measured design tokens (color, type, insets, spacing, radii, icon styling). Separate observation from estimates.
+5. Write an implementation checklist with touched paths, component changes, risks, tests and screenshot checks.
+6. Implement the token/component layer first, then Home as the golden screen. Compare and correct it before moving to other screens.
+7. Continue in this order: Nutrition overview → quick-add → food ingestion/review → food detail/history → Progress and metric details → active workout/completion → Coach → More/settings → reports.
+8. Preserve SQLite/Drizzle semantics, local-first writes, Zustand state, routes, existing food source metadata, workout history and report behavior. No unrelated migrations.
+9. Keep unknown data distinct from zero; no fake demo data; no fabricated Bevel-style scores. Manually logged recovery data must not look like wearable sensor readings.
+10. Every redesigned control must work and have loading/empty/error/disabled/success behavior as appropriate. Preserve form data and retryability on failure.
+11. Test smaller Android widths, safe areas, keyboard overlap, accessible names/roles, and bottom navigation overlap.
+12. After each phase run TypeScript, relevant Jest tests and Expo/device diagnostics. Capture updated screenshots and compare side by side.
+13. Report changed files, behavior preserved, tests run, visual comparisons actually performed and known gaps. Do not claim “pixel perfect” unless verified against screenshots.
+
+## Current review checkpoint — 2026-10-11
+
+The broad visual sweep has covered all 545 extracted archive images via 61 labeled contact sheets, and OCR is available for all 545. Representative native-resolution samples have also been inspected. This is **not yet the required 545/545 canonical native-resolution review**: the local archive is shuffled and its filenames are not confirmed matches for canonical source IDs.
+
+**Do not implement UI changes yet.** First complete every row in `docs/BEVEL_545_SCREEN_REVIEW_LEDGER.csv` by opening the exact `screens/bevel-NNN.png` source image at readable/native resolution, recording screen purpose/state/visual anatomy/controls/transition/NutriLift mapping/confidence, and comparing adjacent states. A row is not complete because its flow tag or OCR text exists.
+
+Use `docs/BEVEL_545_VISUAL_REVIEW_COMPLETION_REPORT.md` for findings from the full-frame sweep. Treat those as design-system hypotheses and cross-family observations, not a substitute for the remaining per-image review. Keep the implementation gate closed until all canonical rows are complete.
+
+## Non-negotiable
+- Do not use Bevel screenshots as app backgrounds or ship them as assets.
+- Do not add Apple Health/Watch, CGM, glucose, paywall, physiological scores, sleep alarms or source-priority features absent from NutriLift.
+- Do not fake a Nutrition Score. Use transparent target adherence and measured statistics only.
+- Do not replace real query/calculation flows with hardcoded values.
+- Don't modify many screens in one giant unreviewed pass.

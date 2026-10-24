@@ -3,7 +3,13 @@
  */
 
 import { ReactNode } from 'react';
-import { TextStyle, ViewProps, TextInputProps, PressableProps } from 'react-native';
+import {
+  TextStyle,
+  ViewProps,
+  TextProps as ReactNativeTextProps,
+  TextInputProps,
+  PressableProps,
+} from 'react-native';
 
 /**
  * Component state model tracking interactive and value states
@@ -231,7 +237,7 @@ export type TypographyVariant =
   | 'label-medium'
   | 'label-small';
 
-export interface TextProps extends TextInputProps {
+export interface TextProps extends ReactNativeTextProps {
   variant?: TypographyVariant;
   color?: 'primary' | 'secondary' | 'error' | 'on-surface' | string;
   weight?: 'light' | 'regular' | 'medium' | 'bold';

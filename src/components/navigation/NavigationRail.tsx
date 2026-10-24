@@ -3,7 +3,7 @@ import { View, Pressable, Text } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { NavigationRailProps } from '../../core/types/component';
 
-export const NavigationRail = React.forwardRef<View, NavigationRailProps>(
+export const NavigationRail = React.forwardRef<React.ComponentRef<typeof View>, NavigationRailProps>(
   ({ items, activeKey, onItemPress, floating = false }, ref) => {
     const { tokens } = useTheme();
     const { colors, spacing } = tokens;

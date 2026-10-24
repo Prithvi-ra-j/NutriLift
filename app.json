@@ -4,6 +4,7 @@
     "slug": "apex",
     "owner": "prithviraj_12",
     "version": "1.0.0",
+    "platforms": ["android"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -30,7 +31,6 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0A0A0F"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.prithvi.nutrilift",
       "permissions": [
@@ -47,14 +47,12 @@
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
-    "web": {
-      "favicon": "./assets/favicon.png",
-      "bundler": "metro"
-    },
     "scheme": "nutrilift",
     "plugins": [
       "expo-router",
       "expo-asset",
+      "expo-font",
+      "expo-sharing",
       [
         "expo-sqlite",
         {
@@ -69,6 +67,7 @@
           "microphonePermission": "Allow NutriLift to access your microphone for voice food logging."
         }
       ],
+      "expo-status-bar",
       [
         "expo-camera",
         {

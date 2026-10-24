@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import type { ComponentRef } from "react";
 import {
   View,
   Text,
@@ -12,15 +13,21 @@ import { Input } from "../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useAIStore } from "../../lib/stores/ai.store";
-import { useTodayStore } from "../../lib/stores/today.store";
 import { generateCoachResponse, isGroqConfigured, type CoachMessage } from "../../lib/groq";
 import { buildCoachContext } from "../../lib/ai/context-builder";
 import { getConversationHistory, insertConversationMessage, clearConversationHistory } from "../../lib/db/queries/reports";
+import { getDailyNutrition } from "../../lib/db/queries/nutrition";
+import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { Card } from "../../components/ui/Card";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { AiConversation } from "../../lib/db/schema";
+import type { DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { useToday } from "../../lib/time/useToday";
+import { logger } from "../../lib/logger";
+import { fireAndLog } from "../../lib/async";
+import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
 
 // Suggested prompts for coach
 const COACH_SUGGESTED_PROMPTS = [
@@ -34,12 +41,15 @@ const COACH_SUGGESTED_PROMPTS = [
 
 export default function CoachScreen() {
   const { messages, isGenerating, error, setMessages, addMessage, setGenerating, setError } = useAIStore();
-  const { nutrition, session } = useTodayStore();
+  const today = useToday();
+  const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
+  const [session, setSession] = useState<WorkoutSession | null>(null);
+  const todayRequestId = useRef(0);
 
   const [input, setInput] = useState("");
   const [groqConfigured, setGroqConfigured] = useState<boolean | null>(null);
   const [requestCount, setRequestCount] = useState(0);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
 
   const checkConfiguration = useCallback(() => {
     const configured = isGroqConfigured();
@@ -53,8 +63,26 @@ export default function CoachScreen() {
 
   useEffect(() => {
     checkConfiguration();
-    loadHistory();
+    fireAndLog(loadHistory(), "Coach conversation history load failed");
   }, [checkConfiguration, loadHistory]);
+
+  useEffect(() => {
+    const request = beginRequest(todayRequestId);
+    Promise.all([getDailyNutrition(today), getSessionsForDate(today)])
+      .then(([nutritionData, sessions]) => {
+        if (!isLatestRequest(todayRequestId, request)) return;
+        setNutrition(nutritionData);
+        setSession(sessions[0] ?? null);
+      })
+      .catch((loadError: unknown) => {
+        logger.error("Coach context load failed", {
+          error: loadError instanceof Error ? loadError.message : String(loadError),
+        });
+      });
+    return () => {
+      invalidateRequests(todayRequestId);
+    };
+  }, [today]);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -203,7 +231,7 @@ export default function CoachScreen() {
           <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: 8, padding: 12, flexDirection: "row", gap: 8 }}>
             <Feather name="alert-circle" size={14} color={M3.colors.error} />
             <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
-              Groq API key is not configured. Please add GROQ_API_KEY to your .env file or Settings.
+              Supabase is not configured. AI coaching is unavailable.
             </Text>
           </View>
         )}

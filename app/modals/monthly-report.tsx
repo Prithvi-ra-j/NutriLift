@@ -23,13 +23,15 @@ import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import type { MonthlyReport } from "../../lib/groq";
+import { useToday } from "../../lib/time/useToday";
 
 export default function MonthlyReportModal() {
+  const today = useToday();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState("");
   const [report, setReport] = useState<MonthlyReport | null>(null);
 
-  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentMonth = today.slice(0, 7);
 
   const generateReport = async () => {
     setIsGenerating(true);
@@ -37,7 +39,7 @@ export default function MonthlyReportModal() {
 
     try {
       const startDate = `${currentMonth}-01`;
-      const endDate = new Date().toISOString().split("T")[0];
+      const endDate = today;
 
       const [nutrition, sessions, prs, inBodyRecords, weightHistory, recoveryLogs, supplementAdherence] =
         await Promise.all([

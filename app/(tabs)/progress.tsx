@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -23,17 +23,22 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
 import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { addDays, parseLocalDate, startOfWeekMonday } from "../../lib/time/localDate";
+import { useToday } from "../../lib/time/useToday";
+import { logger } from "../../lib/logger";
+import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
 
 export default function ProgressScreen() {
+  const today = useToday();
   const [activeSection, setActiveSection] = useState<ProgressSection>("body");
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Week navigation state
-  const todayStr = new Date().toISOString().split("T")[0];
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
+  const selectedDate = pickedDate ?? today;
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const requestId = useRef(0);
 
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
   const [weightHistory, setWeightHistory] = useState<BodyStat[]>([]);
@@ -43,27 +48,22 @@ export default function ProgressScreen() {
 
   // Get week range for selected date
   const getWeekRange = (dateStr: string) => {
-    const date = new Date(dateStr);
-    const dayOfWeek = date.getDay();
-    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust to Monday
-    const monday = new Date(date);
-    monday.setDate(date.getDate() + diff);
-    
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-    
+    const start = startOfWeekMonday(dateStr);
+    const end = addDays(start, 6);
     return {
-      start: monday.toISOString().split("T")[0],
-      end: sunday.toISOString().split("T")[0],
-      monday,
-      sunday,
+      start,
+      end,
+      monday: parseLocalDate(start),
+      sunday: parseLocalDate(end),
     };
   };
 
   const weekRange = getWeekRange(selectedDate);
-  const isCurrentWeek = weekRange.start === getWeekRange(todayStr).start;
+  const isCurrentWeek = weekRange.start === getWeekRange(today).start;
 
   const loadData = useCallback(async () => {
+    const request = beginRequest(requestId);
+    setLoadError(null);
     try {
       const [prsData, weightData, inBodyData, nutritionData, recoveryData] = await Promise.all([
         getAllPRs(),
@@ -72,21 +72,32 @@ export default function ProgressScreen() {
         getLast30DaysNutrition(),
         getRecentRecoveryLogs(30), // Get 30 days to cover multiple weeks
       ]);
+      if (!isLatestRequest(requestId, request)) return;
       setPRs(prsData);
       setWeightHistory(weightData);
       setInBodyRecords(inBodyData);
       setNutritionHistory(nutritionData);
       setRecoveryLogs(recoveryData);
     } catch (err) {
-      console.error("Progress load error:", err);
+      logger.error("Progress load failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      if (isLatestRequest(requestId, request)) {
+        setLoadError("Could not load progress data. Please retry.");
+      }
     } finally {
-      setIsLoading(false);
-      setRefreshing(false);
+      if (isLatestRequest(requestId, request)) {
+        setIsLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     loadData();
+    return () => {
+      invalidateRequests(requestId);
+    };
   }, [loadData]);
 
   // Filter data for selected week
@@ -111,19 +122,15 @@ export default function ProgressScreen() {
   const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
 
   const goToPreviousWeek = () => {
-    const prev = new Date(selectedDate);
-    prev.setDate(prev.getDate() - 7);
-    setSelectedDate(prev.toISOString().split("T")[0]);
+    setPickedDate(addDays(selectedDate, -7));
   };
 
   const goToNextWeek = () => {
-    const next = new Date(selectedDate);
-    next.setDate(next.getDate() + 7);
-    setSelectedDate(next.toISOString().split("T")[0]);
+    setPickedDate(addDays(selectedDate, 7));
   };
 
   const goToToday = () => {
-    setSelectedDate(todayStr);
+    setPickedDate(null);
   };
 
   const sections: { key: ProgressSection; label: string; icon: React.ComponentProps<typeof Feather>["name"] }[] = [
@@ -155,6 +162,20 @@ export default function ProgressScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* ── Header ── */}
+        {loadError && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => {
+              setIsLoading(true);
+              loadData();
+            }}
+            style={{ padding: 14, borderRadius: 10, backgroundColor: M3.colors.errorContainer }}
+          >
+            <Text style={{ color: M3.colors.onErrorContainer, fontFamily: "DMSans_500Medium" }}>
+              {loadError} Tap to retry.
+            </Text>
+          </TouchableOpacity>
+        )}
         <ScreenHeader
           title="PROGRESS"
           subtitle={isCurrentWeek ? "This week" : `Week of ${weekRange.monday.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`}
@@ -271,7 +292,7 @@ export default function ProgressScreen() {
                       Projected Date
                     </Text>
                     <Text style={{ color: bodySummary.onTrackForGoal ? M3.colors.success : M3.colors.warning, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                      {new Date(bodySummary.projectedBFDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                      {parseLocalDate(bodySummary.projectedBFDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
                     </Text>
                   </View>
                 )}
@@ -514,7 +535,7 @@ export default function ProgressScreen() {
                         <View key={i} style={{ flex: 1, alignItems: "center", gap: 3 }}>
                           <View style={{ width: "100%", height: Math.max(4, pct * 52), backgroundColor: color, borderRadius: 3 }} />
                           <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 8, fontFamily: "DMSans_400Regular" }}>
-                            {new Date(log.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
+                            {parseLocalDate(log.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                           </Text>
                         </View>
                       );

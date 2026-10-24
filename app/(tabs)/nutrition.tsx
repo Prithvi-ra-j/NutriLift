@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useTodayStore } from "../../lib/stores/today.store";
 import {
   getDailyNutrition,
   getFoodLogsForDate,
@@ -26,6 +25,10 @@ import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
+import { useToday } from "../../lib/time/useToday";
+import { logger } from "../../lib/logger";
+import { dayOfWeek, parseLocalDate } from "../../lib/time/localDate";
+import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -56,35 +59,52 @@ function groupByMeal(logs: FoodLog[]): MealGroup[] {
 }
 
 export default function NutritionScreen() {
-  const todayStr = new Date().toISOString().split("T")[0];
-  const [selectedDate, setSelectedDate] = useState(todayStr);
-  const { nutrition, foodLogs, setNutrition, setFoodLogs } = useTodayStore();
+  const today = useToday();
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
+  const selectedDate = pickedDate ?? today;
+  const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
+  const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
 
   const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
+  const requestId = useRef(0);
 
   const loadData = useCallback(async () => {
+    const request = beginRequest(requestId);
+    setLoadError(null);
     try {
       const [nutritionData, logsData, weekData] = await Promise.all([
         getDailyNutrition(selectedDate),
         getFoodLogsForDate(selectedDate),
         getLast7DaysNutrition(),
       ]);
+      if (!isLatestRequest(requestId, request)) return;
       setNutrition(nutritionData);
       setFoodLogs(logsData);
       setLast7Days(weekData);
-    } catch (err) {
-      console.error("Nutrition load error:", err);
+    } catch (error) {
+      logger.error("Nutrition load failed", {
+      error: error instanceof Error ? error.message : String(error),
+      });
+      if (isLatestRequest(requestId, request)) {
+      setLoadError("Could not load nutrition data. Please retry.");
+      }
     } finally {
+      if (isLatestRequest(requestId, request)) {
       setRefreshing(false);
       setIsLoading(false);
+      }
     }
   }, [selectedDate]);
 
   useEffect(() => {
     loadData();
+    return () => {
+      invalidateRequests(requestId);
+    };
   }, [loadData]);
 
   const handleDeleteFood = (log: FoodLog) => {
@@ -94,8 +114,14 @@ export default function NutritionScreen() {
         text: "Delete",
         style: "destructive",
         onPress: async () => {
-          await deleteFoodLog(log.id, selectedDate);
-          loadData();
+          try {
+            await deleteFoodLog(log.id, log.date);
+            await loadData();
+          } catch (error) {
+              logger.error("Food log deletion failed", {
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
         },
       },
     ]);
@@ -140,17 +166,35 @@ export default function NutritionScreen() {
         {/* ── Header ── */}
         <ScreenHeader
           title="NUTRITION"
-          subtitle={new Date(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+          subtitle={parseLocalDate(selectedDate).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
           actionIcon="plus"
           actionLabel="Log Food"
-          onAction={() => router.push("/modals/log-food")}
+          onAction={() => router.push({ pathname: "/modals/log-food", params: { date: selectedDate } })}
         />
 
         {/* ── Date Navigator ── */}
-        <DateNavigator selectedDate={selectedDate} onDateChange={setSelectedDate} showFullDate={false} />
+        <DateNavigator
+          selectedDate={selectedDate}
+          onDateChange={(date) => setPickedDate(date === today ? null : date)}
+          showFullDate={false}
+        />
+        {loadError && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            onPress={() => {
+              setIsLoading(true);
+              loadData();
+            }}
+            style={{ padding: 14, borderRadius: 10, backgroundColor: M3.colors.errorContainer }}
+          >
+            <Text style={{ color: M3.colors.onErrorContainer, fontFamily: "DMSans_500Medium" }}>
+              {loadError} Tap to retry.
+            </Text>
+          </TouchableOpacity>
+        )}
 
         {/* ── Marathon Day Notice ── */}
-        {new Date(selectedDate).getDay() === 0 && (
+        {dayOfWeek(selectedDate) === 0 && (
           <Card>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 4 }}>
               <Feather name="activity" size={20} color={M3.colors.error} />
@@ -188,13 +232,13 @@ export default function NutritionScreen() {
               key={mode}
               onPress={() => {
                 if (mode === "scan") {
-                  router.push("/modals/barcode-scanner");
+                  router.push({ pathname: "/modals/barcode-scanner", params: { date: selectedDate } });
                 } else if (mode === "voice") {
-                  router.push("/modals/voice-input");
+                  router.push({ pathname: "/modals/voice-input", params: { date: selectedDate } });
                 } else if (mode === "paste") {
-                  router.push("/modals/inbody-paste");
+                  router.push({ pathname: "/modals/inbody-paste", params: { date: selectedDate } });
                 } else {
-                  router.push("/modals/log-food");
+                  router.push({ pathname: "/modals/log-food", params: { date: selectedDate } });
                 }
               }}
               style={{
@@ -265,7 +309,10 @@ export default function NutritionScreen() {
               </View>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                 <TouchableOpacity
-                  onPress={() => router.push(`/modals/log-food?meal=${group.meal}`)}
+                  onPress={() => router.push({
+                    pathname: "/modals/log-food",
+                    params: { meal: group.meal, date: selectedDate },
+                  })}
                   style={{
                     width: 28,
                     height: 28,
@@ -344,7 +391,7 @@ export default function NutritionScreen() {
                       }}
                     />
                     <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
-                      {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
+                      {parseLocalDate(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                     </Text>
                   </View>
                 );

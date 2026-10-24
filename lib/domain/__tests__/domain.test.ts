@@ -1,0 +1,154 @@
+import { e1rm } from "../e1rm";
+import { derivePRs } from "../prs";
+import { calculateVolume } from "../volume";
+import { shouldIncreaseLoad } from "../progression";
+import { adherenceScore, sumFoodLogs } from "../nutrition";
+import { num } from "../barcode";
+
+describe("strength domain", () => {
+  it("caps Epley repetitions at 12 and treats singles as their lifted weight", () => {
+    expect(e1rm(80, 1)).toBe(80);
+    expect(e1rm(75, 20)).toBe(105);
+    expect(e1rm(75, 12)).toBe(105);
+    expect(() => e1rm(-1, 5)).toThrow(RangeError);
+    expect(() => e1rm(50, 0)).toThrow(RangeError);
+  });
+
+  it("derives PRs in chronological order and promotes the previous best", () => {
+    const sets = [
+      { setId: "later", exerciseName: "Squat", weightKg: 80, reps: 1, date: "2026-01-02", loggedAt: 2, isWarmup: false },
+      { setId: "earlier", exerciseName: "Squat", weightKg: 75, reps: 20, date: "2026-01-01", loggedAt: 1, isWarmup: false },
+      { setId: "warmup", exerciseName: "Squat", weightKg: 200, reps: 1, date: "2026-01-03", loggedAt: 3, isWarmup: true },
+    ];
+
+    const complete = derivePRs(sets);
+    expect(complete.prSetIds).toEqual(new Set(["earlier"]));
+    expect(complete.bestByExercise.get("Squat")?.setId).toBe("earlier");
+    expect(derivePRs(sets.filter((set) => set.setId !== "earlier")).prSetIds).toEqual(
+      new Set(["later"]),
+    );
+  });
+
+  it("does not mark equal e1RM sets on the same day as another PR", () => {
+    const result = derivePRs([
+      { setId: "one", exerciseName: "Bench", weightKg: 60, reps: 10, date: "2026-01-01", loggedAt: 1, isWarmup: false },
+      { setId: "two", exerciseName: "Bench", weightKg: 60, reps: 10, date: "2026-01-01", loggedAt: 2, isWarmup: false },
+    ]);
+    expect(result.prSetIds).toEqual(new Set(["one"]));
+  });
+
+  it("marks a later strict e1RM improvement as a new PR", () => {
+    const result = derivePRs([
+      { setId: "first", exerciseName: "Press", weightKg: 50, reps: 10, date: "2026-01-01", loggedAt: 1, isWarmup: false },
+      { setId: "improvement", exerciseName: "Press", weightKg: 60, reps: 10, date: "2026-01-02", loggedAt: 2, isWarmup: false },
+    ]);
+    expect(result.prSetIds).toEqual(new Set(["first", "improvement"]));
+    expect(result.bestByExercise.get("Press")?.setId).toBe("improvement");
+  });
+
+  it("uses set ID as a deterministic tie-breaker", () => {
+    const result = derivePRs([
+      { setId: "b", exerciseName: "Press", weightKg: 50, reps: 10, date: "2026-01-01", loggedAt: 1, isWarmup: false },
+      { setId: "a", exerciseName: "Press", weightKg: 50, reps: 10, date: "2026-01-01", loggedAt: 1, isWarmup: false },
+    ]);
+    expect(result.bestByExercise.get("Press")?.setId).toBe("a");
+    expect(result.prSetIds).toEqual(new Set(["a"]));
+  });
+
+  it("ignores warmups and invalid strength values when deriving PRs", () => {
+    const result = derivePRs([
+      { setId: "warmup", exerciseName: "Squat", weightKg: 200, reps: 1, date: "2026-01-01", loggedAt: 1, isWarmup: true },
+      { setId: "bad-reps", exerciseName: "Squat", weightKg: 200, reps: 0, date: "2026-01-01", loggedAt: 2, isWarmup: false },
+      { setId: "fractional-reps", exerciseName: "Squat", weightKg: 200, reps: 1.5, date: "2026-01-01", loggedAt: 3, isWarmup: false },
+      { setId: "bad-weight", exerciseName: "Squat", weightKg: Number.NaN, reps: 10, date: "2026-01-01", loggedAt: 4, isWarmup: false },
+      { setId: "negative-weight", exerciseName: "Squat", weightKg: -1, reps: 10, date: "2026-01-01", loggedAt: 5, isWarmup: false },
+    ]);
+    expect(result.prSetIds.size).toBe(0);
+    expect(result.bestByExercise.size).toBe(0);
+  });
+
+  it("calculates working volume only for strength exercise types", () => {
+    const sets = [
+      { weightKg: 20, reps: 10, isWarmup: false, exerciseType: "weight_reps" },
+      { weightKg: 0, reps: 10, isWarmup: false, exerciseType: "bodyweight_reps" },
+      { weightKg: 20, reps: 10, isWarmup: true, exerciseType: "weight_reps" },
+      { weightKg: 20, reps: 10, isWarmup: false, exerciseType: "duration" },
+    ];
+    expect(calculateVolume(sets)).toBe(200);
+
+    const shuffled = [...sets].reverse();
+    expect(calculateVolume(shuffled)).toBe(calculateVolume(sets));
+    expect(calculateVolume([
+      { weightKg: 10, reps: 10, isWarmup: false, exerciseType: null },
+    ])).toBe(100);
+    expect(calculateVolume([
+      { weightKg: Number.NaN, reps: 10, isWarmup: false, exerciseType: "weight_reps" },
+      { weightKg: 10, reps: Number.NaN, isWarmup: false, exerciseType: "weight_reps" },
+      { weightKg: 20, reps: 10, isWarmup: false, exerciseType: "reps_only" },
+    ])).toBe(0);
+  });
+
+  it("checks progression across distinct dates and requires consistent weights", () => {
+    const ready = ["2026-01-05", "2026-01-03"].map((date, index) => ({
+      sessionId: `session-${index}`,
+      date,
+      sets: [1, 2, 3].map(() => ({ weightKg: 50, reps: 12, isWarmup: false })),
+    }));
+    expect(shouldIncreaseLoad(ready, [8, 12], 3)).toBe(true);
+    expect(
+      shouldIncreaseLoad(
+        [{ ...ready[0], date: "2026-01-05" }, { ...ready[1], date: "2026-01-05" }],
+        [8, 12],
+        3,
+      ),
+    ).toBe(false);
+    expect(
+      shouldIncreaseLoad(
+        [{ ...ready[0], sets: [{ weightKg: 45, reps: 12, isWarmup: false }, ...ready[0].sets.slice(1)] }, ready[1]],
+        [8, 12],
+        3,
+      ),
+    ).toBe(false);
+    expect(
+      shouldIncreaseLoad(
+        ready.map((session) => ({
+          ...session,
+          sets: session.sets.slice(0, 2),
+        })),
+        [8, 12],
+        3,
+      ),
+    ).toBe(false);
+    expect(() => shouldIncreaseLoad(ready, [12, 8], 3)).toThrow(RangeError);
+  });
+});
+
+describe("nutrition domain", () => {
+  it("sums food logs and withholds score for fewer than two foods", () => {
+    const logs = [
+      { calories: 500, protein_g: 25, carbs_g: 50, fat_g: 15 },
+      { calories: 500, protein_g: 25, carbs_g: 50, fat_g: 15 },
+    ];
+    expect(sumFoodLogs(logs)).toEqual({
+      calories: 1000,
+      protein_g: 50,
+      carbs_g: 100,
+      fat_g: 30,
+    });
+    expect(adherenceScore(logs[0], { calories: 1000, protein_g: 50 }, 1)).toBeNull();
+    expect(adherenceScore(sumFoodLogs(logs), { calories: 1000, protein_g: 50 }, 2)).toBe(100);
+    expect(adherenceScore({ calories: 2000, protein_g: 75 }, { calories: 1000, protein_g: 50 }, 2)).toBe(40);
+    expect(() => adherenceScore(sumFoodLogs(logs), { calories: 0, protein_g: 50 }, 2)).toThrow(RangeError);
+  });
+});
+
+describe("barcode domain", () => {
+  it("keeps numeric zero and rejects invalid values", () => {
+    expect(num("0")).toBe(0);
+    expect(num(0)).toBe(0);
+    expect(num("invalid")).toBeNull();
+    expect(num(undefined)).toBeNull();
+    expect(num(Number.POSITIVE_INFINITY)).toBeNull();
+    expect(num({ value: 0 })).toBeNull();
+  });
+});

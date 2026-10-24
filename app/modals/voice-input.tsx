@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useAudioRecorder, RecordingPresets } from "expo-audio";
 import { transcribeAudioMultilingual } from "../../lib/groq/transcribeAudio";
 import { parseFoodFromVoice } from "../../lib/groq/parseFood";
@@ -12,8 +12,13 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
+import { useToday } from "../../lib/time/useToday";
+import { isLocalDateString } from "../../lib/time/localDate";
 
 export default function VoiceInputModal() {
+  const params = useLocalSearchParams<{ date?: string }>();
+  const today = useToday();
+  const logDate = isLocalDateString(params.date) ? params.date : today;
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -26,8 +31,8 @@ export default function VoiceInputModal() {
       // Check if Groq is configured
       if (!isGroqConfigured()) {
         Alert.alert(
-          "API Key Required",
-          "Groq API key is not configured. Please add GROQ_API_KEY to your .env file.",
+          "AI Service Unavailable",
+          "Supabase is not configured, so voice logging cannot use the AI service.",
           [{ text: "OK" }]
         );
         return;
@@ -92,14 +97,13 @@ export default function VoiceInputModal() {
     }
 
     try {
-      const today = new Date().toISOString().split("T")[0];
       const meal = parsedFood.meal_suggestion || "snack";
 
       // Save each food item
       for (const item of parsedFood.items) {
         await insertFoodLog({
           id: uuid.v4() as string,
-          date: today,
+          date: logDate,
           meal,
           name: item.name,
           quantity_g: item.quantity_g,

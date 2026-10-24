@@ -6,10 +6,14 @@ export interface ExerciseTemplate {
   equipment: string;
   sets: number;
   reps: string;
+  repRange: [number, number];
+  targetSets: number;
   notes?: string;
 }
 
-export const WORKOUT_TEMPLATES: Record<string, ExerciseTemplate[]> = {
+type UntargetedExerciseTemplate = Omit<ExerciseTemplate, "repRange" | "targetSets">;
+
+const UNTARGETED_WORKOUT_TEMPLATES: Record<string, UntargetedExerciseTemplate[]> = {
   "Push A": [
     { name: "Bench Press", muscle_group: "chest", equipment: "barbell", sets: 3, reps: "8-10" },
     { name: "Incline Dumbbell Press", muscle_group: "chest", equipment: "dumbbell", sets: 3, reps: "10-12" },
@@ -67,6 +71,23 @@ export const WORKOUT_TEMPLATES: Record<string, ExerciseTemplate[]> = {
   "Cardio": [],
   "Rest": [],
 };
+
+export const WORKOUT_TEMPLATES: Record<string, ExerciseTemplate[]> = Object.fromEntries(
+  Object.entries(UNTARGETED_WORKOUT_TEMPLATES).map(([dayType, exercises]) => [
+    dayType,
+    exercises.map((exercise) => {
+      const match = /^(\d+)-(\d+)$/.exec(exercise.reps);
+      if (!match) {
+        throw new Error(`Invalid rep range "${exercise.reps}" for ${exercise.name}.`);
+      }
+      return {
+        ...exercise,
+        repRange: [Number(match[1]), Number(match[2])] as [number, number],
+        targetSets: exercise.sets,
+      };
+    }),
+  ]),
+);
 
 export function getTemplateForDayType(dayType: string): ExerciseTemplate[] {
   return WORKOUT_TEMPLATES[dayType] || [];

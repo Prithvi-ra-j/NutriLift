@@ -67,22 +67,6 @@ coverage/
 # Debug
 .vscode/launch.json
 
-# Assets and Media
-*.png
-*.jpg
-*.jpeg
-*.gif
-*.svg
-*.webp
-*.ico
-*.mp4
-*.mov
-*.avi
-*.mkv
-*.mp3
-*.wav
-*.m4a
-
 # OS
 Thumbs.db
 .DS_Store
@@ -92,9 +76,6 @@ Thumbs.db
 
 expo-env.d.ts
 # @end expo-cli
-
-# Documentation
-docs/
 
 # Local-only PII patterns used by tools/check-no-pii.sh
 tools/pii-patterns.local

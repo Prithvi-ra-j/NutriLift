@@ -5,7 +5,7 @@ import { List } from '../components/data-display/List';
 import { ThemeProvider } from '../core/theme/ThemeProvider';
 
 describe('Performance Benchmarks', () => {
-  it('renders a large list within acceptable time limits', () => {
+  it('renders a large list within acceptable time limits', async () => {
     // Generate 1000 items
     const data = Array.from({ length: 1000 }).map((_, i) => ({
       id: String(i),
@@ -15,7 +15,7 @@ describe('Performance Benchmarks', () => {
 
     const startTime = performance.now();
     
-    render(
+    await render(
       <ThemeProvider initialDark={false}>
         <List data={data} virtualized={true} />
       </ThemeProvider>
@@ -32,21 +32,21 @@ describe('Performance Benchmarks', () => {
     console.log(`[Performance Benchmark] Large List (1000 items) render time: ${renderTimeMs.toFixed(2)}ms`);
   });
 
-  it('Memoization prevents unnecessary re-renders of the List', () => {
+  it('Memoization prevents unnecessary re-renders of the List', async () => {
     let renderCount = 0;
     const MemoizedList = React.memo(() => {
       renderCount++;
       return <List data={[{ id: '1', title: 'test' }]} />;
     });
 
-    const { rerender } = render(
+    const { rerender } = await render(
       <ThemeProvider initialDark={false}>
         <MemoizedList />
       </ThemeProvider>
     );
     expect(renderCount).toBe(1);
 
-    rerender(
+    await rerender(
       <ThemeProvider initialDark={false}>
         <MemoizedList />
       </ThemeProvider>

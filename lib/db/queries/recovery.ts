@@ -1,8 +1,11 @@
 // @ts-nocheck
-import { eq, gte, lte, and, desc } from "drizzle-orm";
+import { eq, gte, lte, and, desc, isNull } from "drizzle-orm";
 import { db } from "../client";
 import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, type SupplementLog } from "../schema";
 import { USER_PROFILE } from "../../constants/user-profile";
+import { inTx } from "../tx";
+import { nowIso, nowUnix } from "../../time/clock";
+import { addDays, localDateString } from "../../time/localDate";
 
 // ─── Recovery Queries ─────────────────────────────────────────────────────────
 
@@ -15,19 +18,20 @@ export async function getRecoveryLog(date: string): Promise<RecoveryLog | null> 
 }
 
 export async function upsertRecoveryLog(log: NewRecoveryLog): Promise<void> {
-  const record = { ...log, updated_at: new Date().toISOString() };
-  const existing = await getRecoveryLog(log.date);
-  if (existing) {
-    await db.update(recoveryLogs).set(record).where(eq(recoveryLogs.date, log.date));
-  } else {
-    await db.insert(recoveryLogs).values(record);
-  }
+  await inTx(async () => {
+    const record = { ...log, updated_at: nowIso() };
+    await db
+      .insert(recoveryLogs)
+      .values(record)
+      .onConflictDoUpdate({
+        target: recoveryLogs.date,
+        set: record,
+      });
+  });
 }
 
 export async function getRecentRecoveryLogs(days: number = 7): Promise<RecoveryLog[]> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - days);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = addDays(localDateString(), -days);
 
   return db
     .select()
@@ -58,7 +62,7 @@ export async function getSupplementLogsForDate(date: string): Promise<Supplement
   return db
     .select()
     .from(supplementLogs)
-    .where(eq(supplementLogs.date, date));
+    .where(and(eq(supplementLogs.date, date), isNull(supplementLogs.deleted_at)));
 }
 
 export async function upsertSupplementLog(
@@ -66,40 +70,39 @@ export async function upsertSupplementLog(
   supplementName: string,
   taken: boolean
 ): Promise<void> {
-  const existing = await db
-    .select()
-    .from(supplementLogs)
-    .where(
-      eq(supplementLogs.date, date)
+  await inTx(async () => {
+    const existing = await db
+      .select()
+      .from(supplementLogs)
+      .where(eq(supplementLogs.date, date));
+    const existingForSupplement = existing.find(
+      (s) => s.supplement_name === supplementName,
     );
+    const now = nowUnix();
+    const updatedAt = nowIso();
 
-  const existingForSupplement = existing.find(
-    (s) => s.supplement_name === supplementName
-  );
-
-  const now = Math.floor(Date.now() / 1000);
-
-  if (existingForSupplement) {
-    await db
-      .update(supplementLogs)
-      .set({ taken: taken ? 1 : 0, logged_at: now })
-      .where(eq(supplementLogs.id, existingForSupplement.id));
-  } else {
-    const { default: uuid } = await import("react-native-uuid");
-    await db.insert(supplementLogs).values({
-      id: uuid.v4() as string,
-      date,
-      supplement_name: supplementName,
-      taken: taken ? 1 : 0,
-      logged_at: now,
-    });
-  }
+    if (existingForSupplement) {
+      await db
+        .update(supplementLogs)
+        .set({ taken: taken ? 1 : 0, logged_at: now, updated_at: updatedAt, deleted_at: null })
+        .where(eq(supplementLogs.id, existingForSupplement.id));
+    } else {
+      const { default: uuid } = await import("react-native-uuid");
+      await db.insert(supplementLogs).values({
+        id: uuid.v4() as string,
+        date,
+        supplement_name: supplementName,
+        taken: taken ? 1 : 0,
+        logged_at: now,
+        updated_at: updatedAt,
+        deleted_at: null,
+      });
+    }
+  });
 }
 
 export async function getSupplementAdherence30d(): Promise<Record<string, number>> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 29);
-  const cutoffStr = cutoff.toISOString().split("T")[0];
+  const cutoffStr = addDays(localDateString(), -29);
 
   const logs = await db
     .select()
