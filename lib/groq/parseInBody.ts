@@ -95,7 +95,7 @@ Rules:
       response_format: { type: "json_object" },
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const raw = completion?.choices?.[0]?.message?.content ?? "{}";
     return JSON.parse(raw) as InBodyParseResult;
   }) as Promise<InBodyParseResult>;
 }

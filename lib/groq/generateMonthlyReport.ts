@@ -127,7 +127,7 @@ Use this exact schema:
       response_format: { type: "json_object" },
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const raw = completion?.choices?.[0]?.message?.content ?? "{}";
     return JSON.parse(raw) as MonthlyReport;
   }) as Promise<MonthlyReport>;
 }

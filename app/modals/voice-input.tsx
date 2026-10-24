@@ -4,9 +4,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAudioRecorder, RecordingPresets } from "expo-audio";
-import { transcribeAudioMultilingual } from "../../lib/groq/transcribeAudio";
+import { transcribeAudioMultilingual } from "../../lib/ai/transcribeAudio";
 import { parseFoodFromVoice } from "../../lib/groq/parseFood";
-import { isGroqConfigured } from "../../lib/groq/client";
+import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { insertFoodLog } from "../../lib/db/queries/nutrition";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
@@ -28,8 +28,7 @@ export default function VoiceInputModal() {
 
   const startRecording = async () => {
     try {
-      // Check if Groq is configured
-      if (!isGroqConfigured()) {
+      if (!isSupabaseConfigured) {
         Alert.alert(
           "AI Service Unavailable",
           "Supabase is not configured, so voice logging cannot use the AI service.",

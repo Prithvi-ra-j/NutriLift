@@ -76,7 +76,7 @@ Rules:
       response_format: { type: "json_object" },
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const raw = completion?.choices?.[0]?.message?.content ?? "{}";
     const result = JSON.parse(raw) as ExerciseParseResult;
     return validateExerciseParseResult(result);
   }) as Promise<ExerciseParseResult>;

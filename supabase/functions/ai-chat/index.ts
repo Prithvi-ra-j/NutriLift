@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+﻿import { createClient } from "npm:@supabase/supabase-js@2.56.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -36,14 +36,63 @@ Deno.serve(async (request) => {
     return Response.json({ error: "Invalid session" }, { status: 401, headers: corsHeaders });
   }
 
-  const body = await request.json();
-  if (!ALLOWED_MODELS.has(body.model) || !Array.isArray(body.messages)) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON body" }, { status: 400, headers: corsHeaders });
+  }
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
     return Response.json({ error: "Unsupported AI request" }, { status: 400, headers: corsHeaders });
   }
 
-  if (body.stream || JSON.stringify(body.messages).length > MAX_PROMPT_CHARACTERS) {
+  const candidate = body as {
+    model?: unknown;
+    messages?: unknown;
+    response_format?: unknown;
+    temperature?: unknown;
+    max_tokens?: unknown;
+    stream?: unknown;
+  };
+
+  if (candidate.stream !== undefined || !Array.isArray(candidate.messages) || candidate.messages.length === 0 || candidate.messages.length > 30) {
+    return Response.json({ error: "Unsupported AI request" }, { status: 400, headers: corsHeaders });
+  }
+
+  const modelName = Deno.env.get("GROQ_CHAT_MODEL") ?? "openai/gpt-oss-120b";
+  if (!ALLOWED_MODELS.has(modelName)) {
+    return Response.json({ error: "Unsupported AI request" }, { status: 400, headers: corsHeaders });
+  }
+
+  let normalizedMessages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  try {
+    normalizedMessages = candidate.messages.map((message) => {
+      if (!message || typeof message !== "object") {
+        throw new Error("Invalid message payload");
+      }
+      const entry = message as { role?: unknown; content?: unknown };
+      if (entry.role !== "system" && entry.role !== "user" && entry.role !== "assistant") {
+        throw new Error("Invalid role");
+      }
+      if (typeof entry.content !== "string" || entry.content.length === 0 || entry.content.length > 12_000) {
+        throw new Error("Invalid content");
+      }
+      return { role: entry.role, content: entry.content };
+    });
+  } catch {
+    return Response.json({ error: "Unsupported AI request" }, { status: 400, headers: corsHeaders });
+  }
+
+  if (JSON.stringify(normalizedMessages).length > MAX_PROMPT_CHARACTERS) {
     return Response.json({ error: "AI request exceeds gateway limits" }, { status: 400, headers: corsHeaders });
   }
+
+  const responseFormat = candidate.response_format === "json_object" || candidate.response_format === "text"
+    ? candidate.response_format
+    : undefined;
+  const temperature = typeof candidate.temperature === "number" ? Math.min(Math.max(candidate.temperature, 0), 1.5) : undefined;
+  const maxTokens = typeof candidate.max_tokens === "number" ? Math.min(Math.max(Math.round(candidate.max_tokens), 1), 1_500) : undefined;
 
   const admin = createClient(supabaseUrl, serviceRoleKey);
   const startOfUtcDay = new Date();
@@ -63,8 +112,8 @@ Deno.serve(async (request) => {
 
   await admin.from("ai_request_usage").insert({
     user_id: user.id,
-    model: body.model,
-    max_output_tokens: Math.min(Number(body.max_tokens) || 0, MAX_OUTPUT_TOKENS),
+    model: modelName,
+    max_output_tokens: Math.min(Number(maxTokens) || 0, MAX_OUTPUT_TOKENS),
   });
 
   const groqResponse = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -74,8 +123,11 @@ Deno.serve(async (request) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      ...body,
-      max_tokens: Math.min(Number(body.max_tokens) || 1_000, MAX_OUTPUT_TOKENS),
+      model: modelName,
+      messages: normalizedMessages,
+      response_format: responseFormat ? { type: responseFormat } : undefined,
+      temperature,
+      max_tokens: Math.min(Number(maxTokens) || 1_000, MAX_OUTPUT_TOKENS),
       stream: false,
     }),
   });

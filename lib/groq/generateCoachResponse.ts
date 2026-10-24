@@ -91,7 +91,7 @@ ${JSON.stringify(context, null, 2)}`;
       max_tokens: 1000,
     });
 
-    const content = completion.choices[0]?.message?.content || "";
+    const content = completion?.choices?.[0]?.message?.content || "";
     if (onChunk && content) onChunk(content);
     return content;
   }) as Promise<string>;
@@ -125,7 +125,7 @@ export async function generateDailyInsight(todayData: {
       max_tokens: 100,
     });
 
-    return completion.choices[0]?.message?.content || "Keep pushing!";
+    return completion?.choices?.[0]?.message?.content || "Keep pushing!";
   }) as Promise<string>;
 }
 
@@ -182,7 +182,7 @@ Be direct, reference actual numbers, and focus on actionable insights. This summ
       max_tokens: 200,
     });
 
-    return completion.choices[0]?.message?.content || "Week completed.";
+    return completion?.choices?.[0]?.message?.content || "Week completed.";
   }) as Promise<string>;
 }
 
@@ -227,7 +227,7 @@ Be analytical, reference specific numbers, and tell the story of the month. This
       max_tokens: 500,
     });
 
-    return completion.choices[0]?.message?.content || "Month completed.";
+    return completion?.choices?.[0]?.message?.content || "Month completed.";
   }) as Promise<string>;
 }
 
@@ -273,7 +273,7 @@ Be comprehensive, tell the 3-month story, and provide strategic analysis. This w
       max_tokens: 800,
     });
 
-    return completion.choices[0]?.message?.content || "Quarter completed.";
+    return completion?.choices?.[0]?.message?.content || "Quarter completed.";
   }) as Promise<string>;
 }
 
@@ -328,6 +328,6 @@ Be inspirational yet analytical. This is the user's annual transformation story.
       max_tokens: 1000,
     });
 
-    return completion.choices[0]?.message?.content || "Year completed.";
+    return completion?.choices?.[0]?.message?.content || "Year completed.";
   }) as Promise<string>;
 }

@@ -86,7 +86,7 @@ Rules:
       response_format: { type: "json_object" },
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
+    const raw = completion?.choices?.[0]?.message?.content ?? "{}";
     const result = JSON.parse(raw) as WeeklyReport;
 
     // Validate and sanitize
@@ -134,6 +134,6 @@ export async function generateDailyInsight(
       max_tokens: 100,
     });
 
-    return completion.choices[0]?.message?.content || "Keep pushing!";
+    return completion?.choices?.[0]?.message?.content || "Keep pushing!";
   }) as Promise<string>;
 }

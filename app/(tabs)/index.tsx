@@ -9,7 +9,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useUIStore } from "../../lib/stores/ui.store";
 import { getDailyNutrition, getLast7DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { getRecoveryLog } from "../../lib/db/queries/recovery";
@@ -55,7 +54,6 @@ interface AdherenceDot {
 
 export default function DashboardScreen() {
   const today = useToday();
-  const { coachInsight } = useUIStore();
 
   const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
   const [session, setSession] = useState<WorkoutSession | null>(null);
@@ -384,35 +382,6 @@ export default function DashboardScreen() {
             })}
           </View>
         </View>
-
-        {/* ── Coach Insight ── */}
-        {coachInsight && (
-          <Card elevated>
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  backgroundColor: M3.colors.primaryContainer,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <Feather name="cpu" size={14} color={M3.colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold", marginBottom: 4, letterSpacing: 0.5 }}>
-                  NUTRILIFT COACH
-                </Text>
-                <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_400Regular", lineHeight: 19 }}>
-                  {coachInsight}
-                </Text>
-              </View>
-            </View>
-          </Card>
-        )}
 
         {/* ── Workout Status ── */}
         <Card>

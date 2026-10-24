@@ -56,6 +56,16 @@ logs/
 *.temp
 .cache/
 
+# Markdown / generated notes
+*.md
+*.MD
+*.markdown
+*.mdx
+
+# Local tool state
+.agents/
+skills-lock.json
+
 # Build files
 build/
 *.tsbuildinfo

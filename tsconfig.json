@@ -4,7 +4,7 @@
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
-    "types": ["jest"],
+    "types": ["jest", "node"],
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "paths": {
@@ -32,18 +32,6 @@
       "@analytics/*": [
         "./lib/analytics/*"
       ],
-      "@/core/*": [
-        "./src/core/*"
-      ],
-      "@/components/*": [
-        "./src/components/*"
-      ],
-      "@/hooks/*": [
-        "./src/hooks/*"
-      ],
-      "@/styles/*": [
-        "./src/styles/*"
-      ]
     }
   },
   "include": [

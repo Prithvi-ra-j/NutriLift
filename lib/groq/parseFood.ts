@@ -84,8 +84,8 @@ Rules:
       response_format: { type: "json_object" }, // Force JSON response
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
-    
+    const raw = completion?.choices?.[0]?.message?.content ?? "{}";
+
     // Parse and validate
     const result = JSON.parse(raw) as FoodParseResult;
     return validateFoodParseResult(result);

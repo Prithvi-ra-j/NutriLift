@@ -14,9 +14,6 @@
 // Client
 export { groq, isGroqConfigured } from "./client";
 
-// Voice transcription
-export { transcribeAudio, transcribeAudioMultilingual } from "./transcribeAudio";
-
 // Food parsing
 export { parseFoodFromText, parseFoodFromVoice } from "./parseFood";
 export type { ParsedFoodItem, FoodParseResult } from "./parseFood";
@@ -42,5 +39,3 @@ export { generateWeeklyReport, generateDailyInsight } from "./agents/weeklyCoach
 export { buildWeeklyContext, buildCustomContext } from "./agents/buildWeeklyContext";
 export type { WeeklyContext, WeeklyReport } from "./agents/weeklyCoach";
 
-// Error handling
-export { safeGroqCall, retryGroqCall } from "./safeCall";

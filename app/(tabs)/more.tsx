@@ -28,7 +28,6 @@ import { supabase } from "../../lib/supabase/client";
 import { requestSync, retryRejectedAndSync, useSyncStatus } from "../../lib/sync/syncEngine";
 import { hasCloudBackup, hasEmptyLocalDatabase, restoreFromCloud } from "../../lib/sync/restore";
 import { M3 } from "../../design-system/tokens";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { logger } from "../../lib/logger";
 import { useToday } from "../../lib/time/useToday";
 import { getProfile, getTargetsForDate } from "../../lib/data/profile";
@@ -171,12 +170,6 @@ export default function MoreScreen() {
       setActiveSection(params.section as MoreSection);
     }
   }, [params.section]);
-
-  useEffect(() => {
-    AsyncStorage.removeItem("GROQ_API_KEY").catch((error) => {
-      logger.error("Failed to remove legacy Groq API key from device storage", { error });
-    });
-  }, []);
 
   const logWeight = async () => {
     const weight = parseFloat(weightInput);
