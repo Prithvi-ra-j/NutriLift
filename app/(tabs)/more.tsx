@@ -11,11 +11,10 @@ import {
 import { Input } from "../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { insertBodyStat, getLatestWeight } from "../../lib/db/queries/body";
 import { getSupplementLogsForDate, upsertSupplementLog, getRecoveryLog, upsertRecoveryLog } from "../../lib/db/queries/recovery";
 import { getAllReports } from "../../lib/db/queries/reports";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
 import { Card } from "../../components/ui/Card";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { Button } from "../../components/ui/Button";
@@ -76,6 +75,7 @@ export default function MoreScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const isWeb = Platform.OS === "web";
+  const supplementNames = [...new Set(supplementLogs.map((log) => log.supplement_name))];
 
   const loadData = useCallback(async () => {
     const [weight, suppLogs, recoveryLog, reportsData, profileData, targetData] = await Promise.all([
@@ -104,15 +104,22 @@ export default function MoreScreen() {
     }
   }, [today]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    let active = true;
     loadData()
-      .then(() => setLoadError(null))
+      .then(() => {
+        if (active) setLoadError(null);
+      })
       .catch((error: unknown) => {
+        if (!active) return;
         const message = error instanceof Error ? error.message : String(error);
         logger.error("More screen data load failed", { error: message });
         setLoadError(message);
       });
-  }, [loadData]);
+    return () => {
+      active = false;
+    };
+  }, [loadData]));
 
   useEffect(() => {
     // Reads the locally persisted session (no network call) so sign-in survives app restarts / pull-to-refresh.
@@ -448,12 +455,16 @@ export default function MoreScreen() {
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
               TODAY'S SUPPLEMENTS
             </Text>
-            {USER_PROFILE.supplements.map((supp) => {
-              const log = supplementLogs.find((l) => l.supplement_name === supp.name);
+            {supplementNames.length === 0 ? (
+              <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
+                No supplements have been logged today.
+              </Text>
+            ) : supplementNames.map((supplementName) => {
+              const log = supplementLogs.find((l) => l.supplement_name === supplementName);
               const taken = log?.taken === 1;
               return (
                 <View
-                  key={supp.name}
+                  key={supplementName}
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
@@ -464,7 +475,7 @@ export default function MoreScreen() {
                   }}
                 >
                   <TouchableOpacity
-                    onPress={() => toggleSupplement(supp.name, taken)}
+                    onPress={() => toggleSupplement(supplementName, taken)}
                     activeOpacity={0.75}
                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     style={{
@@ -482,10 +493,7 @@ export default function MoreScreen() {
                   </TouchableOpacity>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: taken ? M3.colors.onSurface : M3.colors.onSurfaceVariant, fontSize: 14, fontFamily: "DMSans_500Medium" }}>
-                      {supp.name}
-                    </Text>
-                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 1 }}>
-                      {supp.dose} · {supp.timing}
+                      {supplementName}
                     </Text>
                   </View>
                 </View>
@@ -732,6 +740,12 @@ export default function MoreScreen() {
         {/* ── Settings ── */}
         {activeSection === "settings" && (
           <>
+            <ListRow
+              icon="user"
+              title={profile ? "Edit profile" : "Set up profile"}
+              subtitle="Personalize your local profile"
+              onPress={() => router.push("/modals/profile-setup")}
+            />
             <Card>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 PROFILE
@@ -864,7 +878,7 @@ export default function MoreScreen() {
 
             <View style={{ alignItems: "center", paddingVertical: 16 }}>
               <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-                NutriLift v1.0 · Built for Prithvi · May 2026
+                NutriLift v1.0 · Local-first fitness tracking
               </Text>
             </View>
           </>

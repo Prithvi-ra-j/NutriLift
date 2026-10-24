@@ -2,7 +2,6 @@
 import { eq, gte, lte, and, desc, isNull } from "drizzle-orm";
 import { db } from "../client";
 import { recoveryLogs, supplementLogs, type RecoveryLog, type NewRecoveryLog, type SupplementLog } from "../schema";
-import { USER_PROFILE } from "../../constants/user-profile";
 import { inTx } from "../tx";
 import { nowIso, nowUnix } from "../../time/clock";
 import { addDays, localDateString } from "../../time/localDate";
@@ -107,23 +106,18 @@ export async function getSupplementAdherence30d(): Promise<Record<string, number
   const logs = await db
     .select()
     .from(supplementLogs)
-    .where(gte(supplementLogs.date, cutoffStr));
+    .where(and(gte(supplementLogs.date, cutoffStr), isNull(supplementLogs.deleted_at)));
 
-  const adherence: Record<string, { taken: number; total: number }> = {};
-
-  for (const supplement of USER_PROFILE.supplements) {
-    adherence[supplement.name] = { taken: 0, total: 0 };
-  }
-
+  const adherence = new Map<string, { taken: number; total: number }>();
   for (const log of logs) {
-    if (adherence[log.supplement_name]) {
-      adherence[log.supplement_name].total++;
-      if (log.taken) adherence[log.supplement_name].taken++;
-    }
+    const counts = adherence.get(log.supplement_name) ?? { taken: 0, total: 0 };
+    counts.total++;
+    if (log.taken) counts.taken++;
+    adherence.set(log.supplement_name, counts);
   }
 
-  const result: Record<string, number> = {};
-  for (const [name, data] of Object.entries(adherence)) {
+  const result: Record<string, number> = Object.create(null) as Record<string, number>;
+  for (const [name, data] of adherence) {
     result[name] = data.total > 0 ? (data.taken / data.total) * 100 : 0;
   }
 

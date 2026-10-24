@@ -24,8 +24,10 @@ import {
 } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { eq } from "drizzle-orm";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { localDateString } from "../../lib/time/localDate";
+
+const SAMPLE_SUPPLEMENTS = [{ name: "Sample supplement" }] as const;
 
 // Get dates for the last 30 days (a full month)
 function getLast30Days(): string[] {
@@ -181,7 +183,7 @@ export async function addDummyWeekData(): Promise<void> {
   // Add weight logs for each day (morning weigh-ins)
   for (let i = 0; i < dates.length; i++) {
     const date = dates[i];
-    const baseWeight = 75.0; // kg (from USER_PROFILE)
+    const baseWeight = 75.0;
     const dailyVariation = (Math.random() - 0.5) * 0.4; // ±0.2kg daily fluctuation
     const weight = baseWeight + dailyVariation;
     
@@ -214,36 +216,7 @@ export async function addDummyWeekData(): Promise<void> {
     });
   }
   
-  // Add InBody scan (most recent - from USER_PROFILE April 9 data)
-  await db.insert(bodyStats).values({
-    id: uuid.v4() as string,
-    date: "2026-04-09",
-    type: "inbody",
-    weight_kg: 75.0,
-    body_fat_pct: 34.9,
-    body_fat_mass_kg: 26.1, // 57.5 lb converted
-    skeletal_muscle_mass_kg: 27.2, // 60 lb converted
-    lean_body_mass_kg: 48.9,
-    bmi: 26.0,
-    inbody_score: 58,
-    tbw_l: 36.5,
-    ecw_tbw_ratio: 0.38,
-    visceral_fat_level: 12,
-    seg_muscle_right_arm: 3.2,
-    seg_muscle_left_arm: 3.1,
-    seg_muscle_trunk: 24.5,
-    seg_muscle_right_leg: 9.8,
-    seg_muscle_left_leg: 9.7,
-    seg_fat_right_arm: 1.8,
-    seg_fat_left_arm: 1.7,
-    seg_fat_trunk: 14.2,
-    seg_fat_right_leg: 4.2,
-    seg_fat_left_leg: 4.1,
-    raw_paste: null,
-    source: "inbody_paste",
-  });
-  
-  console.log("  ✅ Added weight logs and InBody scan");
+  console.log("  ✅ Added sample weight logs");
   
   // ═══════════════════════════════════════════════════════════════════════════
   // 2. ADD SUPPLEMENT LOGS (Daily adherence)
@@ -254,8 +227,7 @@ export async function addDummyWeekData(): Promise<void> {
     const date = dates[i];
     const now = Math.floor(Date.now() / 1000);
     
-    // Log each supplement from USER_PROFILE
-    for (const supplement of USER_PROFILE.supplements) {
+    for (const supplement of SAMPLE_SUPPLEMENTS) {
       // 85% adherence rate (randomly miss some)
       const taken = Math.random() > 0.15;
       
@@ -413,8 +385,8 @@ export async function addDummyWeekData(): Promise<void> {
     // ─────────────────────────────────────────────────────────────────────────
     // 4b. Add daily nutrition summary
     // ─────────────────────────────────────────────────────────────────────────
-    const proteinTarget = USER_PROFILE.targets.protein_g;
-    const calorieTarget = USER_PROFILE.targets.calories;
+    const proteinTarget = DEFAULT_TARGETS.protein_g;
+    const calorieTarget = DEFAULT_TARGETS.calories;
     
     await db.insert(dailyNutrition).values({
       date,
@@ -553,8 +525,8 @@ export async function addDummyWeekData(): Promise<void> {
   console.log("\n🎉 Comprehensive dummy data added successfully!");
   console.log("📊 Summary:");
   console.log(`  - ${dates.length} days of weight logs (30 days)`);
-  console.log(`  - 1 InBody scan`);
-  console.log(`  - ${dates.length * USER_PROFILE.supplements.length} supplement logs`);
+  console.log("  - No InBody scan data");
+  console.log(`  - ${dates.length * SAMPLE_SUPPLEMENTS.length} sample supplement logs`);
   console.log(`  - ${prData.length} personal records`);
   console.log(`  - ${dates.length} days of nutrition data (with variability)`);
   console.log(`  - ~${Math.floor(dates.length * 0.85)} workout sessions (Mon-Sat, ~5% missed)`);

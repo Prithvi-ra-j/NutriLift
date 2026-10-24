@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Generate comprehensive progress report PDF
  * Includes nutrition logs, workout logs, body stats, and recovery data
@@ -6,8 +5,6 @@
 
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system";
-import { Platform } from "react-native";
 import { db } from "../db/client";
 import { 
   foodLogs, 
@@ -20,8 +17,8 @@ import {
   personalRecords
 } from "../db/schema";
 import { desc, gte, sql } from "drizzle-orm";
-import { USER_PROFILE } from "../constants/user-profile";
-import { escapeHtml } from "./html";
+import { getProfile, getTargetsForDate } from "../data/profile";
+import { html as htmlTemplate } from "./html";
 import { addDays, localDateString } from "../time/localDate";
 
 interface ExportOptions {
@@ -53,16 +50,18 @@ async function generateHTML(options: ExportOptions): Promise<string> {
   const end = endDate || today;
 
   // Fetch all data
-  const [nutritionData, workoutData, bodyData, recoveryData, prData] = await Promise.all([
+  const [nutritionData, workoutData, bodyData, recoveryData, prData, profile, targets] = await Promise.all([
     includeNutrition ? fetchNutritionData(start, end) : null,
     includeWorkouts ? fetchWorkoutData(start, end) : null,
     includeBody ? fetchBodyData(start, end) : null,
     includeRecovery ? fetchRecoveryData(start, end) : null,
     includePRs ? fetchPRData() : null,
+    getProfile(),
+    getTargetsForDate(end),
   ]);
 
   // Build HTML
-  let html = `
+  let html = htmlTemplate`
 <!DOCTYPE html>
 <html>
 <head>
@@ -202,9 +201,9 @@ async function generateHTML(options: ExportOptions): Promise<string> {
 <body>
   <div class="header">
     <h1>NUTRILIFT PROGRESS REPORT</h1>
-    <div class="subtitle">${escapeHtml(USER_PROFILE.name)} · ${escapeHtml(start)} to ${escapeHtml(end)}</div>
+    <div class="subtitle">${profile?.display_name || "NutriLift user"} · ${start} to ${end}</div>
     <div class="meta">
-      <span>Generated: ${escapeHtml(new Date().toLocaleString())}</span>
+      <span>Generated: ${new Date().toLocaleString()}</span>
       <span>NutriLift v1.0</span>
     </div>
   </div>
@@ -223,18 +222,18 @@ async function generateHTML(options: ExportOptions): Promise<string> {
       html += `
         <div class="summary-card">
           <div class="label">Avg Daily Protein</div>
-          <div class="value">${escapeHtml(String(avgProtein.toFixed(0)))}g</div>
-          <div class="subvalue">Target: ${escapeHtml(String(USER_PROFILE.targets.protein_g))}g</div>
+          <div class="value">${avgProtein.toFixed(0)}g</div>
+          <div class="subvalue">Target: ${targets.protein_g}g</div>
         </div>
         <div class="summary-card">
           <div class="label">Avg Daily Calories</div>
-          <div class="value">${escapeHtml(String(avgCalories.toFixed(0)))}</div>
-          <div class="subvalue">Target: ${escapeHtml(String(USER_PROFILE.targets.calories))}</div>
+          <div class="value">${avgCalories.toFixed(0)}</div>
+          <div class="subvalue">Target: ${targets.calories}</div>
         </div>
         <div class="summary-card">
           <div class="label">Protein Target Hit</div>
-          <div class="value">${escapeHtml(String(proteinDaysHit))}</div>
-          <div class="subvalue">of ${escapeHtml(String(nutritionData.dailySummaries.length))} days</div>
+          <div class="value">${proteinDaysHit}</div>
+          <div class="subvalue">of ${nutritionData.dailySummaries.length} days</div>
         </div>
       `;
     }
@@ -244,8 +243,8 @@ async function generateHTML(options: ExportOptions): Promise<string> {
       html += `
         <div class="summary-card">
           <div class="label">Total Volume</div>
-          <div class="value">${escapeHtml(String((totalVolume / 1000).toFixed(1)))}t</div>
-          <div class="subvalue">${escapeHtml(String(workoutData.sessions.length))} sessions</div>
+          <div class="value">${(totalVolume / 1000).toFixed(1)}t</div>
+          <div class="subvalue">${workoutData.sessions.length} sessions</div>
         </div>
       `;
     }
@@ -272,14 +271,14 @@ async function generateHTML(options: ExportOptions): Promise<string> {
     
     for (const day of nutritionData.dailySummaries) {
       const proteinStatus = day.protein_target_met === 1 ? 'badge-green' : 'badge-red';
-      html += `
+      html += htmlTemplate`
         <tr>
-          <td>${escapeHtml(String(day.date))}</td>
-          <td>${escapeHtml(String(day.total_calories.toFixed(0)))} kcal</td>
-          <td>${escapeHtml(String(day.total_protein_g.toFixed(0)))}g</td>
-          <td>${escapeHtml(String(day.total_carbs_g.toFixed(0)))}g</td>
-          <td>${escapeHtml(String(day.total_fat_g.toFixed(0)))}g</td>
-          <td><span class="badge ${proteinStatus}">${day.protein_target_met === 1 ? 'Hit' : 'Miss'}</span></td>
+          <td>${day.date}</td>
+          <td>${day.total_calories.toFixed(0)} kcal</td>
+          <td>${day.total_protein_g.toFixed(0)}g</td>
+          <td>${day.total_carbs_g.toFixed(0)}g</td>
+          <td>${day.total_fat_g.toFixed(0)}g</td>
+          <td><span class="badge ${proteinStatus}">${day.protein_target_met === 1 ? "Hit" : "Miss"}</span></td>
         </tr>`;
     }
     
@@ -290,7 +289,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
     const groupedByDate = groupBy(nutritionData.foodLogs, 'date');
     
     for (const [date, foods] of Object.entries(groupedByDate)) {
-      html += `<h4 style="margin-top: 16px; font-size: 14px; color: #666;">${escapeHtml(String(date))}</h4>`;
+      html += htmlTemplate`<h4 style="margin-top: 16px; font-size: 14px; color: #666;">${date}</h4>`;
       html += `<table>
         <thead>
           <tr>
@@ -305,16 +304,16 @@ async function generateHTML(options: ExportOptions): Promise<string> {
         </thead>
         <tbody>`;
       
-      for (const food of foods as any[]) {
-        html += `
+      for (const food of foods) {
+        html += htmlTemplate`
           <tr>
-            <td style="text-transform: capitalize;">${escapeHtml(String(food.meal))}</td>
-            <td>${escapeHtml(String(food.name))}</td>
-            <td>${food.quantity_g ? escapeHtml(String(food.quantity_g)) + "g" : "—"}</td>
-            <td>${escapeHtml(String(food.calories.toFixed(0)))}</td>
-            <td>${escapeHtml(String(food.protein_g.toFixed(0)))}g</td>
-            <td>${escapeHtml(String(food.carbs_g.toFixed(0)))}g</td>
-            <td>${escapeHtml(String(food.fat_g.toFixed(0)))}g</td>
+            <td style="text-transform: capitalize;">${food.meal}</td>
+            <td>${food.name}</td>
+            <td>${food.quantity_g ? `${food.quantity_g}g` : "—"}</td>
+            <td>${food.calories.toFixed(0)}</td>
+            <td>${food.protein_g.toFixed(0)}g</td>
+            <td>${food.carbs_g.toFixed(0)}g</td>
+            <td>${food.fat_g.toFixed(0)}g</td>
           </tr>`;
       }
       
@@ -328,11 +327,11 @@ async function generateHTML(options: ExportOptions): Promise<string> {
     html += `<h2>💪 Workout Logs</h2>`;
     
     for (const session of workoutData.sessions) {
-      html += `<h3>${escapeHtml(String(session.date))} - ${escapeHtml(String(session.day_type))}</h3>`;
-      html += `<p style="font-size: 12px; color: #666; margin-bottom: 12px;">
-        Duration: ${escapeHtml(String(session.duration_min || "—"))}min | 
-        Volume: ${escapeHtml(String(((session.total_volume_kg || 0) / 1000).toFixed(1)))}t | 
-        RPE: ${escapeHtml(String(session.rpe || "—"))}/10
+      html += htmlTemplate`<h3>${session.date} - ${session.day_type}</h3>`;
+      html += htmlTemplate`<p style="font-size: 12px; color: #666; margin-bottom: 12px;">
+        Duration: ${session.duration_min || "—"}min | 
+        Volume: ${((session.total_volume_kg || 0) / 1000).toFixed(1)}t | 
+        RPE: ${session.rpe || "—"}/10
       </p>`;
       
       const exercises = workoutData.exercises.filter(e => e.session_id === session.id);
@@ -340,7 +339,7 @@ async function generateHTML(options: ExportOptions): Promise<string> {
       for (const exercise of exercises) {
         const sets = workoutData.sets.filter(s => s.exercise_log_id === exercise.id);
         
-        html += `<h4 style="font-size: 13px; margin-top: 12px; color: #252535;">${escapeHtml(String(exercise.exercise_name))}</h4>`;
+        html += htmlTemplate`<h4 style="font-size: 13px; margin-top: 12px; color: #252535;">${exercise.exercise_name}</h4>`;
         html += `<table style="margin-top: 4px;">
           <thead>
             <tr>
@@ -363,14 +362,14 @@ async function generateHTML(options: ExportOptions): Promise<string> {
           const volume = isStrengthSet ? set.weight_kg * set.reps : 0;
           const displayedReps = isStrengthSet ? set.reps : "—";
           const type = set.is_warmup ? 'Warmup' : 'Working';
-          html += `
+          html += htmlTemplate`
             <tr>
-              <td>${escapeHtml(String(set.set_number))}</td>
-              <td>${escapeHtml(String(set.weight_kg))}kg</td>
-              <td>${escapeHtml(String(displayedReps))}</td>
-              <td>${escapeHtml(String(set.rpe || "—"))}</td>
-              <td>${escapeHtml(String(volume.toFixed(0)))}kg</td>
-              <td>${escapeHtml(String(type))}${set.is_pr ? '<span class="pr-badge">PR</span>' : ''}</td>
+              <td>${set.set_number}</td>
+              <td>${set.weight_kg}kg</td>
+              <td>${displayedReps}</td>
+              <td>${set.rpe || "—"}</td>
+              <td>${volume.toFixed(0)}kg</td>
+              <td>${type}${set.is_pr ? " · PR" : ""}</td>
             </tr>`;
         }
         
@@ -397,14 +396,14 @@ async function generateHTML(options: ExportOptions): Promise<string> {
       <tbody>`;
     
     for (const stat of bodyData) {
-      html += `
+      html += htmlTemplate`
         <tr>
-          <td>${escapeHtml(String(stat.date))}</td>
-          <td>${stat.weight_kg ? escapeHtml(String(stat.weight_kg.toFixed(1))) + "kg" : "—"}</td>
-          <td>${stat.body_fat_pct ? escapeHtml(String(stat.body_fat_pct.toFixed(1))) + "%" : "—"}</td>
-          <td>${stat.skeletal_muscle_mass_kg ? escapeHtml(String(stat.skeletal_muscle_mass_kg.toFixed(1))) + "kg" : "—"}</td>
-          <td>${stat.bmi ? escapeHtml(String(stat.bmi.toFixed(1))) : "—"}</td>
-          <td>${escapeHtml(String(stat.inbody_score || "—"))}</td>
+          <td>${stat.date}</td>
+          <td>${stat.weight_kg ? `${stat.weight_kg.toFixed(1)}kg` : "—"}</td>
+          <td>${stat.body_fat_pct ? `${stat.body_fat_pct.toFixed(1)}%` : "—"}</td>
+          <td>${stat.skeletal_muscle_mass_kg ? `${stat.skeletal_muscle_mass_kg.toFixed(1)}kg` : "—"}</td>
+          <td>${stat.bmi ? stat.bmi.toFixed(1) : "—"}</td>
+          <td>${stat.inbody_score || "—"}</td>
         </tr>`;
     }
     
@@ -430,16 +429,16 @@ async function generateHTML(options: ExportOptions): Promise<string> {
       <tbody>`;
     
     for (const log of recoveryData) {
-      html += `
+      html += htmlTemplate`
         <tr>
-          <td>${escapeHtml(String(log.date))}</td>
-          <td>${log.sleep_duration_hr ? escapeHtml(String(log.sleep_duration_hr.toFixed(1))) : "—"}</td>
-          <td>${escapeHtml(String(log.sleep_quality || "—"))}/5</td>
-          <td>${escapeHtml(String(log.energy_level || "—"))}/5</td>
-          <td>${escapeHtml(String(log.muscle_soreness || "—"))}/5</td>
-          <td>${escapeHtml(String(log.stress_level || "—"))}/5</td>
-          <td>${escapeHtml(String(log.hrv || "—"))}</td>
-          <td>${escapeHtml(String(log.resting_hr || "—"))}</td>
+          <td>${log.date}</td>
+          <td>${log.sleep_duration_hr ? log.sleep_duration_hr.toFixed(1) : "—"}</td>
+          <td>${log.sleep_quality || "—"}/5</td>
+          <td>${log.energy_level || "—"}/5</td>
+          <td>${log.muscle_soreness || "—"}/5</td>
+          <td>${log.stress_level || "—"}/5</td>
+          <td>${log.hrv || "—"}</td>
+          <td>${log.resting_hr || "—"}</td>
         </tr>`;
     }
     
@@ -464,14 +463,14 @@ async function generateHTML(options: ExportOptions): Promise<string> {
       <tbody>`;
     
     for (const pr of prData) {
-      html += `
+      html += htmlTemplate`
         <tr>
-          <td>${escapeHtml(String(pr.exercise_name))}</td>
-          <td>${escapeHtml(String(pr.best_weight_kg.toFixed(1)))}kg</td>
-          <td>${escapeHtml(String(pr.best_reps_at_best_weight || "—"))}</td>
-          <td>${pr.best_1rm_estimated ? escapeHtml(String(pr.best_1rm_estimated.toFixed(1))) + "kg" : "—"}</td>
-          <td>${pr.best_volume_single_set ? escapeHtml(String(pr.best_volume_single_set.toFixed(0))) + "kg" : "—"}</td>
-          <td>${escapeHtml(String(pr.achieved_date))}</td>
+          <td>${pr.exercise_name}</td>
+          <td>${pr.best_weight_kg.toFixed(1)}kg</td>
+          <td>${pr.best_reps_at_best_weight || "—"}</td>
+          <td>${pr.best_1rm_estimated ? `${pr.best_1rm_estimated.toFixed(1)}kg` : "—"}</td>
+          <td>${pr.best_volume_single_set ? `${pr.best_volume_single_set.toFixed(0)}kg` : "—"}</td>
+          <td>${pr.achieved_date}</td>
         </tr>`;
     }
     
@@ -479,10 +478,10 @@ async function generateHTML(options: ExportOptions): Promise<string> {
   }
 
   // Footer
-  html += `
+  html += htmlTemplate`
   <div class="footer">
-    <p>Generated by NutriLift · ${escapeHtml(new Date().toLocaleDateString())}</p>
-    <p style="margin-top: 4px;">Built for ${escapeHtml(String(USER_PROFILE.name))} · Training since ${escapeHtml(String(USER_PROFILE.training_start_date))}</p>
+    <p>Generated by NutriLift · ${new Date().toLocaleDateString()}</p>
+    <p style="margin-top: 4px;">${profile?.display_name ? `Prepared for ${profile.display_name}` : "Personal progress report"}</p>
   </div>
 </body>
 </html>`;

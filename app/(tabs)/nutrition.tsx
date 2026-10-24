@@ -16,7 +16,8 @@ import {
   deleteFoodLog,
   getLast7DaysNutrition,
 } from "../../lib/db/queries/nutrition";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getTargetsForDate } from "../../lib/data/profile";
+import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { EmptyState } from "../../components/ui/EmptyState";
@@ -70,21 +71,34 @@ export default function NutritionScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
+  const [targets, setTargets] = useState<
+    Pick<Awaited<ReturnType<typeof getTargetsForDate>>, "calories" | "protein_g" | "carbs_g" | "fat_g">
+  >(DEFAULT_TARGETS);
+  const [proteinTargetsByDate, setProteinTargetsByDate] = useState<Record<string, number>>({});
   const requestId = useRef(0);
 
   const loadData = useCallback(async () => {
     const request = beginRequest(requestId);
     setLoadError(null);
     try {
-      const [nutritionData, logsData, weekData] = await Promise.all([
+      const [nutritionData, logsData, weekData, targetData] = await Promise.all([
         getDailyNutrition(selectedDate),
         getFoodLogsForDate(selectedDate),
         getLast7DaysNutrition(),
+        getTargetsForDate(selectedDate),
       ]);
+      const weekTargets = await Promise.all(
+        weekData.map(async (day) => {
+          const dayTargets = await getTargetsForDate(day.date);
+          return [day.date, dayTargets.protein_g] as const;
+        }),
+      );
       if (!isLatestRequest(requestId, request)) return;
       setNutrition(nutritionData);
       setFoodLogs(logsData);
       setLast7Days(weekData);
+      setTargets(targetData);
+      setProteinTargetsByDate(Object.fromEntries(weekTargets));
     } catch (error) {
       logger.error("Nutrition load failed", {
       error: error instanceof Error ? error.message : String(error),
@@ -217,12 +231,12 @@ export default function NutritionScreen() {
               {calories.toFixed(0)}
             </Text>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", marginTop: -4 }}>
-              of {USER_PROFILE.targets.calories} kcal
+              of {targets.calories} kcal
             </Text>
           </View>
-          <MacroBar label="Protein" current={protein} target={USER_PROFILE.targets.protein_g} color={M3.colors.secondary} />
-          <MacroBar label="Carbs" current={carbs} target={USER_PROFILE.targets.carbs_g} color={M3.colors.success} />
-          <MacroBar label="Fat" current={fat} target={USER_PROFILE.targets.fat_g} color={M3.macroColors.fat} />
+          <MacroBar label="Protein" current={protein} target={targets.protein_g} color={M3.colors.secondary} />
+          <MacroBar label="Carbs" current={carbs} target={targets.carbs_g} color={M3.colors.success} />
+          <MacroBar label="Fat" current={fat} target={targets.fat_g} color={M3.macroColors.fat} />
         </Card>
 
         {/* ── Log Mode Buttons ── */}
@@ -378,7 +392,8 @@ export default function NutritionScreen() {
             </Text>
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: 60 }}>
               {last7Days.map((day, i) => {
-                const pct = Math.min(1, day.total_protein_g / USER_PROFILE.targets.protein_g);
+                const target = proteinTargetsByDate[day.date] ?? DEFAULT_TARGETS.protein_g;
+                const pct = Math.min(1, day.total_protein_g / target);
                 const hit = day.protein_target_met === 1;
                 return (
                   <View key={i} style={{ flex: 1, alignItems: "center", gap: 4 }}>

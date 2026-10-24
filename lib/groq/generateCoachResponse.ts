@@ -72,7 +72,7 @@ RULES:
 - Give specific, actionable answers with numbers.
 - Reference only data present in Current Context. Treat missing_data as unknown, not as evidence that something did not happen.
 - Apply double progression: compound lifts progress when 3×12 hit twice.
-- Consider structural notes (APT, TFL overactivation, ankle restriction) when recommending exercises.
+- Consider user-provided movement limitations and training preferences when recommending exercises.
 - Keep responses concise (2-4 paragraphs max unless detail requested).
 - If data missing, say "I don't see X logged yet" — don't assume.
 

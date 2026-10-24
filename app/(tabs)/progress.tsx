@@ -15,7 +15,8 @@ import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getRecentRecoveryLogs } from "../../lib/db/queries/recovery";
 import { computeNutritionSummary } from "../../lib/analytics/nutrition-analytics";
 import { computeBodySummary } from "../../lib/analytics/body-analytics";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getTargetsForDate } from "../../lib/data/profile";
+import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
@@ -45,6 +46,9 @@ export default function ProgressScreen() {
   const [inBodyRecords, setInBodyRecords] = useState<BodyStat[]>([]);
   const [nutritionHistory, setNutritionHistory] = useState<DailyNutrition[]>([]);
   const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>([]);
+  const [targets, setTargets] = useState<
+    Pick<Awaited<ReturnType<typeof getTargetsForDate>>, "calories" | "protein_g" | "carbs_g" | "fat_g">
+  >(DEFAULT_TARGETS);
 
   // Get week range for selected date
   const getWeekRange = (dateStr: string) => {
@@ -65,12 +69,13 @@ export default function ProgressScreen() {
     const request = beginRequest(requestId);
     setLoadError(null);
     try {
-      const [prsData, weightData, inBodyData, nutritionData, recoveryData] = await Promise.all([
+      const [prsData, weightData, inBodyData, nutritionData, recoveryData, targetData] = await Promise.all([
         getAllPRs(),
         getWeightHistory(90), // Get 90 days to cover multiple weeks
         getAllInBodyRecords(),
         getLast30DaysNutrition(),
         getRecentRecoveryLogs(30), // Get 30 days to cover multiple weeks
+        getTargetsForDate(selectedDate),
       ]);
       if (!isLatestRequest(requestId, request)) return;
       setPRs(prsData);
@@ -78,6 +83,7 @@ export default function ProgressScreen() {
       setInBodyRecords(inBodyData);
       setNutritionHistory(nutritionData);
       setRecoveryLogs(recoveryData);
+      setTargets(targetData);
     } catch (err) {
       logger.error("Progress load failed", {
         error: err instanceof Error ? err.message : String(err),
@@ -91,7 +97,7 @@ export default function ProgressScreen() {
         setRefreshing(false);
       }
     }
-  }, []);
+  }, [selectedDate]);
 
   useEffect(() => {
     loadData();
@@ -261,23 +267,15 @@ export default function ProgressScreen() {
               </View>
             </Card>
 
-            {/* Goal projection */}
+            {/* Body composition */}
             <Card elevated>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
                 <Feather name="target" size={16} color={M3.colors.primary} />
                 <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                  December 2026 Goal
+                  Body Composition
                 </Text>
               </View>
               <View style={{ gap: 8 }}>
-                <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                    Target Body Fat
-                  </Text>
-                  <Text style={{ color: M3.colors.primary, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                    {USER_PROFILE.targets.body_fat_pct_dec2026}%
-                  </Text>
-                </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
                     Current Body Fat
@@ -286,16 +284,6 @@ export default function ProgressScreen() {
                     {latestInBody?.body_fat_pct ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "No InBody data"}
                   </Text>
                 </View>
-                {bodySummary.projectedBFDate && (
-                  <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-                    <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                      Projected Date
-                    </Text>
-                    <Text style={{ color: bodySummary.onTrackForGoal ? M3.colors.success : M3.colors.warning, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                      {parseLocalDate(bodySummary.projectedBFDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
-                    </Text>
-                  </View>
-                )}
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
                     Trend
@@ -473,8 +461,8 @@ export default function ProgressScreen() {
                 {isCurrentWeek ? "THIS WEEK" : "WEEK"} NUTRITION SUMMARY
               </Text>
               {[
-                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: `${USER_PROFILE.targets.calories}` },
-                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: `${USER_PROFILE.targets.protein_g}g` },
+                { label: "Avg Daily Calories", value: `${nutritionSummary.avgDailyCalories.toFixed(0)} kcal`, target: `${targets.calories}` },
+                { label: "Avg Daily Protein", value: `${nutritionSummary.avgDailyProtein.toFixed(0)}g`, target: `${targets.protein_g}g` },
                 { label: "Protein Hit Rate", value: `${nutritionSummary.proteinHitRate.toFixed(0)}%`, target: "100%" },
                 { label: "Best Streak", value: `${nutritionSummary.bestStreak} days`, target: "" },
                 { label: "Current Streak", value: `${nutritionSummary.currentStreak} days`, target: "" },

@@ -1,4 +1,3 @@
-import { USER_PROFILE } from "../constants/user-profile";
 import { getLast7DaysNutrition, getProteinHitRate } from "../db/queries/nutrition";
 import { getRecentSessions, getAllPRs } from "../db/queries/workout";
 import { getLatestInBody, getLatestWeight } from "../db/queries/body";
@@ -7,13 +6,14 @@ import { getPreviousWeeksAISummaries } from "./weekly-summary-service";
 import { getPreviousMonthsAISummaries } from "./monthly-summary-service";
 import { getPreviousQuartersAISummaries } from "./quarterly-summary-service";
 import { getPreviousYearsAISummaries } from "./yearly-summary-service";
+import { getProfile } from "../data/profile";
 import type { DailyNutrition, WorkoutSession, PersonalRecord, BodyStat, RecoveryLog } from "../db/schema";
 
 export interface CoachContext {
   context_version: "1.0";
   generated_at: string;
   missing_data: string[];
-  user_profile: typeof USER_PROFILE;
+  user_profile: Awaited<ReturnType<typeof getProfile>>;
   last_7_days_nutrition: DailyNutrition[];
   previous_weeks_ai_summaries: Array<{ week_start: string; week_end: string; summary: string }>;
   previous_months_ai_summaries?: Array<{ month: string; summary: string }>;
@@ -58,6 +58,7 @@ export async function buildCoachContext(
     supplementAdherence,
     recoveryLogs,
     proteinHitRate,
+    profile,
   ] = await Promise.all([
     getLast7DaysNutrition(),
     getPreviousWeeksAISummaries(), // Last 3 weeks
@@ -68,6 +69,7 @@ export async function buildCoachContext(
     getSupplementAdherence30d(),
     getRecentRecoveryLogs(2),
     getProteinHitRate(30),
+    getProfile(),
   ]);
 
   const missingData: string[] = [];
@@ -91,7 +93,7 @@ export async function buildCoachContext(
     context_version: "1.0",
     generated_at: new Date().toISOString(),
     missing_data: missingData,
-    user_profile: USER_PROFILE,
+    user_profile: profile,
     last_7_days_nutrition: last7DaysNutrition,
     previous_weeks_ai_summaries: previousWeeksAISummaries,
     last_30_days_adherence: {

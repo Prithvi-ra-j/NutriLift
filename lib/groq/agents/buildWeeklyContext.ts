@@ -8,8 +8,8 @@ import {
 } from "../../db/schema";
 import { gte, desc, eq } from "drizzle-orm";
 import { WeeklyContext } from "./weeklyCoach";
-import { USER_PROFILE } from "../../constants/user-profile";
 import { addDays, localDateString } from "../../time/localDate";
+import { getProfile, getTargetsForDate } from "../../data/profile";
 
 /**
  * Build weekly context from SQLite database for AI coach analysis
@@ -19,7 +19,7 @@ export async function buildWeeklyContext(): Promise<WeeklyContext> {
   const weekAgoStr = addDays(nowStr, -6);
 
   // Fetch all data in parallel
-  const [nutrition, sessions, weights] = await Promise.all([
+  const [nutrition, sessions, weights, profile, targets] = await Promise.all([
     // Last 7 days nutrition
     db
       .select()
@@ -41,6 +41,8 @@ export async function buildWeeklyContext(): Promise<WeeklyContext> {
       .where(eq(bodyStats.type, "weight"))
       .orderBy(desc(bodyStats.date))
       .limit(14),
+    getProfile(),
+    getTargetsForDate(nowStr),
   ]);
 
   // Get detailed workout data (exercises and sets)
@@ -79,9 +81,9 @@ export async function buildWeeklyContext(): Promise<WeeklyContext> {
   // Build context object
   const context: WeeklyContext = {
     weekRange: `${weekAgoStr} to ${nowStr}`,
-    goal: (USER_PROFILE as any).goal || "body recomposition",
-    targetCalories: USER_PROFILE.targets.calories,
-    targetProtein: USER_PROFILE.targets.protein_g,
+    goal: profile?.goal_text || "General fitness",
+    targetCalories: targets.calories,
+    targetProtein: targets.protein_g,
     days: nutrition.map((n: any) => ({
       date: n.date,
       calories: n.total_calories,
@@ -96,8 +98,8 @@ export async function buildWeeklyContext(): Promise<WeeklyContext> {
       weight: w.weight_kg || 0,
     })),
     currentWeight: weights[0]?.weight_kg || 0,
-    startWeight: (USER_PROFILE as any).current_weight_kg || 0,
-    targetWeight: (USER_PROFILE as any).target_weight_kg || 0,
+    startWeight: weights[weights.length - 1]?.weight_kg ?? null,
+    targetWeight: null,
   };
 
   return context;
@@ -110,7 +112,7 @@ export async function buildCustomContext(
   startDate: string,
   endDate: string
 ): Promise<WeeklyContext> {
-  const [nutrition, sessions, weights] = await Promise.all([
+  const [nutrition, sessions, weights, profile, targets] = await Promise.all([
     db
       .select()
       .from(dailyNutrition)
@@ -129,6 +131,8 @@ export async function buildCustomContext(
       .where(eq(bodyStats.type, "weight"))
       .orderBy(desc(bodyStats.date))
       .limit(30),
+    getProfile(),
+    getTargetsForDate(endDate),
   ]);
 
   const workoutsWithDetails = await Promise.all(
@@ -165,9 +169,9 @@ export async function buildCustomContext(
 
   return {
     weekRange: `${startDate} to ${endDate}`,
-    goal: (USER_PROFILE as any).goal || "body recomposition",
-    targetCalories: USER_PROFILE.targets.calories,
-    targetProtein: USER_PROFILE.targets.protein_g,
+    goal: profile?.goal_text || "General fitness",
+    targetCalories: targets.calories,
+    targetProtein: targets.protein_g,
     days: nutrition.map((n: any) => ({
       date: n.date,
       calories: n.total_calories,
@@ -182,7 +186,7 @@ export async function buildCustomContext(
       weight: w.weight_kg || 0,
     })),
     currentWeight: weights[0]?.weight_kg || 0,
-    startWeight: (USER_PROFILE as any).current_weight_kg || 0,
-    targetWeight: (USER_PROFILE as any).target_weight_kg || 0,
+    startWeight: weights[weights.length - 1]?.weight_kg ?? null,
+    targetWeight: null,
   };
 }

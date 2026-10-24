@@ -60,7 +60,12 @@
           "useSQLCipher": false
         }
       ],
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": false
+        }
+      ],
       [
         "expo-audio",
         {

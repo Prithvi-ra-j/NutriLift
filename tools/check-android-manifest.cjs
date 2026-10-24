@@ -36,12 +36,16 @@ function checkManifest(manifestPath) {
   const xml = fs.readFileSync(manifestPath, "utf8");
   const application = xml.match(/<application\b[^>]*>/s)?.[0];
   const backupValue = application?.match(/\bandroid:allowBackup="(true|false)"/)?.[1];
+  const backupRules = application?.match(/\bandroid:(?:fullBackupContent|dataExtractionRules)="([^"]+)"/g) ?? [];
   const permissions = [...xml.matchAll(/<uses-permission(?:-[\w-]+)?\b[^>]*android:name="([^"]+)"/g)]
     .map((match) => match[1]);
   const errors = [];
 
   if (backupValue !== "false") {
     errors.push(`expected android:allowBackup="false", found "${backupValue ?? "missing"}"`);
+  }
+  if (backupRules.length > 0) {
+    errors.push(`unexpected Android backup rules remain enabled: ${backupRules.join(", ")}`);
   }
   for (const permission of forbiddenPermissions) {
     if (permissions.includes(permission)) errors.push(`forbidden permission is present: ${permission}`);

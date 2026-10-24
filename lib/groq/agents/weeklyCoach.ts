@@ -23,8 +23,8 @@ export interface WeeklyContext {
   }[];
   bodyWeight: { date: string; weight: number }[];
   currentWeight: number;
-  startWeight: number;
-  targetWeight: number;
+  startWeight: number | null;
+  targetWeight: number | null;
 }
 
 export interface WeeklyReport {

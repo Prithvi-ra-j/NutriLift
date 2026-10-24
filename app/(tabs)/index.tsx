@@ -12,7 +12,8 @@ import { router } from "expo-router";
 import { getDailyNutrition, getLast7DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { getRecoveryLog } from "../../lib/db/queries/recovery";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getProfile, getTargetsForDate } from "../../lib/data/profile";
+import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { MacroRing } from "../../components/ui/MacroRing";
@@ -62,6 +63,10 @@ export default function DashboardScreen() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [adherenceDots, setAdherenceDots] = useState<AdherenceDot[]>([]);
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
+  const [profile, setProfile] = useState<Awaited<ReturnType<typeof getProfile>>>(null);
+  const [targets, setTargets] = useState<
+    Pick<Awaited<ReturnType<typeof getTargetsForDate>>, "calories" | "protein_g" | "carbs_g" | "fat_g">
+  >(DEFAULT_TARGETS);
   const requestId = useRef(0);
 
   const getTodayDayType = (date: string): string => {
@@ -90,16 +95,20 @@ export default function DashboardScreen() {
     const request = beginRequest(requestId);
     setLoadError(null);
     try {
-      const [nutritionData, sessionsData, last7Days, recoveryData] =
+      const [nutritionData, sessionsData, last7Days, recoveryData, profileData, targetData] =
         await Promise.all([
           getDailyNutrition(today),
           getSessionsForDate(today),
           getLast7DaysNutrition(),
           getRecoveryLog(today),
+          getProfile(),
+          getTargetsForDate(today),
         ]);
 
       if (!isLatestRequest(requestId, request)) return;
       setNutrition(nutritionData);
+      setProfile(profileData);
+      setTargets(targetData);
       
       // Handle session and day type
       if (sessionsData[0]) {
@@ -172,11 +181,11 @@ export default function DashboardScreen() {
   const carbs = nutrition?.total_carbs_g ?? 0;
   const fat = nutrition?.total_fat_g ?? 0;
 
-  const caloriePct = Math.min(100, (calories / USER_PROFILE.targets.calories) * 100);
+  const caloriePct = Math.min(100, (calories / targets.calories) * 100);
 
   // Protein pace
   const mealsLogged = 2; // simplified — would count distinct meals
-  const proteinRemaining = Math.max(0, USER_PROFILE.targets.protein_g - protein);
+  const proteinRemaining = Math.max(0, targets.protein_g - protein);
   const mealsLeft = Math.max(1, 4 - mealsLogged);
   const proteinPerMeal = proteinRemaining / mealsLeft;
 
@@ -212,7 +221,7 @@ export default function DashboardScreen() {
               {formatDate(parseLocalDate(today))}
             </Text>
             <Text style={{ color: M3.colors.onSurface, fontSize: 26, fontFamily: "BebasNeue_400Regular", letterSpacing: 1 }}>
-              {getGreeting()}, {USER_PROFILE.name}
+              {getGreeting()}, {profile?.display_name?.trim() || "You"}
             </Text>
           </View>
           {loadError && (
@@ -242,7 +251,7 @@ export default function DashboardScreen() {
             }}
           >
             <Text style={{ color: M3.colors.primary, fontSize: 16, fontFamily: "DMSans_700Bold" }}>
-              {USER_PROFILE.name?.charAt(0).toUpperCase() ?? "N"}
+              {profile?.display_name?.trim().charAt(0).toUpperCase() ?? "Y"}
             </Text>
           </View>
         </View>
@@ -255,11 +264,11 @@ export default function DashboardScreen() {
               protein={protein}
               carbs={carbs}
               fat={fat}
-              proteinTarget={USER_PROFILE.targets.protein_g}
-              carbsTarget={USER_PROFILE.targets.carbs_g}
-              fatTarget={USER_PROFILE.targets.fat_g}
+              proteinTarget={targets.protein_g}
+              carbsTarget={targets.carbs_g}
+              fatTarget={targets.fat_g}
               calories={calories}
-              caloriesTarget={USER_PROFILE.targets.calories}
+              caloriesTarget={targets.calories}
             />
 
             {/* Macro bars */}
@@ -267,19 +276,19 @@ export default function DashboardScreen() {
               <MacroBar
                 label="Protein"
                 current={protein}
-                target={USER_PROFILE.targets.protein_g}
+                target={targets.protein_g}
                 color={M3.colors.secondary}
               />
               <MacroBar
                 label="Carbs"
                 current={carbs}
-                target={USER_PROFILE.targets.carbs_g}
+                target={targets.carbs_g}
                 color={M3.colors.success}
               />
               <MacroBar
                 label="Fat"
                 current={fat}
-                target={USER_PROFILE.targets.fat_g}
+                target={targets.fat_g}
                 color={M3.macroColors.fat}
               />
             </View>
@@ -289,8 +298,8 @@ export default function DashboardScreen() {
         {/* ── Stats Row ── */}
         <View style={{ flexDirection: "row", gap: 12 }}>
           {[
-            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${USER_PROFILE.targets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
-            { label: "Calories", value: calories.toFixed(0), sub: `/ ${USER_PROFILE.targets.calories}`, color: M3.colors.primary, icon: "zap" as const },
+            { label: "Protein", value: `${protein.toFixed(0)}g`, sub: `/ ${targets.protein_g}g`, color: M3.colors.secondary, icon: "target" as const },
+            { label: "Calories", value: calories.toFixed(0), sub: `/ ${targets.calories}`, color: M3.colors.primary, icon: "zap" as const },
             { label: "Volume", value: session?.total_volume_kg ? `${(session.total_volume_kg / 1000).toFixed(1)}t` : "—", sub: "today", color: M3.colors.tertiary, icon: "trending-up" as const },
             { label: "Recovery", value: recoveryScore ? `${recoveryScore}` : "—", sub: "/ 100", color: M3.colors.success, icon: "heart" as const },
           ].map((stat) => (

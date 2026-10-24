@@ -48,7 +48,7 @@ export interface MealTemplate {
 
 export const MEAL_TEMPLATES: MealTemplate[] = [
   {
-    name: "Prithvi's Breakfast",
+    name: "Sample Breakfast",
     meal: "breakfast",
     items: [
       { food: COMMON_FOODS.find(f => f.name === "Whole Egg")!, quantity_multiplier: 4 },

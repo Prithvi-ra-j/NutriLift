@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { generateMonthlyReport } from "../../lib/groq";
-import { USER_PROFILE } from "../../lib/constants/user-profile";
+import { getProfile } from "../../lib/data/profile";
 import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsInRange, getAllPRs } from "../../lib/db/queries/workout";
 import { getAllInBodyRecords, getWeightHistory } from "../../lib/db/queries/body";
@@ -41,7 +41,7 @@ export default function MonthlyReportModal() {
       const startDate = `${currentMonth}-01`;
       const endDate = today;
 
-      const [nutrition, sessions, prs, inBodyRecords, weightHistory, recoveryLogs, supplementAdherence] =
+      const [nutrition, sessions, prs, inBodyRecords, weightHistory, recoveryLogs, supplementAdherence, profile] =
         await Promise.all([
           getLast30DaysNutrition(),
           getSessionsInRange(startDate, endDate),
@@ -50,11 +50,12 @@ export default function MonthlyReportModal() {
           getWeightHistory(30),
           getRecentRecoveryLogs(30),
           getSupplementAdherence30d(),
+          getProfile(),
         ]);
 
       setProgress("Generating AI analysis...");
 
-      const reportData = await generateMonthlyReport(USER_PROFILE, {
+      const reportData = await generateMonthlyReport(profile, {
         month: currentMonth,
         nutrition_logs: nutrition,
         workout_sessions: sessions,

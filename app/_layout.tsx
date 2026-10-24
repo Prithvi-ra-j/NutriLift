@@ -1,7 +1,7 @@
 import "../global.css";
 import { useEffect, useRef, useState } from "react";
 import { View, Text, ActivityIndicator, Platform, Alert } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   useFonts,
@@ -25,6 +25,7 @@ import { purgeUploadedQueue } from "../lib/integrations/life-os/syncRepository";
 import { onBackground, onForeground } from "../lib/lifecycle/foreground";
 import { supabase } from "../lib/supabase/client";
 import { hasCloudBackup, hasEmptyLocalDatabase, markRestorePrompted, restoreFromCloud } from "../lib/sync/restore";
+import { getProfile } from "../lib/data/profile";
 
 type GlobalErrorUtils = {
   getGlobalHandler: () => (error: Error, isFatal?: boolean) => void;
@@ -51,10 +52,14 @@ function installGlobalErrorHandler(): void {
 }
 
 export default function RootLayout() {
+  const router = useRouter();
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
   const [migrationAttempt, setMigrationAttempt] = useState(0);
+  const [restoreCheckComplete, setRestoreCheckComplete] = useState(false);
+  const [profileSetupRequired, setProfileSetupRequired] = useState(false);
   const restorePromptStarted = useRef(false);
+  const profileSetupPrompted = useRef(false);
 
   const [fontsLoaded] = useFonts({
     BebasNeue_400Regular,
@@ -82,14 +87,24 @@ export default function RootLayout() {
   }, [dbReady]);
 
   useEffect(() => {
-    if (!dbReady || Platform.OS === "web" || !supabase || restorePromptStarted.current) return;
+    if (!dbReady) return;
+    if (Platform.OS === "web" || !supabase || restorePromptStarted.current) {
+      setRestoreCheckComplete(true);
+      return;
+    }
     restorePromptStarted.current = true;
     void (async () => {
       const prompted = await sqlite.getFirstAsync<{ value: string }>(
         "SELECT value FROM app_settings WHERE key = 'restore_prompted'",
       );
-      if (prompted?.value === "1") return;
-      if (!(await hasEmptyLocalDatabase()) || !(await hasCloudBackup())) return;
+      if (prompted?.value === "1") {
+        setRestoreCheckComplete(true);
+        return;
+      }
+      if (!(await hasEmptyLocalDatabase()) || !(await hasCloudBackup())) {
+        setRestoreCheckComplete(true);
+        return;
+      }
       Alert.alert(
         "Cloud backup found",
         "This device has no NutriLift logs. Would you like to restore your backup now?",
@@ -100,6 +115,8 @@ export default function RootLayout() {
             onPress: () => {
               void markRestorePrompted().catch((error: unknown) => {
                 logger.error("Could not save the restore prompt choice", { error });
+              }).finally(() => {
+                setRestoreCheckComplete(true);
               });
             },
           },
@@ -113,6 +130,9 @@ export default function RootLayout() {
                   const message = error instanceof Error ? error.message : String(error);
                   logger.error("First-run cloud restore failed", { error: message });
                   Alert.alert("Restore failed", message);
+                })
+                .finally(() => {
+                  setRestoreCheckComplete(true);
                 });
             },
           },
@@ -123,8 +143,33 @@ export default function RootLayout() {
       logger.warn("Could not check for a first-run cloud backup", {
         error: error instanceof Error ? error.message : String(error),
       });
+      setRestoreCheckComplete(true);
     });
   }, [dbReady]);
+
+  useEffect(() => {
+    if (!dbReady || !restoreCheckComplete) return;
+    let active = true;
+    getProfile()
+      .then((profile) => {
+        if (active) setProfileSetupRequired(!profile);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        const message = error instanceof Error ? error.message : String(error);
+        logger.error("Profile setup status check failed", { error: message });
+        setDbError(message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [dbReady, restoreCheckComplete]);
+
+  useEffect(() => {
+    if (!dbReady || !restoreCheckComplete || !profileSetupRequired || profileSetupPrompted.current) return;
+    profileSetupPrompted.current = true;
+    router.replace({ pathname: "/modals/profile-setup", params: { firstRun: "true" } });
+  }, [dbReady, profileSetupRequired, restoreCheckComplete, router]);
 
   useEffect(() => {
     let active = true;
@@ -184,6 +229,14 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="modals/profile-setup"
+            options={{
+              presentation: "modal",
+              headerShown: false,
+              gestureEnabled: false,
+            }}
+          />
           <Stack.Screen
             name="modals/log-food"
             options={{
