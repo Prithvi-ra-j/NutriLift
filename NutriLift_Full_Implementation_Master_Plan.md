@@ -75,7 +75,7 @@ Vision and product safety
 5.0 to 9
 7, 9
 1. Build, CI and the test gate (2.0 to 9)
-Target state: a fresh clone type-checks, lints, tests and builds with one command each; CI blocks bad merges; release builds are reproducible and properly signed; no stray files.
+Target state: a fresh clone type-checks, lints, tests and builds with one command each; CI blocks bad merges; release builds are reproducible and properly signed; root directories are intentional and documented (not merely deleted to satisfy a stale allowlist).
 1. Make the gate runnable. Delete lib/db/__tests__/migration-contract.test.ts (syntax error toBe(9;, imports a nonexistent ../migration-contract, asserts tables that do not exist). Section 3 replaces it with real migration tests. Then delete features/train/ (no importers, imports the missing components/ui/PressableScale). Run npx tsc --noEmit; it must report 0 errors.
 2. Add scripts to package.json:
     ◦ typecheck: tsc --noEmit
@@ -106,14 +106,14 @@ Existing code stays at warn (ratchet); the new folders are error from day one. S
 6. Move to Continuous Native Generation (one native source of truth). Run git rm -r --cached android and add /android and /ios to .gitignore. In app.json plugins, add the expo-camera plugin with a cameraPermission string such as 'NutriLift scans barcodes to look up foods.' Verify with npx expo prebuild --platform android --clean in a scratch copy: it must exit 0 and generate the res/xml/secure_store_* files and launcher icons from assets/. This removes the debug-keystore release signing, the missing res/xml and mipmap resources, and the 'two configs, one silently wins' trap.
 7. EAS profiles (eas.json). development stays (dev client, apk). preview: distribution: internal, apk. production: android.buildType: app-bundle and autoIncrement: true. Run eas credentials -p android and let EAS generate and hold the release keystore; download a backup of it into your password manager.
 8. Updates policy. In app.json replace runtimeVersion: 1.0.0 with the object { policy: fingerprint } (JSON: "runtimeVersion": { "policy": "fingerprint" }) and set updates.checkAutomatically to ON_LOAD. An OTA update can now only reach binaries whose native code matches.
-9. Delete clutter: fix-ts.js, fix-ts-2.js, check-tasks.js, scripts/delete-sunday-workout.js, scripts/delete-sunday-workout.ts, lib/db/queries/delete-sunday-workout.ts, scripts/watch-build.ps1. Run grep -rn delete-sunday . first; it must return nothing outside those files. Move lib/db/seed-dummy-data.ts, scripts/add-dummy-week-data.ts and scripts/run-seed.js to tools/dev/ (outside app/ and lib/, excluded from lint).
+9. Delete clutter: fix-ts.js, fix-ts-2.js, check-tasks.js, scripts/delete-sunday-workout.js, scripts/delete-sunday-workout.ts, lib/db/queries/delete-sunday-workout.ts, scripts/watch-build.ps1. Run grep -rn delete-sunday . first; it must return nothing outside those files. Move lib/db/seed-dummy-data.ts, scripts/add-dummy-week-data.ts and scripts/run-seed.js to tools/dev/ (outside app/ and lib/, excluded from lint). Reconcile the root allowlist with actual usage before moving or deleting directories: design-system/ is active shared theme-token code imported by screens and components, so keep it as an explicit allowed root (or migrate its tokens in a separately tested change); src/ contains the active component showcase, component implementation and tests imported by app/design-system, so keep it as an explicit allowed root (or migrate those files and imports together). android/ is generated native output and must be untracked/ignored under CNG. features/, drizzle/ and scripts/ have no tracked files after the specified cleanup; remove any remaining empty directories and do not restore obsolete code there. If any becomes active again, move maintained code under an approved root rather than expanding the allowlist without review.
 10. Lockfile discipline. Keep --legacy-peer-deps only through a committed .npmrc containing legacy-peer-deps=true, so local and CI installs match. Add .github/dependabot.yml (weekly, npm, grouped minor and patch).
 Done when:
 [ ] Fresh clone: npm ci && npm run verify exits 0.
 [ ] A PR with a type error or failing test cannot merge (branch protection requires the CI check).
 [ ] npx expo prebuild --platform android --clean succeeds in a clean checkout.
 [ ] Tagging v1.0.1 produces a signed AAB through EAS; no debug keystore is referenced.
-[ ] Repo root contains only config, app/, lib/, components/, assets/, supabase/, tools/, docs.
+[ ] Repo root contains only config and the intentional app/, lib/, components/, design-system/, src/, assets/, supabase/, tools/ and docs/ roots; generated android/ios/, obsolete features/, drizzle/ and scripts/ are absent from version control.
 2. Security and privacy (3.0 to 9)
 Target state: no personal data in the repo or its history; no plaintext tokens; minimal Android permissions; backups off; server locked down; safe HTML; every claim in the README about security is enforced by code or CI.
 1. Stop the bleeding. GitHub: Settings, General, Danger Zone, Change visibility, Private. Do this before any refactor.

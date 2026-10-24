@@ -18,7 +18,7 @@ The app remains fully usable without a network connection. User data is stored l
 
 | Area | Implementation |
 | --- | --- |
-| Mobile | Expo SDK 54, React Native, Expo Router |
+| Mobile | Expo SDK 58, React Native, Expo Router |
 | Language | TypeScript |
 | Local data | Expo SQLite and Drizzle ORM |
 | State | Zustand and Immer |
@@ -132,6 +132,16 @@ Run the full configured test suite:
 ```bash
 npm test
 ```
+
+Run the local Supabase database tests (Docker Desktop must be running):
+
+```bash
+npx supabase start
+npm run test:supabase
+npx supabase stop
+```
+
+The local Supabase CLI and database configuration are included in the project. These database tests do not require a hosted Supabase project or credentials.
 
 ## Android Identity
 
