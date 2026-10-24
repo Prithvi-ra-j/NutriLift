@@ -14,6 +14,7 @@ import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import { useToday } from "../../lib/time/useToday";
 import { isLocalDateString } from "../../lib/time/localDate";
+import { logger } from "../../lib/logger";
 
 export default function VoiceInputModal() {
   const params = useLocalSearchParams<{ date?: string }>();
@@ -53,7 +54,7 @@ export default function VoiceInputModal() {
       await audioRecorder.record();
       setIsRecording(true);
     } catch (err: any) {
-      console.error("Recording error:", err);
+      logger.error("Recording error", { error: err?.message || String(err) });
       Alert.alert("Recording Error", err?.message || "Could not start recording. Please try again.");
     }
   };
@@ -70,18 +71,16 @@ export default function VoiceInputModal() {
         throw new Error("No audio recorded");
       }
 
-      // Step 1: Transcribe audio using Groq Whisper
-      console.log("🎤 Transcribing audio...");
+      logger.info("Transcribing audio for voice log", { uri });
       const transcribedText = await transcribeAudioMultilingual(uri);
       setTranscript(transcribedText);
 
-      // Step 2: Parse food from transcription using Groq LLaMA
-      console.log("🍽️ Parsing food from:", transcribedText);
+      logger.info("Parsing food from voice transcription", { transcriptionLength: transcribedText.length });
       const foodResult = await parseFoodFromVoice(transcribedText);
       setParsedFood(foodResult);
 
     } catch (err: any) {
-      console.error("Processing error:", err);
+      logger.error("Processing error", { error: err?.message || String(err) });
       setError(err?.message || "Could not process recording");
       Alert.alert("Processing Error", err?.message || "Could not process recording. Please try again.");
     } finally {
@@ -125,7 +124,7 @@ export default function VoiceInputModal() {
         [{ text: "OK", onPress: () => router.back() }]
       );
     } catch (err: any) {
-      console.error("Save error:", err);
+      logger.error("Save error", { error: err?.message || String(err) });
       Alert.alert("Save Error", err?.message || "Could not save food logs");
     }
   };

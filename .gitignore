@@ -57,6 +57,10 @@ logs/
 .cache/
 
 # Markdown / generated notes
+**/*.md
+**/*.MD
+**/*.markdown
+**/*.mdx
 *.md
 *.MD
 *.markdown

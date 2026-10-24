@@ -1,10 +1,67 @@
 import { Tabs } from "expo-router";
-import { View, Text, Platform, useWindowDimensions } from "react-native";
+import { View, Text, Platform, StyleSheet, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { M3 } from "../../design-system/tokens";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
+
+const styles = StyleSheet.create({
+  tabIcon: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    height: "100%",
+    gap: 3,
+  },
+  tabIconBadge: {
+    width: 44,
+    height: 28,
+    borderRadius: M3.shape.full,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  tabIconBadgeActive: {
+    backgroundColor: M3.colors.primaryContainer,
+  },
+  tabIconBadgeInactive: {
+    backgroundColor: "transparent",
+  },
+  tabLabel: {
+    fontSize: 9,
+    textAlign: "center",
+    letterSpacing: 0.2,
+  },
+  tabLabelActive: {
+    color: M3.colors.primary,
+    fontFamily: "DMSans_700Bold",
+  },
+  tabLabelInactive: {
+    color: M3.colors.onSurfaceVariant,
+    fontFamily: "DMSans_500Medium",
+  },
+  tabBar: {
+    position: "absolute",
+    backgroundColor: M3.colors.surfaceContainer,
+    borderTopWidth: 0,
+    borderRadius: M3.shape.extraLarge,
+    borderWidth: 1,
+    borderColor: M3.colors.outline,
+    height: 68,
+    paddingBottom: 0,
+    paddingTop: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  tabBarItem: {
+    height: 68,
+    paddingVertical: 6,
+  },
+});
 
 interface TabIconProps {
   name: FeatherIconName;
@@ -19,27 +76,16 @@ interface TabIconProps {
  * Inactive state: icon + label in onSurfaceVariant
  */
 function TabIcon({ name, focused, label }: TabIconProps) {
+  const labelStyle = focused ? styles.tabLabelActive : styles.tabLabelInactive;
+
   return (
-    <View
-      style={{
-        alignItems: "center",
-        justifyContent: "center",
-        flex: 1,
-        height: "100%",
-        gap: 3,
-      }}
-    >
+    <View style={styles.tabIcon}>
       {/* M3 active indicator pill */}
       <View
-        style={{
-          width: 44,
-          height: 28,
-          borderRadius: M3.shape.full,
-          backgroundColor: focused ? M3.colors.primaryContainer : "transparent",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-        }}
+        style={[
+          styles.tabIconBadge,
+          focused ? styles.tabIconBadgeActive : styles.tabIconBadgeInactive,
+        ]}
       >
         <Feather
           name={name}
@@ -50,13 +96,7 @@ function TabIcon({ name, focused, label }: TabIconProps) {
 
       {/* Label — always visible per M3 nav bar spec */}
       <Text
-        style={{
-          fontSize: 9,
-          color: focused ? M3.colors.primary : M3.colors.onSurfaceVariant,
-          fontFamily: focused ? "DMSans_700Bold" : "DMSans_500Medium",
-          textAlign: "center",
-          letterSpacing: 0.2,
-        }}
+        style={[styles.tabLabel, labelStyle]}
         numberOfLines={1}
         minimumFontScale={0.8}
         adjustsFontSizeToFit
@@ -78,35 +118,21 @@ export default function TabsLayout() {
   // Respect the device's own safe area (notch / gesture bar / home indicator) instead of
   // hardcoded platform guesses, so the floating bar sits correctly on every device.
   const bottomInset = Math.max(insets.bottom, Platform.OS === "android" ? 12 : 8) + 8;
+  const tabBarStyle = [
+    styles.tabBar,
+    {
+      left: horizontalInset,
+      right: horizontalInset,
+      bottom: bottomInset,
+    },
+  ];
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          position: "absolute",
-          left: horizontalInset,
-          right: horizontalInset,
-          bottom: bottomInset,
-          backgroundColor: M3.colors.surfaceContainer,
-          borderTopWidth: 0,
-          borderRadius: M3.shape.extraLarge,
-          borderWidth: 1,
-          borderColor: M3.colors.outline,
-          // Floating pill nav bar
-          height: 68,
-          paddingBottom: 0,
-          paddingTop: 0,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.35,
-          shadowRadius: 16,
-          elevation: 12,
-        },
-        tabBarItemStyle: {
-          height: 68,
-          paddingVertical: 6,
-        },
+        tabBarStyle,
+        tabBarItemStyle: styles.tabBarItem,
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
       }}

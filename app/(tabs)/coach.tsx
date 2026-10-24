@@ -18,10 +18,8 @@ import { buildCoachContext } from "../../lib/ai/context-builder";
 import { getConversationHistory, insertConversationMessage, clearConversationHistory } from "../../lib/db/queries/reports";
 import { getDailyNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsForDate } from "../../lib/db/queries/workout";
-import { Card } from "../../components/ui/Card";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { AiConversation } from "../../lib/db/schema";
-import type { DailyNutrition, WorkoutSession } from "../../lib/db/schema";
+import type { AiConversation, DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";
@@ -40,7 +38,7 @@ const COACH_SUGGESTED_PROMPTS = [
 ];
 
 export default function CoachScreen() {
-  const { messages, isGenerating, error, setMessages, addMessage, setGenerating, setError } = useAIStore();
+  const { messages, isGenerating, setMessages, addMessage, setGenerating, setError } = useAIStore();
   const today = useToday();
   const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
   const [session, setSession] = useState<WorkoutSession | null>(null);
