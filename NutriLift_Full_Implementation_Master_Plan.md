@@ -1,87 +1,62 @@
-NutriLift - Path to 9/10: Exact Implementation Plan
-Oct 17, 2026 · @Prithvi
-This plan takes every section of the audit from its current score to 9/10 or higher, in an order where each step makes the next one safer. Each section lists exact files, exact changes and checkable 'Done when' boxes; a section reaches 9/10 when all its boxes are ticked.
-Rules for the executing agent (paste first)
-1. One branch per section (fix/s1-ci, fix/s2-security, ...), one commit per numbered step, npm run verify green before each commit (that script is created in Section 1).
-2. Migrations are additive and tested against a v0 fixture DB (a copy of a real current install). Never drop or rewrite user rows except where a step says so.
-3. No new dependency unless the step names it. No any, no @ts-nocheck, no console.*, no toISOString().split(...) in any file you touch.
-4. If a step's assumption is false (file missing, function renamed), stop and report. Do not improvise a different design.
-5. Every bug fix gets a failing test first. Every step ends by running npx tsc --noEmit and npx jest --ci.
-6. Times are ISO-8601 UTC strings in storage and local YYYY-MM-DD strings for 'which day'. Both come from helpers in lib/time/ (Section 4); never hand-roll.
-Execution order
-Order
-Section
-Audit section
-Score now to target
-Needs
-1
-Build, CI and the test gate
-10 + 9 (gate)
-2.0 to 9
-nothing
-2
-Security and privacy
-5
-3.0 to 9
-1
-3
-Data layer and migrations
-1
-3.0 to 9
-1
-4
-Time, state and lifecycle
-7
-3.5 to 9
-3
-5
-Domain logic
-2
-4.0 to 9
-3, 4
-6
-Sync and Supabase
-3
-4.5 to 9
-3, 5
-7
-AI layer and edge functions
-4
-4.0 to 9
-2, 3
-8
-Architecture
-6
-4.0 to 9
-5, 6, 7
-9
-UI/UX, accessibility, performance
-8
-4.5 to 9
-8
-10
-Testing depth
-9
-3.0 to 9
-5, 6
-11
-Docs and process
-11
-4.0 to 9
-8
-12
-Vision and product safety
-12
-5.0 to 9
-7, 9
-1. Build, CI and the test gate (2.0 to 9)
-Target state: a fresh clone type-checks, lints, tests and builds with one command each; CI blocks bad merges; release builds are reproducible and properly signed; root directories are intentional and documented (not merely deleted to satisfy a stale allowlist).
-1. Make the gate runnable. Delete lib/db/__tests__/migration-contract.test.ts (syntax error toBe(9;, imports a nonexistent ../migration-contract, asserts tables that do not exist). Section 3 replaces it with real migration tests. Then delete features/train/ (no importers, imports the missing components/ui/PressableScale). Run npx tsc --noEmit; it must report 0 errors.
-2. Add scripts to package.json:
+# NutriLift - Implementation Roadmap and Acceptance Plan
+
+*Original audit: Oct 17, 2026 · Revised: Oct 24, 2026 · Owner: @Prithvi*
+
+This is a living roadmap for closing the audit gaps, with acceptance criteria that can be verified against the repository and running app. The scores below are the original audit baseline, not current scores. Do not infer a score or mark a section complete from code presence alone.
+
+## Rules for maintaining and executing this plan
+1. Work in the current feature branch and group related steps into reviewable changes; do not require a separate branch or commit for every numbered step.
+2. Database migrations must preserve existing user data and be tested against a representative pre-migration database before release.
+3. Avoid new dependencies unless the plan names them or the change has an explicit, documented justification. Do not add any, @ts-nocheck, console.*, or hand-rolled date conversions in changed code.
+4. Re-check file names, imports, scripts, and assumptions against the current checkout before acting. If an audit finding has already disappeared, record the evidence and skip that remediation rather than recreating or deleting code.
+5. Add or update a regression test for each behavior change or bug fix. Run focused checks while iterating and npm run verify before merge.
+6. Stored instants use ISO-8601 UTC and day keys use local YYYY-MM-DD; use the shared helpers in lib/time/.
+7. Treat external controls (GitHub branch protection, hosted Supabase settings, EAS credentials/releases, and device/emulator behavior) as open until their actual settings or successful runs are recorded.
+
+## Status snapshot (verified Oct 24, 2026)
+
+| Area | Status | Evidence and remaining proof |
+|---|---|---|
+| Local quality gate | Passed locally | npm run verify: TypeScript and lint completed with no errors; Jest passed 49/49 suites and 304/304 tests. ESLint still reports 1,101 warnings. The integration test also passed in isolation. |
+| Expo dependency alignment | Passed | npx expo install --check reports dependencies are up to date. |
+| Supabase local test setup | Passed locally | Project-local CLI and local config are committed. npm run test:supabase passed all 5 pgTAP assertions; local Supabase was stopped afterward. |
+| Section 1: CI and release readiness | In progress | CI and release workflows exist and include npm ci, verification/security checks, and Android prebuild/manifest validation. A successful hosted run, the required GitHub branch-protection rule, a clean-install proof, and a signed production AAB are not recorded here. android/ still has 44 tracked files. |
+| Section 6: sync and restore | Implemented; acceptance is not fully closed | Queue/checkpoint, single-flight, and restore implementations have tests; restore coverage includes food, supplements, sessions, exercises, sets, PRs, body, nutrition, and recovery. Queue-lease recovery and conditional server upsert have tests. The local SQL suite passed. Verify user-facing offline/sync-status flows and complete the full acceptance checklist before calling the section done. |
+| Root-directory policy | Clarified; cleanup remains | design-system/ and src/ are active and should remain allowed roots. features/, drizzle/, and scripts/ have no tracked files in the current checkout. android/ remains tracked and needs an explicit CNG disposition. |
+| Sections 2-5 and 7-12 | Not re-scored in this update | Their Oct 17 scores remain historical baselines. Reassess each against its measurable acceptance criteria before reporting a current score. |
+
+## Next verification gates
+1. Confirm a hosted CI run succeeds from a clean checkout, including npm ci, the PII tripwire, and Android prebuild/manifest validation; then confirm branch protection requires the verification check.
+2. Resolve and document install consistency: the README currently prescribes npm install --legacy-peer-deps, while CI uses npm ci and there is no committed .npmrc. Prove the intended clean-install command works locally and in CI.
+3. Decide and execute the native-project disposition. If using CNG, verify a clean prebuild and release from a clean checkout, then stop tracking generated native output as specified below. Record a signed production AAB before closing the release gate.
+4. Verify Section 6 user-facing sync states and restore behavior on the supported runtime; keep the already-passing SQL and automated tests as regression gates.
+5. Re-score the remaining sections only after collecting evidence for their acceptance checks.
+
+## Execution order
+
+| Order | Section | Audit area | Original baseline to target | Depends on |
+|---:|---|---|---:|---|
+| 1 | Build, CI and the test gate | 10 + 9 (gate) | 2.0 to 9 | None |
+| 2 | Security and privacy | 5 | 3.0 to 9 | 1 |
+| 3 | Data layer and migrations | 1 | 3.0 to 9 | 1 |
+| 4 | Time, state and lifecycle | 7 | 3.5 to 9 | 3 |
+| 5 | Domain logic | 2 | 4.0 to 9 | 3, 4 |
+| 6 | Sync and Supabase | 3 | 4.5 to 9 | 3, 5 |
+| 7 | AI layer and edge functions | 4 | 4.0 to 9 | 2, 3 |
+| 8 | Architecture | 6 | 4.0 to 9 | 5, 6, 7 |
+| 9 | UI/UX, accessibility and performance | 8 | 4.5 to 9 | 8 |
+| 10 | Testing depth | 9 | 3.0 to 9 | 5, 6 |
+| 11 | Docs and process | 11 | 4.0 to 9 | 8 |
+| 12 | Vision and product safety | 12 | 5.0 to 9 | 7, 9 |
+## 1. Build, CI and the test gate (2.0 to 9)
+### Target state
+A fresh clone type-checks, lints, tests and builds with one command each; CI blocks bad merges; release builds are reproducible and properly signed; root directories are intentional and documented (not merely deleted to satisfy a stale allowlist).
+1. Recheck the original baseline findings before cleanup. lib/db/__tests__/migration-contract.test.ts is absent in the current checkout, and features/train/ has no tracked files. Search imports and tracked files before removing any remnants; do not repeat the old deletion blindly. The current TypeScript check passes.
+2. Preserve and validate the existing scripts in package.json:
     ◦ typecheck: tsc --noEmit
     ◦ lint: eslint .
     ◦ verify: npm run typecheck && npm run lint && npm test -- --ci
-3. Add ESLint with npx expo install eslint eslint-config-expo eslint-plugin-react-native. Create eslint.config.js:
+3. Preserve and maintain the existing ESLint setup in eslint.config.js. Its warning ratchet is intentional until the later strictness work:
 const expo = require('eslint-config-expo/flat');
 const strict = {
   'no-console': 'error',
@@ -101,21 +76,22 @@ module.exports = [
   { files: ['lib/domain/**', 'lib/time/**', 'lib/data/**', 'lib/ai/**', 'lib/sync/**'], rules: strict },
 ];
 Existing code stays at warn (ratchet); the new folders are error from day one. Section 8 flips the global rules to strict.
-4. Replace the workflow. Delete .github/workflows/build-apk.yml. Create .github/workflows/ci.yml (triggers: pull_request and push to main): checkout, actions/setup-node@v4 with node 20 and cache: npm, npm ci, npm run verify. Create .github/workflows/release.yml (trigger: tags v*; first a job that runs the same verify steps, then a build job that needs it): expo/expo-github-action@v8 with eas-version pinned to the exact version npx eas-cli --version prints on your machine (no latest), no expo-version, then eas build --platform android --profile production --non-interactive. Pushes to main no longer trigger cloud builds.
+4. Maintain the existing .github/workflows/ci.yml and release.yml rather than recreating them. They currently use Node 22, run npm ci, verification and a PII tripwire; CI and release also generate Android from Expo config and check the merged release manifest, and the release workflow builds an AAB with EAS. Confirm the hosted jobs pass, the PII secret is configured, and branch protection requires the verification check. Pin and review action/tool versions as part of routine maintenance.
 5. Fix the asset ignore rules. In .gitignore delete the whole 'Assets and Media' block (*.png *.jpg *.jpeg *.gif *.svg *.webp *.ico *.mp4 and the rest) and the docs/ line. Create assets/ with icon.png (1024x1024), splash-icon.png, adaptive-icon.png (1024x1024, key art inside the central 66%) and favicon.png; commit them. If the originals are lost, export new ones from your design source.
 6. Move to Continuous Native Generation (one native source of truth). Run git rm -r --cached android and add /android and /ios to .gitignore. In app.json plugins, add the expo-camera plugin with a cameraPermission string such as 'NutriLift scans barcodes to look up foods.' Verify with npx expo prebuild --platform android --clean in a scratch copy: it must exit 0 and generate the res/xml/secure_store_* files and launcher icons from assets/. This removes the debug-keystore release signing, the missing res/xml and mipmap resources, and the 'two configs, one silently wins' trap.
 7. EAS profiles (eas.json). development stays (dev client, apk). preview: distribution: internal, apk. production: android.buildType: app-bundle and autoIncrement: true. Run eas credentials -p android and let EAS generate and hold the release keystore; download a backup of it into your password manager.
 8. Updates policy. In app.json replace runtimeVersion: 1.0.0 with the object { policy: fingerprint } (JSON: "runtimeVersion": { "policy": "fingerprint" }) and set updates.checkAutomatically to ON_LOAD. An OTA update can now only reach binaries whose native code matches.
-9. Delete clutter: fix-ts.js, fix-ts-2.js, check-tasks.js, scripts/delete-sunday-workout.js, scripts/delete-sunday-workout.ts, lib/db/queries/delete-sunday-workout.ts, scripts/watch-build.ps1. Run grep -rn delete-sunday . first; it must return nothing outside those files. Move lib/db/seed-dummy-data.ts, scripts/add-dummy-week-data.ts and scripts/run-seed.js to tools/dev/ (outside app/ and lib/, excluded from lint). Reconcile the root allowlist with actual usage before moving or deleting directories: design-system/ is active shared theme-token code imported by screens and components, so keep it as an explicit allowed root (or migrate its tokens in a separately tested change); src/ contains the active component showcase, component implementation and tests imported by app/design-system, so keep it as an explicit allowed root (or migrate those files and imports together). android/ is generated native output and must be untracked/ignored under CNG. features/, drizzle/ and scripts/ have no tracked files after the specified cleanup; remove any remaining empty directories and do not restore obsolete code there. If any becomes active again, move maintained code under an approved root rather than expanding the allowlist without review.
+9. Delete clutter only after confirming it still exists and has no live references. Run the reference search before removing any named file. Reconcile the root allowlist with actual usage: design-system/ contains active shared theme tokens and src/ contains the active component showcase, component implementation, and tests imported by app/design-system; keep both as explicit roots unless those files and imports are migrated together. Under CNG, generated android/ and ios/ output should not be tracked. In the current checkout, android/ has 44 tracked files; features/, drizzle/, and scripts/ have no tracked files. Remove remaining empty or ignored remnants only after checking their contents. If any directory becomes active, move maintained code under an approved root rather than expanding the allowlist without review.
 10. Lockfile discipline. Keep --legacy-peer-deps only through a committed .npmrc containing legacy-peer-deps=true, so local and CI installs match. Add .github/dependabot.yml (weekly, npm, grouped minor and patch).
-Done when:
+### Acceptance criteria
 [ ] Fresh clone: npm ci && npm run verify exits 0.
 [ ] A PR with a type error or failing test cannot merge (branch protection requires the CI check).
 [ ] npx expo prebuild --platform android --clean succeeds in a clean checkout.
 [ ] Tagging v1.0.1 produces a signed AAB through EAS; no debug keystore is referenced.
 [ ] Repo root contains only config and the intentional app/, lib/, components/, design-system/, src/, assets/, supabase/, tools/ and docs/ roots; generated android/ios/, obsolete features/, drizzle/ and scripts/ are absent from version control.
-2. Security and privacy (3.0 to 9)
-Target state: no personal data in the repo or its history; no plaintext tokens; minimal Android permissions; backups off; server locked down; safe HTML; every claim in the README about security is enforced by code or CI.
+## 2. Security and privacy (3.0 to 9)
+### Target state
+No personal data in the repo or its history; no plaintext tokens; minimal Android permissions; backups off; server locked down; safe HTML; every claim in the README about security is enforced by code or CI.
 1. Stop the bleeding. GitHub: Settings, General, Danger Zone, Change visibility, Private. Do this before any refactor.
 2. Replace hard-coded identity with a profile. lib/constants/user-profile.ts (USER_PROFILE) is imported by 13 files: app/(tabs)/index.tsx, more.tsx, nutrition.tsx, progress.tsx, app/modals/monthly-report.tsx, lib/ai/context-builder.ts, lib/analytics/body-analytics.ts, lib/analytics/nutrition-analytics.ts, lib/db/queries/nutrition.ts, lib/db/queries/recovery.ts, lib/export/generate-progress-pdf.ts, lib/groq/agents/buildWeeklyContext.ts, plus seed-dummy-data.ts. Order of work: (a) Section 3 step 5 creates the user_profile and target_history tables; (b) create lib/data/profile.ts exporting getProfile(), saveProfile(p) and getTargetsForDate(date); (c) create lib/constants/defaults.ts with neutral DEFAULT_TARGETS (calories 2200, protein 130, carbs 250, fat 70); (d) replace every USER_PROFILE.* read with await getProfile() / getTargetsForDate(); (e) add a first-run onboarding modal app/modals/profile-setup.tsx that writes the profile; (f) delete user-profile.ts.
 3. Scrub history. pip install git-filter-repo; in a fresh mirror clone run git filter-repo --path lib/constants/user-profile.ts --invert-paths, then force-push all branches and tags. Also search every tracked file and every doc for personal strings and remove or generalise them: grep -rniE "34\.9|toji|saw palmetto|ashwagandha|pelvic|APT|TFL|dorsiflexion|Prithvi" --include=* . (docs and the master plan contain such text). Treat the old data as already disclosed.
@@ -127,15 +103,16 @@ Target state: no personal data in the repo or its history; no plaintext tokens; 
 9. Supabase dashboard checklist: Auth, Providers, Email: turn off Allow new users to sign up and create your own account manually; enable leaked-password protection; JWT expiry 3600; confirm ai-chat is deployed with verify_jwt on (default); run a two-user RLS test (create user B, try selecting user A's sync_records with B's JWT, expect 0 rows).
 10. Dependencies. Add npm audit --omit=dev --audit-level=high as a non-blocking CI step; Dependabot from Section 1 handles updates. Remove groq-sdk from dependencies once Section 7 lands (only type imports remain today).
 11. Optional 9 to 10: encrypt the SQLite file with SQLCipher (useSQLCipher: true in the expo-sqlite plugin, key from SecureStore, one-time export of the old DB with sqlcipher_export). Do this only if you accept the extra migration risk; with backups off and device encryption it is not required for 9.
-Done when:
+### Acceptance criteria
 [ ] Repo is private and git log --all -S"34.9" finds nothing.
 [ ] tools/check-no-pii.sh runs in CI and passes.
 [ ] Merged manifest has no SYSTEM_ALERT_WINDOW or storage permissions and allowBackup=false.
 [ ] AsyncStorage shows only ciphertext for the Supabase session key.
 [ ] Sign-ups are disabled and the two-user RLS test returns 0 rows.
 [ ] PDF export test with markup in notes renders it as text.
-3. Data layer and migrations (3.0 to 9)
-Target state: one ordered, versioned, tested migration list; every multi-write atomic; soft deletes and updated_at on every syncable table; derived data rebuilt inside the same transaction as its source; schema.ts provably equals the real schema.
+## 3. Data layer and migrations (3.0 to 9)
+### Target state
+One ordered, versioned, tested migration list; every multi-write atomic; soft deletes and updated_at on every syncable table; derived data rebuilt inside the same transaction as its source; schema.ts provably equals the real schema.
 1. Create the migration runner lib/db/migrations/runner.ts:
 import type { SQLiteDatabase } from 'expo-sqlite';
 export type Migration = { version: number; name: string; up: (db: SQLiteDatabase) => Promise<void> };
@@ -217,15 +194,16 @@ Rule: every function that writes goes through inTx. Wrap insertFoodLog, deleteFo
 12. Web target. Delete the Proxy mock DB branch in lib/db/client.ts. Remove the web script, build:web, vercel.json and the react-native-web and react-dom dependencies; the product is an Android app. Importing the DB on web must throw a clear error.
 13. Backup you control. Add lib/data/exportAll.ts that dumps every table to one JSON file with expo-file-system and shares it with expo-sharing; add an 'Export data' row to Settings. This is the safety net until event-level sync (Section 6) is verified.
 14. Migration tests (harness in Section 10): a v0 fixture DB with representative rows must migrate to the latest version with row counts preserved and no updated_at equal to the migration time.
-Done when:
+### Acceptance criteria
 [ ] PRAGMA user_version equals the latest migration number after launch on both a fresh install and the v0 fixture.
 [ ] custom_exercises exists and the Workout tab loads on a fresh install.
 [ ] Killing the app between the insert and the recompute (simulate by throwing inside inTx) leaves food_logs and daily_nutrition consistent.
 [ ] grep -rn "db.delete(" lib returns only barcode-cache pruning and clearConversationHistory.
 [ ] A schema-parity test proves schema.ts columns equal PRAGMA table_info for every table.
 [ ] A failed migration shows a fatal screen and leaves the previous version untouched.
-4. Time, state and lifecycle (3.5 to 9)
-Target state: the app always knows which local day it is, including after midnight and after foregrounding; async loads cannot race; failures are visible; one source of truth for navigation and lifecycle events.
+## 4. Time, state and lifecycle (3.5 to 9)
+### Target state
+The app always knows which local day it is, including after midnight and after foregrounding; async loads cannot race; failures are visible; one source of truth for navigation and lifecycle events.
 1. Create lib/time/localDate.ts (the only place date strings are built):
 const pad = (n: number) => String(n).padStart(2, '0');
 export function localDateString(d: Date = new Date()): string {
@@ -292,14 +270,15 @@ Render loadError with a Retry button. Never call loadWorkout() after a single se
 onForeground(() => supabase?.auth.startAutoRefresh());
 AppState.addEventListener('change', (s) => { if (s !== 'active') supabase?.auth.stopAutoRefresh(); });
 11. Tests. In jest.config.js set process.env.TZ = 'Asia/Kolkata' via a globalSetup file. Cases: localDateString(new Date('2026-10-17T20:00:00Z')) is 2026-10-18 (01:30 IST); new Date('2026-10-17T18:29:00Z') gives 2026-10-17; startOfWeekMonday('2026-10-18') (a Sunday) is 2026-10-12; addDays across a month end and a leap day; useToday with fake timers rolls over at local midnight; the loadWorkout guard ignores a slower earlier response.
-Done when:
+### Acceptance criteria
 [ ] grep -rnE "toISOString\(\)\.(split|slice)" app lib components is empty and the ESLint rule is error globally.
 [ ] A 05:00 IST workout and a 00:30 IST meal are filed under the correct local day (tests above).
 [ ] Leave the app open across midnight: 'today' updates without a restart.
 [ ] Switching dates rapidly never shows another day's data.
 [ ] A failed migration shows the fatal screen; no unhandled promise rejection appears in a 10-minute monkey test.
-5. Domain logic (4 to 9)
-Target state: every number the user sees is derivable from raw logs by pure, tested functions; PRs, volume and adherence can be rebuilt at any time; bad AI or barcode data can never silently become a log.
+## 5. Domain logic (4 to 9)
+### Target state
+Every number the user sees is derivable from raw logs by pure, tested functions; PRs, volume and adherence can be rebuilt at any time; bad AI or barcode data can never silently become a log.
 1. Create lib/domain/ with pure TypeScript (no react, expo-*, Drizzle or Supabase imports; add an ESLint no-restricted-imports rule enforcing that): e1rm.ts, prs.ts, volume.ts, progression.ts, nutrition.ts, barcode.ts. Data-layer functions fetch rows, call these, and write results inside inTx.
 2. Model exercise types explicitly (migration v5, 005_exercise_types.ts). First run SELECT DISTINCT exercise_type FROM exercise_logs on a real device DB and map every value to one of: weight_reps, bodyweight_reps (added load in weight_kg, 0 allowed), reps_only, duration, distance_duration. Then fix polluted rows: duration sets stored seconds in reps, so set reps = 0 where duration_sec IS NOT NULL for duration types (the seconds already live in duration_sec). Update the validator in workout.ts: weight_reps needs weight_kg > 0 and reps >= 1; bodyweight_reps allows weight_kg >= 0; duration needs duration_sec > 0 and ignores reps. Grep every read of .reps in lib/analytics, lib/ai, lib/export and filter by type so duration data never enters strength math.
 3. Derive PRs from history instead of patching them. lib/domain/e1rm.ts: e1rm(w, r) = r <= 1 ? w : w * (1 + Math.min(r, 12) / 30) (Epley, capped at 12 reps). lib/domain/prs.ts exports derivePRs(sets: SetPoint[]) where SetPoint = { setId, exerciseName, weightKg, reps, date, loggedAt, isWarmup }: sort by (date, loggedAt), skip warm-ups and reps < 1, keep a running best e1RM per exercise, flag a set as PR only when its e1RM is strictly greater than every earlier set's, and return { prSetIds, bestByExercise }. In the data layer add recomputePRsForExercise(name) inside inTx: load all alive sets for that exercise, run derivePRs, UPDATE set_logs SET is_pr = (id IN prSetIds) for those sets, and upsert (or soft-delete when the exercise has no sets) the single personal_records row. Call it after insertSetLog, updateSetLog, deleteSetLog, deleteExerciseLog and any rename. Delete checkAndUpdatePR. If personal_records lacks an e1RM column, add estimated_1rm_kg REAL in migration v5.
@@ -325,14 +304,17 @@ Replace every parseFloat(x) || null in lib/services/barcodeScanner.ts with num(x
 11. Use the Indian food DB or delete it. Recommended: wire lib/data/indianFoodDB.ts into log-food as instant, offline type-ahead (searchLocalFoods(query), case-insensitive contains, top 8) shown above the AI option; items from it are source: 'local'.
 12. Rebuild once. After migration v5, call rebuildAllDerived() (PRs for every exercise, volume for every session, daily nutrition for every date) once, guarded by app_settings key derived_rebuilt_v5.
 13. Tests (all in lib/domain/__tests__). derivePRs: 75x20 beats 80x1; deleting the PR set promotes the previous best; warm-ups never PR; two sets same day. shouldIncreaseLoad: two sessions same day do not count as two; mixed weights do not qualify. adherenceScore: null below two foods; exact targets give 100. num('0') is 0. Property test: volume is independent of set insertion order.
-Done when:
+### Acceptance criteria
 [ ] All domain functions are pure and covered at 95% or more branches.
 [ ] Deleting or editing any set leaves personal_records and is_pr equal to a fresh derivePRs run (property test).
 [ ] Pull-ups and planks can be logged; no duration data appears in strength analytics.
 [ ] Failing an AI parse cannot create a zero-calorie log; logging for a past date works.
 [ ] Barcode for water or plain chicken breast shows 0 carbs without a 'missing' warning.
-6. Sync and Supabase (4.5 to 9)
-Target state: sync is a real backup: every event table syncs, deletes propagate, uploads survive crashes, older data can never overwrite newer data, and a wiped phone restores completely. All of it is observable in Settings.
+## 6. Sync and Supabase (original baseline 4.5; target 9)
+### Status (verified Oct 24, 2026)
+The local-first queue, per-table checkpoints, single-flight engine, and restore path are implemented. Automated restore, lease-recovery, single-flight, and server upsert tests exist; the local pgTAP suite passed 5/5 assertions. Keep the acceptance criteria open until the user-facing sync states and full restore behavior have been verified on the supported runtime.
+### Target state
+Sync is a real backup: every event table syncs, deletes propagate, uploads survive crashes, older data can never overwrite newer data, and a wiped phone restores completely. All of it is observable in Settings.
 1. Sync every event table. In lib/integrations/life-os/exportSchema.ts add record types for food_log, exercise_log and set_log following the existing naming pattern there. External IDs: nutrilift:food_log:<id>, nutrilift:exercise_log:<id>, nutrilift:set_log:<id>. Payloads carry parent IDs (session_id, exercise_log_id), updated_at, and deleted: boolean.
 2. Fix the mappers (recordMappers.ts). (a) Remove every new Date() fallback for sourceUpdatedAt; a row without updated_at is rejected with reason missing_updated_at. (b) A soft-deleted row (deleted_at set) maps to the same record with deleted: true; stop using sync_tombstones for new deletes (keep the table readable for legacy rows). (c) PR external ID is nutrilift:pr:<slug(exerciseName)> (no date).
 3. Validate at the door. npm i zod; add a schema per record type in lib/sync/schemas.ts. Invalid records are written to sync_queue with state = 'rejected' and last_error, never silently dropped, so the checkpoint can safely move past them and Settings can show them.
@@ -374,14 +356,15 @@ The client replaces its direct upsert with supabase.rpc('upsert_sync_records', {
 9. Clean legacy PR rows once (after the stable PR ID ships), in the SQL editor: delete rows whose PR external ID ends in a date, delete from sync_records where record_type like '%personal_record%' and external_id similar to '%[0-9]{4}-[0-9]{2}-[0-9]{2}'; (confirm the record-type string first with select distinct record_type from sync_records).
 10. Prove it is a backup: restore. Create lib/sync/restore.ts: when the local DB is empty and a session exists, page through sync_records ordered by source_updated_at, external_id, map each record back to rows with inverse mappers, and insert everything in one inTx, then set app_settings.restore_completed. Add a 'Restore from cloud' action to Settings and to the first-run flow.
 11. Tests. Engine with a fake transport: kill mid-upload then relaunch reclaims the lease and uploads once; duplicate delivery is idempotent; an invalid record is rejected and the checkpoint still advances; delete propagates as deleted: true; a slower older update does not overwrite a newer server row (SQL test in supabase/tests/sync_records.test.sql, run with supabase test db); round trip: seed DB, sync to fake server, wipe, restore, and assert every table equals the original.
-Done when:
+### Acceptance criteria
 [ ] Round-trip restore test passes for all tables including food, exercises and sets.
 [ ] Kill-mid-upload test: zero stranded rows after relaunch.
 [ ] Offline sync attempt shows 'offline', never 'sign in'.
 [ ] Deleting a meal, exercise or workout appears as deleted: true server-side within one sync.
 [ ] Settings shows pending, rejected, last-success and last-error accurately.
-7. AI layer and edge functions (4 to 9)
-Target state: one typed gateway; every request and response validated; voice works end to end; costs and abuse bounded server-side; prompts built from the user's own profile; explicit consent; a coach that cannot give unsafe advice.
+## 7. AI layer and edge functions (4 to 9)
+### Target state
+One typed gateway; every request and response validated; voice works end to end; costs and abuse bounded server-side; prompts built from the user's own profile; explicit consent; a coach that cannot give unsafe advice.
 1. Remove the fake SDK and the dead key UI. Delete lib/groq/client.ts (the shim pretending to be groq-sdk), then delete safeGroqCall and any lib/groq/index.ts re-exports. In app/(tabs)/more.tsx remove the Groq-key state, the validation call to api.groq.com, the AsyncStorage keys and the whole key section; remove every 'add GROQ_API_KEY to .env' string from voice-input.tsx and coach.tsx. Remove the groq-sdk dependency.
 2. Create the gateway lib/ai/gateway.ts:
 import { supabase } from '../supabase/client';
@@ -448,14 +431,15 @@ Add a second per-minute bucket the same way (table keyed by date_trunc('minute',
 9. Minimise context. Send aggregates only (last 7 and 28 days: averages, adherence, PRs, volume trend), capped at about 2,000 characters per section, never raw logs. Dates come from localDateString().
 10. Reliability and cost. Client-side: 20-second timeout, dedupe identical in-flight requests by key, retry only server errors (max 2, jittered), debounce user-triggered generation, and cache period summaries in SQLite keyed by (period, hash(inputs)) so unchanged weeks are never regenerated.
 11. Tests. Gateway error mapping for 401, 429 (with retry_after), 500 and offline; schema accept/reject fixtures including fenced JSON, trailing prose and truncated JSON; a Deno test proving the edge validator rejects n, tools and max_completion_tokens; an SQL test that fires 50 concurrent consume_ai_quota(10) calls and asserts exactly 10 allowed; prompt tests asserting the safety block is present in the coach prompt and that clampTargets enforces the floor.
-Done when:
+### Acceptance criteria
 [ ] Voice logging works on a real device from recording to a saved, reviewed entry.
 [ ] A client request with extra fields is rejected with 400; 50 parallel calls consume at most the limit.
 [ ] The 429 path shows the real message; the Groq key UI and groq-sdk are gone.
 [ ] AI calls are blocked until consent; toggles change what the context contains (test).
 [ ] No prompt or constant in the repo contains personal health data.
-8. Architecture (4 to 9)
-Target state: clear layers with enforced import boundaries; small files; one UI kit; strict TypeScript with zero suppressions; a dependency list that matches reality.
+## 8. Architecture (4 to 9)
+### Target state
+Clear layers with enforced import boundaries; small files; one UI kit; strict TypeScript with zero suppressions; a dependency list that matches reality.
 Layout to reach:
 app/           screens and routing only (each file <= 250 lines)
 components/    shared UI kit (one design system, tokens in design-system/tokens.ts)
@@ -472,13 +456,14 @@ tools/         dev scripts and seeds
 6. Real type safety. List suppressions with grep -rl "@ts-nocheck" app lib components and remove them one file at a time, fixing errors as they surface (order: repositories, generate-progress-pdf.ts, weekly-summary-service.ts, then the rest). Replace the 53 anys with real types or unknown plus Zod. In tsconfig.json set strict: true, noUncheckedIndexedAccess: true, noImplicitOverride: true. Flip the ESLint ratchet from Section 1 so the global rules equal strict. Codemod console.log/warn/error to logger.debug/warn/error; make the logger write to a size-capped file in production (errors only) with a 'Share logs' action in Settings.
 7. Naming and config hygiene. Keep the DB file name apex.db (renaming would orphan existing data) but put it in one documented constant DB_NAME with a comment explaining why. Keep the apex Expo slug (changing it breaks EAS and update channels).
 8. Dependency diet. Run npx depcheck and remove what it proves unused (expect groq-sdk, react-native-web, react-dom, drizzle-kit, and leftovers from src/); run npx expo install --check and fix version drift; commit the lockfile.
-Done when:
+### Acceptance criteria
 [ ] tools/check-size.sh, depcheck, ESLint boundaries and tsc --noEmit (strict) all pass in CI.
 [ ] Zero @ts-nocheck, zero any in lib/ and app/, zero console.*.
 [ ] No screen imports SQLite, Drizzle or lib/data/db.
 [ ] src/, app/design-system/ and unused dependencies are gone; the app still builds and all tests pass.
-9. UI/UX, accessibility and performance (4.5 to 9)
-Target state: logging a set takes about five seconds and feels instant; every list is virtualised; errors never block; every control is labelled and reachable; every screen has loading, error and empty states.
+## 9. UI/UX, accessibility and performance (4.5 to 9)
+### Target state
+Logging a set takes about five seconds and feels instant; every list is virtualised; errors never block; every control is labelled and reachable; every screen has loading, error and empty states.
 1. Make the money path instant. logSet becomes a mutation: onMutate appends the set to the cached ['workout', date] data with a temporary ID; the repository write (inside inTx, which also recomputes volume and PRs) returns the saved row; onSuccess swaps the temporary ID for the real one; onError rolls back and shows a toast with Retry. Delete the loadWorkout() call after every set. Inputs: decimal pad for weight, number pad for reps, steppers with long-press repeat, values prefilled from the last set, a 'Repeat last set' button, expo-haptics on success, returnKeyType='done'. Add a dev-only timer around the handler and enforce budgets: UI updated within 100 ms of the tap, persisted within 300 ms.
 2. Virtualise every list. npx expo install @shopify/flash-list. Convert: exercise picker, food search and history, workout history, personal records, weekly/monthly summary lists, barcode history. Use estimatedItemSize, stable keyExtractor, memoised row components, and remove ScrollView-inside-ScrollView nesting.
 3. Replace alert popups with a toast system. Create components/ui/Toast.tsx, ToastProvider and useToast() with show({ message, kind, action?, durationMs }), a queue, and accessibilityLiveRegion='polite'. Keep Alert.alert only inside a confirmDestructive(title, message): Promise<boolean> helper. Of the 52 current calls, informational and error ones become toasts. Deletes become soft deletes (Section 3) with a five-second 'Undo' toast that calls the matching restore* repository function.
@@ -491,14 +476,15 @@ Target state: logging a set takes about five seconds and feels instant; every li
 10. Performance budgets. Workout screen interactive within 400 ms of navigation on a mid-range Android; list scroll at 55 fps or better; no full-screen re-render on a keystroke (draft inputs local to the row). Verify with React DevTools Profiler and the Perf Monitor; record numbers in docs/PERF.md.
 11. Sequence with the redesign. If you proceed with the visual redesign, do it after steps 1 to 6 so the new UI lands on a stable data layer and kit.
 12. Tests. Component tests for Toast (queue, undo), Button (label required, role, disabled state), AsyncBoundary (four states); Maestro flows in Section 10 cover set logging, meal logging and undo.
-Done when:
+### Acceptance criteria
 [ ] Tap-to-visible for a set is under 100 ms in the dev timer on a mid-range Android.
 [ ] Zero ScrollView over data lists, zero inline-style lint errors, zero Alert.alert outside confirmDestructive.
 [ ] TalkBack can complete 'log a set' and 'log a meal' with every control announced; contrast script passes.
 [ ] Every screen shows skeleton, error and empty states (screenshot test or Maestro assertions).
 [ ] Deleting a meal or set offers Undo and restores it exactly.
-10. Testing depth (3 to 9)
-Target state: the risky 80% (data, sync, domain, AI plumbing) is covered by real-database tests with enforced thresholds; a handful of end-to-end flows protect the core promise; CI refuses regressions.
+## 10. Testing depth (3 to 9)
+### Target state
+The risky 80% (data, sync, domain, AI plumbing) is covered by real-database tests with enforced thresholds; a handful of end-to-end flows protect the core promise; CI refuses regressions.
 1. Real-SQLite test harness. npm i -D better-sqlite3 @types/better-sqlite3. Create tools/test/expo-sqlite-shim.ts that exports openDatabaseSync(name) returning an in-memory better-sqlite3 database wrapped in the async API the app uses (execAsync, runAsync, getFirstAsync, getAllAsync, withTransactionAsync implemented with BEGIN/COMMIT/ROLLBACK). Create tools/test/drizzle-expo-shim.ts that re-exports drizzle from drizzle-orm/better-sqlite3. In jest.config.js map '^expo-sqlite$' and '^drizzle-orm/expo-sqlite$' to those shims via moduleNameMapper. Add makeTestDb({ upTo? }) in lib/data/__tests__/helpers/testDb.ts that runs the real migrate(); repository tests then run against the real schema.
 2. Legacy fixture. Export a sanitised copy of a real install's data (no personal strings) as tools/test/fixtures/v0.sql; loadFixtureV0() builds a user_version = 0 database from it. This is the migration safety net.
 3. Test inventory (write these before or with each section; names are file names).
@@ -537,13 +523,14 @@ appId: <android.package from app.json>
     id: 'set.row.0'
 Add .github/workflows/e2e.yml (nightly schedule plus manual dispatch, not a PR gate) that builds the preview APK and runs Maestro on reactivecircus/android-emulator-runner.
 7. Preflight script. tools/preflight.sh runs: npm run verify, coverage thresholds, npx expo-doctor, npx expo prebuild --platform android --no-install dry run in a temp dir, the PII check, and confirms the version in app.json is greater than the last git tag. CI runs it on tags before eas build.
-Done when:
+### Acceptance criteria
 [ ] npm run test:cov passes the thresholds above on a clean clone.
 [ ] The v0-fixture migration test and the restore round-trip test exist and pass.
 [ ] The four Maestro flows pass nightly on an emulator.
 [ ] Reverting any Section 3, 5 or 6 fix makes at least one test fail (spot-check three reverts).
-11. Docs and process hygiene (4 to 9)
-Target state: a small set of living documents that cannot contradict the code, plus a lightweight process that keeps them true.
+## 11. Docs and process hygiene (4 to 9)
+### Target state
+A small set of living documents that cannot contradict the code, plus a lightweight process that keeps them true.
 1. Consolidate. Keep exactly: README.md, ARCHITECTURE.md, DECISIONS.md, PROMISE.md (Section 12), docs/RUNBOOK.md, docs/PERF.md. git mv everything else under docs/archive/, then delete docs/archive/ after the next release (the 340 KB of plans, audits and CSV ledgers are history, not documentation).
 2. Rewrite the README to be verifiable. Sections: what it is (three lines); a feature table with columns Feature, State (Working, Beta, Planned) and Test file; quick start (npm ci, copy .env.example, npx expo start); an environment table (name, used by, secret yes/no); commands table; link to ARCHITECTURE; release process; troubleshooting. Add docs/features.json mapping each 'Working' feature to its test path and a tools/check-readme.ts script (run in CI) that fails if a listed test file does not exist or the README table and JSON disagree. Remove every claim the code does not back (no 'food lookup' unless Section 5 step 11 shipped; no secure-storage claim unless Section 2 step 6 shipped).
 3. ARCHITECTURE.md (at most 60 lines). The layer diagram from Section 8; the data flow for logging a set (tap, optimistic update, inTx write, recompute PRs and volume, enqueue for sync, sync engine uploads); the invariants: SQLite is the source of truth, derived tables are rebuildable, every syncable row has updated_at and deleted_at, day keys come from localDateString, instants from nowIso, no UI imports the DB, AI only through the gateway.
@@ -553,13 +540,14 @@ Target state: a small set of living documents that cannot contradict the code, p
 7. A repeatable honest audit. Create tools/audit.sh that runs verify, coverage, depcheck, check-size.sh, the PII check and npm audit --omit=dev, and writes the results with the date into docs/AUDIT.md. Run it weekly (schedule) and on tags. The goal is for the repo to be audited by running it, not by reading it.
 8. .env.example tells the truth. Only EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY. Server secrets live in the RUNBOOK, never in client env.
 9. Comment policy. Comments explain why, not what; delete generated banner comments and emoji log lines; every TODO carries an issue number (ESLint no-warning-comments with a custom pattern).
-Done when:
+### Acceptance criteria
 [ ] docs/ contains only RUNBOOK, PERF (and AUDIT output); the repo root has README, ARCHITECTURE, DECISIONS, PROMISE, CHANGELOG.
 [ ] tools/check-readme.ts passes in CI.
 [ ] Every ADR above exists; every PR uses the template.
 [ ] docs/AUDIT.md is generated by CI and shows all gates green.
-12. Product vision and safety (5 to 9)
-Target state: the app's promise is written down and measured; the product is explicitly either a personal instrument or a product (not both); the interface supports consistency without shame; the coach cannot cause harm.
+## 12. Product vision and safety (5 to 9)
+### Target state
+The app's promise is written down and measured; the product is explicitly either a personal instrument or a product (not both); the interface supports consistency without shame; the coach cannot cause harm.
 1. Write PROMISE.md (at most ten lines): 'Log a set in five seconds. Trust every number. Never lose data.' Add a non-goals list (no social features, no meal-plan marketplace, no web app, no Play Store until the product decision below says so) and the rule: a feature that does not serve the promise is filed as an issue labelled later, not built.
 2. Make the N=1 versus product decision and record it as ADR-005. Recommended for your stated goal (build once, never maintain): personal instrument with private cloud backup. Consequences: sign-ups stay disabled (Section 2), Supabase is for the owner only, RLS and quotas stay (they are cheap), the in-app profile keeps the repo generic, distribution is a private EAS internal build or GitHub release APK, and the Play Store is out of scope. If you choose product instead, the added mandatory work is: onboarding with consent logging, a privacy policy URL, in-app account and data deletion, crash reporting with PII scrubbing, a terms page, per-user targets everywhere (already done by the profile table), content safety review of the coach, and a support channel.
 3. Pause mode and neutral language. Add app_settings.pause_until and a 'Pause tracking' action (illness, travel, rest). While paused: no adherence score, no streaks, no coach nudges, and days are marked skipped rather than failed. Replace streak counters with a neutral 'logged N of the last 7 days'. Missing data displays as a dash, never a zero. Add a lint-style test that scans prompt and UI copy for banned words (fail, slack, lazy, cheat, guilt).
@@ -571,64 +559,30 @@ Target state: the app's promise is written down and measured; the product is exp
 9. Measure the promise locally. Record (on device only) the time from tapping 'Log set' to the saved row, the number of days with at least one log in the last 28, and app-open-to-first-log time. Show them in Settings, Diagnostics. The promise is unmet if the median set-log time exceeds eight seconds.
 10. Anti-avoidance rule. No new planning or audit document until npm run verify is green and at least one real workout has been logged end to end on the current build. Put this in PROMISE.md as the definition of done.
 11. Dogfood protocol. After Section 9, use the app for 14 consecutive days; file every snag as an issue labelled friction; fix those before building anything new.
-Done when:
+### Acceptance criteria
 [ ] PROMISE.md and ADR-005 exist and the repo contains no personal data or multi-tenant code that contradicts the decision.
 [ ] Pause mode suppresses scores, streaks and coach nudges (test).
 [ ] Risk-phrase tests pass; the model is never called on a matching input.
 [ ] Diagnostics shows median set-log time under eight seconds over the dogfood fortnight.
 [ ] Quarterly and yearly summaries are behind a flag that defaults off.
-Verification matrix and expected scores
-Section
-Proof it reached 9
-Score now
-Target
-1 Build and CI
-Clean clone: npm ci && npm run verify; tag produces a signed AAB
-2.0
-9
-2 Security and privacy
-PII check green; manifest clean; ciphertext session; two-user RLS test
-3.0
-9
-3 Data layer
-Migration tests incl. v0 fixture; atomicity tests; schema-parity test
-3.0
-9
-4 Time and lifecycle
-TZ test suite; no UTC date calls; midnight rollover test
-3.5
-9
-5 Domain logic
-95% domain coverage; PR derivation property test
-4.0
-9
-6 Sync
-Round-trip restore; kill-mid-upload; conditional upsert SQL test
-4.5
-9
-7 AI layer
-Real voice flow; allowlist and quota tests; consent and safety tests
-4.0
-9
-8 Architecture
-Size and boundary checks; strict TS; zero suppressions
-4.0
-9
-9 UI/UX
-100 ms set-log budget; TalkBack pass; four-state screens
-4.5
-9
-10 Testing
-Coverage thresholds; four Maestro flows nightly
-3.0
-9
-11 Docs and process
-README check script; ADRs; generated AUDIT.md
-4.0
-9
-12 Vision and safety
-PROMISE, ADR-005, pause mode, risk-phrase path, measured median
-5.0
-9
-Effort (solo, focused days): S1 0.5, S2 1, S3 3, S4 2, S5 4, S6 6, S7 4, S8 5, S9 5, S10 4, S11 1, S12 2, about 37 days; the first four sections (about 6.5 days) remove every verified P0 and are worth doing before anything else.
-What 10/10 would additionally need: SQLCipher for the on-device database, crash and performance telemetry you control (Sentry with PII scrubbing), mutation testing on lib/domain, multi-device conflict resolution (today's design is single-device last-write-wins), automated perf budgets in CI, and a signed, reproducible build attestation. None of these are required for 9.
+## Verification matrix — original audit baseline and acceptance evidence
+
+| Section | Evidence required for target score | Original baseline (Oct 17) | Target |
+|---|---|---:|---:|
+| 1. Build and CI | Clean clone: `npm ci && npm run verify`; tag produces a signed AAB | 2.0 | 9 |
+| 2. Security and privacy | PII check green; manifest clean; encrypted session; two-user RLS test | 3.0 | 9 |
+| 3. Data layer | Migration tests including v0 fixture; atomicity tests; schema-parity test | 3.0 | 9 |
+| 4. Time and lifecycle | Time-zone suite; no UTC date calls; midnight rollover test | 3.5 | 9 |
+| 5. Domain logic | 95% domain coverage; PR derivation property test | 4.0 | 9 |
+| 6. Sync | Round-trip restore; kill-mid-upload; conditional upsert SQL test | 4.5 | 9 |
+| 7. AI layer | Real voice flow; allowlist and quota tests; consent and safety tests | 4.0 | 9 |
+| 8. Architecture | Size and boundary checks; strict TypeScript; zero suppressions | 4.0 | 9 |
+| 9. UI/UX | 100 ms set-log budget; TalkBack pass; four-state screens | 4.5 | 9 |
+| 10. Testing | Coverage thresholds; four Maestro flows nightly | 3.0 | 9 |
+| 11. Docs and process | README check script; ADRs; generated `AUDIT.md` | 4.0 | 9 |
+| 12. Vision and safety | PROMISE, ADR-005, pause mode, risk-phrase path, measured median | 5.0 | 9 |
+### Original effort estimate
+Solo focused-day estimates: S1 0.5, S2 1, S3 3, S4 2, S5 4, S6 6, S7 4, S8 5, S9 5, S10 4, S11 1, S12 2 (about 37 days total). This was estimated on Oct 17 before the work recorded above; it is not an estimate of remaining effort. Re-estimate after the open gates and scope are confirmed.
+
+## What 10/10 would additionally need
+SQLCipher for the on-device database, crash and performance telemetry you control (Sentry with PII scrubbing), mutation testing on lib/domain, multi-device conflict resolution (today's design is single-device last-write-wins), automated performance budgets in CI, and a signed, reproducible build attestation. None of these are required for 9.
