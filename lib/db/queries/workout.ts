@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc, sql, isNull } from "drizzle-orm";
+import { eq, and, gte, lte, desc, sql, isNull, inArray, or } from "drizzle-orm";
 import { db } from "../client";
 import {
   workoutSessions,
@@ -395,6 +395,7 @@ export async function recomputePRsForExercise(
       date: exerciseLogs.date,
       loggedAt: setLogs.logged_at,
       isWarmup: setLogs.is_warmup,
+      isPR: setLogs.is_pr,
       exerciseType: exerciseLogs.exercise_type,
     })
     .from(setLogs)
@@ -422,12 +423,25 @@ export async function recomputePRsForExercise(
       isWarmup: row.isWarmup === 1,
     }));
   const derived = derivePRs(points);
-  const allSetIds = rows.map((row) => row.setId);
-  for (const setId of allSetIds) {
+  const changedRows = rows.filter(
+    (row) => (row.isPR ?? -1) !== (derived.prSetIds.has(row.setId) ? 1 : 0),
+  );
+  const updatedAt = nowIso();
+  for (let offset = 0; offset < changedRows.length; offset += 400) {
+    const batch = changedRows.slice(offset, offset + 400);
+    const batchPRs = batch
+      .filter((row) => derived.prSetIds.has(row.setId))
+      .map((row) => row.setId);
+    const prExpression = batchPRs.length > 0
+      ? sql`CASE WHEN ${setLogs.id} IN (${sql.join(
+          batchPRs.map((setId) => sql`${setId}`),
+          sql`, `,
+        )}) THEN 1 ELSE 0 END`
+      : sql`0`;
     await db
       .update(setLogs)
-      .set({ is_pr: derived.prSetIds.has(setId) ? 1 : 0, updated_at: nowIso() })
-      .where(eq(setLogs.id, setId));
+      .set({ is_pr: prExpression, updated_at: updatedAt })
+      .where(inArray(setLogs.id, batch.map((row) => row.setId)));
   }
 
   const best = derived.bestByExercise.get(exerciseName);
@@ -435,7 +449,6 @@ export async function recomputePRsForExercise(
     .select()
     .from(personalRecords)
     .where(eq(personalRecords.exercise_name, exerciseName));
-  const updatedAt = nowIso();
   if (!best) {
     if (existing && !existing.deleted_at) {
       await db
@@ -506,6 +519,27 @@ export interface DoubleProgressionStatus {
 export async function checkDoubleProgression(
   exerciseName: string
 ): Promise<DoubleProgressionStatus> {
+  const recentDates = await db
+    .select({ date: exerciseLogs.date })
+    .from(exerciseLogs)
+    .innerJoin(workoutSessions, eq(exerciseLogs.session_id, workoutSessions.id))
+    .where(and(
+      eq(exerciseLogs.exercise_name, exerciseName),
+      isNull(exerciseLogs.deleted_at),
+      isNull(workoutSessions.deleted_at),
+    ))
+    .groupBy(exerciseLogs.date)
+    .orderBy(desc(exerciseLogs.date))
+    .limit(2);
+
+  if (recentDates.length < 2) {
+    return {
+      shouldProgress: false,
+      message: "Not enough data yet",
+      lastTwoSessions: [],
+    };
+  }
+
   const exerciseRows = await db
     .select({
       session_id: exerciseLogs.session_id,
@@ -517,16 +551,27 @@ export async function checkDoubleProgression(
     .innerJoin(workoutSessions, eq(exerciseLogs.session_id, workoutSessions.id))
     .where(and(
       eq(exerciseLogs.exercise_name, exerciseName),
+      inArray(exerciseLogs.date, recentDates.map((row) => row.date)),
       isNull(exerciseLogs.deleted_at),
       isNull(workoutSessions.deleted_at),
     ))
-    .orderBy(desc(exerciseLogs.date), desc(exerciseLogs.session_id));
+    .orderBy(
+      desc(exerciseLogs.date),
+      desc(workoutSessions.started_at),
+      desc(workoutSessions.id),
+    );
 
   const sessionsById = new Map<
     string,
     { sessionId: string; date: string; dayType: string; exerciseLogIds: string[] }
   >();
+  const selectedSessionByDate = new Map<string, string>();
   for (const row of exerciseRows) {
+    const selectedSessionId = selectedSessionByDate.get(row.date);
+    if (selectedSessionId && selectedSessionId !== row.session_id) continue;
+    if (!selectedSessionId) {
+      selectedSessionByDate.set(row.date, row.session_id);
+    }
     let session = sessionsById.get(row.session_id);
     if (!session) {
       session = {
@@ -539,21 +584,7 @@ export async function checkDoubleProgression(
     }
     session.exerciseLogIds.push(row.exercise_log_id);
   }
-  const sessions = [...sessionsById.values()];
-  const seenDates = new Set<string>();
-  const recentSessions = sessions.filter((session) => {
-    if (seenDates.has(session.date)) return false;
-    seenDates.add(session.date);
-    return true;
-  }).slice(0, 2);
-
-  if (recentSessions.length < 2) {
-    return {
-      shouldProgress: false,
-      message: "Not enough data yet",
-      lastTwoSessions: [],
-    };
-  }
+  const recentSessions = [...sessionsById.values()];
 
   const template = recentSessions
     .flatMap((session) => getTemplateForDayType(session.dayType))
@@ -611,6 +642,10 @@ export async function getLastWeightForExercise(
     .where(and(
       eq(exerciseLogs.exercise_name, exerciseName),
       isNull(exerciseLogs.deleted_at),
+      or(
+        isNull(exerciseLogs.exercise_type),
+        inArray(exerciseLogs.exercise_type, ["weight_reps", "bodyweight_reps"]),
+      ),
     ))
     .orderBy(desc(exerciseLogs.date))
     .limit(1);

@@ -5,7 +5,11 @@ import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useAudioRecorder, RecordingPresets } from "expo-audio";
 import { transcribeAudioMultilingual } from "../../lib/ai/transcribeAudio";
-import { parseFoodFromVoice } from "../../lib/groq/parseFood";
+import { parseFoodFromVoice } from "../../lib/ai/parsers";
+import type { FoodParseResult } from "../../lib/ai/schemas";
+import { AI_SAFETY_RESPONSE, containsEatingSafetyRisk } from "../../lib/ai/riskPhrases";
+import { getAiPreference } from "../../lib/data/aiPreferences";
+import { AiError } from "../../lib/ai/gateway";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { insertFoodLog } from "../../lib/db/queries/nutrition";
 import { ModalHeader } from "../../components/ui/ModalHeader";
@@ -23,7 +27,7 @@ export default function VoiceInputModal() {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [parsedFood, setParsedFood] = useState<any>(null);
+  const [parsedFood, setParsedFood] = useState<FoodParseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
@@ -35,6 +39,11 @@ export default function VoiceInputModal() {
           "Supabase is not configured, so voice logging cannot use the AI service.",
           [{ text: "OK" }]
         );
+        return;
+      }
+      const consent = await getAiPreference("ai_consent_v1");
+      if (consent !== "accepted") {
+        router.push("/modals/ai-consent");
         return;
       }
 
@@ -73,16 +82,34 @@ export default function VoiceInputModal() {
 
       logger.info("Transcribing audio for voice log", { uri });
       const transcribedText = await transcribeAudioMultilingual(uri);
+      if (containsEatingSafetyRisk(transcribedText)) {
+        setTranscript("");
+        setParsedFood(null);
+        setError(AI_SAFETY_RESPONSE);
+        Alert.alert("Support is available", AI_SAFETY_RESPONSE);
+        return;
+      }
       setTranscript(transcribedText);
 
       logger.info("Parsing food from voice transcription", { transcriptionLength: transcribedText.length });
       const foodResult = await parseFoodFromVoice(transcribedText);
       setParsedFood(foodResult);
 
-    } catch (err: any) {
-      logger.error("Processing error", { error: err?.message || String(err) });
-      setError(err?.message || "Could not process recording");
-      Alert.alert("Processing Error", err?.message || "Could not process recording. Please try again.");
+    } catch (err: unknown) {
+      if (err instanceof AiError && err.code === "safety") {
+        setTranscript("");
+        setParsedFood(null);
+        setError(AI_SAFETY_RESPONSE);
+        Alert.alert("Support is available", AI_SAFETY_RESPONSE);
+        return;
+      }
+      if (err instanceof AiError && err.code === "consent") {
+        router.push("/modals/ai-consent");
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      logger.error("Processing error", { error: message });
+      setError(message || "Could not process recording");
+      Alert.alert("Processing Error", message || "Could not process recording. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -215,7 +242,7 @@ export default function VoiceInputModal() {
               </Text>
             </View>
 
-            {parsedFood.items.map((item: any, index: number) => (
+            {parsedFood.items.map((item, index: number) => (
               <View
                 key={index}
                 style={{
@@ -248,6 +275,11 @@ export default function VoiceInputModal() {
                 {item.confidence === "low" && (
                   <Text style={{ color: M3.colors.warning, fontSize: 10, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
                     Low confidence estimate
+                  </Text>
+                )}
+                {item.needs_review && (
+                  <Text style={{ color: M3.colors.warning, fontSize: 10, fontFamily: "DMSans_700Bold", marginTop: 4 }}>
+                    Review this estimate before saving
                   </Text>
                 )}
               </View>

@@ -11,9 +11,12 @@ if (Platform.OS === "web") {
   );
 }
 
+// Keep the existing name so installed users' databases are not orphaned.
+export const DB_NAME = "apex.db";
+
 const SQLite = require("expo-sqlite") as typeof import("expo-sqlite");
 
-export const sqlite: SQLiteDatabase = SQLite.openDatabaseSync("apex.db");
+export const sqlite: SQLiteDatabase = SQLite.openDatabaseSync(DB_NAME);
 sqlite.execSync(`
   PRAGMA journal_mode = WAL;
   PRAGMA foreign_keys = ON;

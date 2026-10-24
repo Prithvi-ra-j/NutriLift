@@ -6,24 +6,25 @@ import {
   getMonthlySummariesForQuarter,
   getPreviousQuarterlySummaries 
 } from "../db/queries/reports";
-import { generateQuarterlySummary } from "../groq/generateCoachResponse";
+import { generateQuarterlySummary } from "./generators";
+import { getOrGenerateAiSummary } from "./summaryCache";
+import { quarterlyPrompt } from "./prompts/quarterly";
 import type { QuarterlySummary } from "../db/schema";
 import { localDateString } from "../time/localDate";
 import { logger } from "../logger";
+import { isFeatureEnabled } from "../featureFlags";
 
 /**
  * Generate or retrieve AI-powered quarterly summary
  * Summaries are cached in the database and only generated once per quarter
  */
 export async function getOrGenerateQuarterlySummary(quarter: string): Promise<QuarterlySummary | null> {
+  if (!(await isFeatureEnabled("quarterlySummaries"))) return null;
+
   // quarter format: YYYY-Q1, YYYY-Q2, etc.
   
   // Check if summary already exists
   const existing = await getQuarterlySummary(quarter);
-  if (existing) {
-    return existing;
-  }
-
   // Don't generate summary for current quarter (incomplete data)
   const today = new Date();
   const currentQuarter = Math.floor(today.getMonth() / 3) + 1;
@@ -62,7 +63,7 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
     };
 
     // Generate AI summary
-    const aiSummary = await generateQuarterlySummary({
+    const summaryInput = {
       quarter,
       start_date: localDateString(startDate),
       end_date: localDateString(endDate),
@@ -73,7 +74,24 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
           summary: m.ai_summary!,
         })),
       stats: aggregatedStats,
-    });
+    };
+    const aiSummary = await getOrGenerateAiSummary(
+      `quarterly:${quarter}`,
+      `${quarterlyPrompt.id}@${quarterlyPrompt.version}`,
+      summaryInput,
+      () => generateQuarterlySummary(summaryInput),
+    );
+
+    if (existing) {
+      if (existing.ai_summary !== aiSummary) {
+        await updateQuarterlySummary(existing.id, {
+          ai_summary: aiSummary,
+          stats_json: JSON.stringify(aggregatedStats),
+        });
+        return { ...existing, ai_summary: aiSummary };
+      }
+      return existing;
+    }
 
     // Store in database
     const summary: QuarterlySummary = {
@@ -99,6 +117,7 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
  * Returns up to 1 previous quarter
  */
 export async function getPreviousQuartersAISummaries(): Promise<Array<{ quarter: string; summary: string }>> {
+  if (!(await isFeatureEnabled("quarterlySummaries"))) return [];
   const summaries = await getPreviousQuarterlySummaries(1);
   return summaries.map(s => ({
     quarter: s.quarter,

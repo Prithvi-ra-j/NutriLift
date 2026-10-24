@@ -8,21 +8,22 @@ import {
 } from "../db/queries/reports";
 import { getAllPRs } from "../db/queries/workout";
 import { getBodyStatsForDateRange } from "../db/queries/body";
-import { generateYearlySummary } from "../groq/generateCoachResponse";
+import { generateYearlySummary } from "./generators";
+import { getOrGenerateAiSummary } from "./summaryCache";
+import { yearlyPrompt } from "./prompts/yearly";
 import type { YearlySummary } from "../db/schema";
 import { logger } from "../logger";
+import { isFeatureEnabled } from "../featureFlags";
 
 /**
  * Generate or retrieve AI-powered yearly summary
  * Summaries are cached in the database and only generated once per year
  */
 export async function getOrGenerateYearlySummary(year: string): Promise<YearlySummary | null> {
+  if (!(await isFeatureEnabled("yearlySummaries"))) return null;
+
   // Check if summary already exists
   const existing = await getYearlySummary(year);
-  if (existing) {
-    return existing;
-  }
-
   // Don't generate summary for current year (incomplete data)
   const currentYear = new Date().getFullYear();
   if (parseInt(year) === currentYear) {
@@ -70,14 +71,32 @@ export async function getOrGenerateYearlySummary(year: string): Promise<YearlySu
     };
 
     // Generate AI summary
-    const aiSummary = await generateYearlySummary({
+    const summaryInput = {
       year,
       quarterly_summaries: quarterlySummaries.map(q => ({
         quarter: q.quarter,
         summary: q.ai_summary,
       })),
       stats: aggregatedStats,
-    });
+    };
+    const aiSummary = await getOrGenerateAiSummary(
+      `yearly:${year}`,
+      `${yearlyPrompt.id}@${yearlyPrompt.version}`,
+      summaryInput,
+      () => generateYearlySummary(summaryInput),
+    );
+
+    if (existing) {
+      if (existing.ai_summary !== aiSummary) {
+        await updateYearlySummary(existing.id, {
+          ai_summary: aiSummary,
+          transformation_story: aiSummary,
+          stats_json: JSON.stringify(aggregatedStats),
+        });
+        return { ...existing, ai_summary: aiSummary, transformation_story: aiSummary };
+      }
+      return existing;
+    }
 
     // Store in database
     const summary: YearlySummary = {
@@ -102,6 +121,7 @@ export async function getOrGenerateYearlySummary(year: string): Promise<YearlySu
  * Returns up to 5 previous years
  */
 export async function getPreviousYearsAISummaries(): Promise<Array<{ year: string; summary: string }>> {
+  if (!(await isFeatureEnabled("yearlySummaries"))) return [];
   const summaries = await getPreviousYearlySummaries(5);
   return summaries.map(s => ({
     year: s.year,

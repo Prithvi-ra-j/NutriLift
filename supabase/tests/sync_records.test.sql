@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(9);
+SELECT plan(12);
 
 INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at)
 VALUES (
@@ -7,6 +7,17 @@ VALUES (
   'authenticated',
   'authenticated',
   'sync-test@nutrilift.invalid',
+  '',
+  now()
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at)
+VALUES (
+  '02d72f5d-a9d0-46f1-9f09-c00eae8c28a5',
+  'authenticated',
+  'authenticated',
+  'sync-test-b@nutrilift.invalid',
   '',
   now()
 )
@@ -81,6 +92,28 @@ SELECT is(
    WHERE user_id = auth.uid() AND external_id = 'nutrilift:food_log:test'),
   '2026-10-26 00:00:00+00',
   'deletion timestamp is retained on the server'
+);
+
+SELECT set_config('request.jwt.claim.sub', '02d72f5d-a9d0-46f1-9f09-c00eae8c28a5', true);
+
+SELECT is(
+  (SELECT count(*)::integer FROM public.sync_records),
+  0,
+  'another authenticated user cannot read the first user''s records'
+);
+
+SELECT is(
+  public.upsert_sync_records(
+    '[{"external_id":"nutrilift:food_log:other","record_type":"body.nutrition.food_log","payload":{"id":"other","row":{"id":"other"}},"source_updated_at":"2026-10-27T00:00:00Z","source_app":"nutrilift","occurred_at":"2026-10-27T00:00:00Z","schema_version":1,"deleted_at":null}]'
+  ),
+  1,
+  'second user can upload a record owned by their JWT identity'
+);
+
+SELECT is(
+  (SELECT count(*)::integer FROM public.sync_records),
+  1,
+  'second user can see only their own record'
 );
 
 SELECT * FROM finish();

@@ -15,6 +15,8 @@ import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getRecentRecoveryLogs } from "../../lib/db/queries/recovery";
 import { computeNutritionSummary } from "../../lib/analytics/nutrition-analytics";
 import { computeBodySummary } from "../../lib/analytics/body-analytics";
+import { canCommentOnBodyComp, getEligibleBodyCompTimeOfDay } from "../../lib/analytics/bodyCompSafety";
+import { rollingBodyAverage } from "../../lib/analytics/body-averages";
 import { getTargetsForDate } from "../../lib/data/profile";
 import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { Card } from "../../components/ui/Card";
@@ -126,6 +128,17 @@ export default function ProgressScreen() {
   const nutritionSummary = computeNutritionSummary(weekNutritionHistory);
   const latestInBody = inBodyRecords[inBodyRecords.length - 1] ?? null;
   const bodySummary = computeBodySummary(weekWeightHistory, latestInBody);
+  const eligibleBodyCompTimeOfDay = getEligibleBodyCompTimeOfDay(inBodyRecords);
+  const bodyCompEligible = canCommentOnBodyComp(inBodyRecords);
+  const comparableInBodyRecords = eligibleBodyCompTimeOfDay
+    ? inBodyRecords.filter(
+      (record) => record.measurement_time_of_day === eligibleBodyCompTimeOfDay,
+    )
+    : [];
+  const selectedWeightAverage = rollingBodyAverage(weightHistory, "weight_kg", selectedDate);
+  const selectedBodyFatAverage = bodyCompEligible
+    ? rollingBodyAverage(comparableInBodyRecords, "body_fat_pct", selectedDate)
+    : null;
 
   const goToPreviousWeek = () => {
     setPickedDate(addDays(selectedDate, -7));
@@ -250,8 +263,8 @@ export default function ProgressScreen() {
               </Text>
               <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                 {[
-                  { label: "Weight", value: bodySummary.currentWeight ? `${bodySummary.currentWeight.toFixed(1)}kg` : "—", color: M3.colors.onSurface },
-                  { label: "Body Fat", value: latestInBody?.body_fat_pct ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "—", color: M3.colors.error },
+                  { label: "7-day Weight Avg", value: selectedWeightAverage !== null ? `${selectedWeightAverage.toFixed(1)}kg` : "—", color: M3.colors.onSurface },
+                  { label: "7-day Body Fat Avg", value: selectedBodyFatAverage !== null ? `${selectedBodyFatAverage.toFixed(1)}%` : "—", color: M3.colors.error },
                   { label: "Muscle", value: latestInBody?.skeletal_muscle_mass_kg ? `${latestInBody.skeletal_muscle_mass_kg.toFixed(1)}kg` : "—", color: M3.colors.success },
                   { label: "InBody", value: latestInBody?.inbody_score ? `${latestInBody.inbody_score}` : "—", color: M3.colors.primary },
                 ].map((stat) => (
@@ -278,10 +291,10 @@ export default function ProgressScreen() {
               <View style={{ gap: 8 }}>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
                   <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                    Current Body Fat
+                    7-day Body Fat Average
                   </Text>
-                  <Text style={{ color: latestInBody?.body_fat_pct ? M3.colors.error : M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
-                    {latestInBody?.body_fat_pct ? `${latestInBody.body_fat_pct.toFixed(1)}%` : "No InBody data"}
+                  <Text style={{ color: selectedBodyFatAverage !== null ? M3.colors.error : M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_700Bold" }}>
+                    {selectedBodyFatAverage !== null ? `${selectedBodyFatAverage.toFixed(1)}%` : "—"}
                   </Text>
                 </View>
                 <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
@@ -294,9 +307,12 @@ export default function ProgressScreen() {
                     fontFamily: "DMSans_700Bold",
                     textTransform: "capitalize",
                   }}>
-                    {bodySummary.trend}
+                    {bodyCompEligible ? bodySummary.trend : "Not enough consistent measurements"}
                   </Text>
                 </View>
+                <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
+                  Body-fat readings can shift by a few percentage points with hydration. Compare rolling averages, not single readings.
+                </Text>
               </View>
             </Card>
 
@@ -308,11 +324,14 @@ export default function ProgressScreen() {
                 </Text>
                 <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 2, height: 60 }}>
                   {weekWeightHistory.map((stat, i) => {
-                    const weights = weekWeightHistory.map((s) => s.weight_kg ?? 0).filter(Boolean);
+                    const weights = weekWeightHistory
+                      .map((s) => rollingBodyAverage(weightHistory, "weight_kg", s.date))
+                      .filter((value): value is number => value !== null);
                     const min = Math.min(...weights);
                     const max = Math.max(...weights);
                     const range = max - min || 1;
-                    const pct = ((stat.weight_kg ?? min) - min) / range;
+                    const average = rollingBodyAverage(weightHistory, "weight_kg", stat.date) ?? min;
+                    const pct = (average - min) / range;
                     return (
                       <View
                         key={i}
@@ -339,10 +358,10 @@ export default function ProgressScreen() {
                 {weekWeightHistory.length > 0 && (
                   <View style={{ flexDirection: "row", justifyContent: "space-between", marginTop: 4 }}>
                     <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
-                      Start: {weekWeightHistory[0]?.weight_kg?.toFixed(1)}kg
+                      Start: {rollingBodyAverage(weightHistory, "weight_kg", weekWeightHistory[0]?.date ?? selectedDate)?.toFixed(1) ?? "—"}kg
                     </Text>
                     <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
-                      End: {weekWeightHistory[weekWeightHistory.length - 1]?.weight_kg?.toFixed(1)}kg
+                      End: {rollingBodyAverage(weightHistory, "weight_kg", weekWeightHistory[weekWeightHistory.length - 1]?.date ?? selectedDate)?.toFixed(1) ?? "—"}kg
                     </Text>
                   </View>
                 )}
@@ -370,10 +389,12 @@ export default function ProgressScreen() {
                       {record.date}
                     </Text>
                     <Text style={{ color: M3.colors.onSurface, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
-                      {record.weight_kg?.toFixed(1)}kg
+                      {rollingBodyAverage(inBodyRecords, "weight_kg", record.date)?.toFixed(1) ?? "—"}kg avg
                     </Text>
                     <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
-                      {record.body_fat_pct?.toFixed(1)}% BF
+                      {bodyCompEligible
+                        ? `${rollingBodyAverage(comparableInBodyRecords, "body_fat_pct", record.date)?.toFixed(1) ?? "—"}% BF avg`
+                        : "—"}
                     </Text>
                     <Text style={{ color: M3.colors.success, fontSize: 12, fontFamily: "DMSans_500Medium" }}>
                       {record.skeletal_muscle_mass_kg?.toFixed(1)}kg SMM

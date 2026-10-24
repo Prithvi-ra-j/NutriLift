@@ -5,6 +5,8 @@ import { getTargetsForDate } from "../../data/profile";
 import { adherenceScore, sumFoodLogs } from "../../domain/nutrition";
 import { inTx } from "../tx";
 import { nowIso } from "../../time/clock";
+import { getAppSetting } from "../../data/appSettings";
+import { isTrackingPausedOnDate } from "../../pauseMode";
 import { addDays, localDateString } from "../../time/localDate";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
@@ -120,14 +122,22 @@ export async function recomputeDailyNutritionInTransaction(date: string): Promis
   const totals = sumFoodLogs(logs);
 
   const targets = await getTargetsForDate(date);
-  const proteinTargetMet = totals.protein_g >= targets.protein_g ? 1 : 0;
-  const calorieTargetMet =
-    totals.calories >= targets.calories * 0.9 &&
-    totals.calories <= targets.calories * 1.1
+  const pauseSettings = await Promise.all([
+    getAppSetting("pause_from"),
+    getAppSetting("pause_until"),
+  ]);
+  const paused = isTrackingPausedOnDate(date, pauseSettings[0], pauseSettings[1]);
+  const proteinTargetMet = paused
+    ? null
+    : totals.protein_g >= targets.protein_g ? 1 : 0;
+  const calorieTargetMet = paused
+    ? null
+    : totals.calories >= targets.calories * 0.9 &&
+        totals.calories <= targets.calories * 1.1
       ? 1
       : 0;
 
-  const score = adherenceScore(totals, targets, logs.length);
+  const score = paused ? null : adherenceScore(totals, targets, logs.length);
   const updatedAt = nowIso();
   await db
     .insert(dailyNutrition)

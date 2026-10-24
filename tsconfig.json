@@ -4,6 +4,7 @@
     "strict": true,
     "noImplicitAny": true,
     "strictNullChecks": true,
+    "noImplicitOverride": true,
     "types": ["jest", "node"],
     "noUnusedLocals": false,
     "noUnusedParameters": false,

@@ -1,0 +1,44 @@
+{
+  "features": [
+    {
+      "name": "Barcode food data normalization",
+      "state": "Working",
+      "testFile": "lib/services/__tests__/barcodeScanner.test.ts"
+    },
+    {
+      "name": "AI request and output safety validation",
+      "state": "Working",
+      "testFile": "lib/ai/__tests__/aiSafetySchemas.test.ts"
+    },
+    {
+      "name": "Coach response validation and target clamping",
+      "state": "Working",
+      "testFile": "lib/ai/__tests__/coach.test.ts"
+    },
+    {
+      "name": "Summary feature-flag defaults",
+      "state": "Working",
+      "testFile": "lib/__tests__/featureFlags.test.ts"
+    },
+    {
+      "name": "Body-composition comment safety gate",
+      "state": "Working",
+      "testFile": "lib/analytics/__tests__/bodyCompSafety.test.ts"
+    },
+    {
+      "name": "Toast queue and undo action",
+      "state": "Beta",
+      "testFile": "components/ui/__tests__/Toast.test.tsx"
+    },
+    {
+      "name": "Workout progression rules",
+      "state": "Beta",
+      "testFile": "lib/domain/__tests__/domain.test.ts"
+    },
+    {
+      "name": "Supabase sync transport",
+      "state": "Beta",
+      "testFile": "lib/integrations/life-os/syncClient.test.ts"
+    }
+  ]
+}

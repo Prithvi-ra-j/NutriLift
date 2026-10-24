@@ -13,6 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
 import { parseFoodInput, type ParsedFoodItem } from "../../lib/ai/parsers";
+import { AiError } from "../../lib/ai/gateway";
+import { AI_SAFETY_RESPONSE } from "../../lib/ai/riskPhrases";
 import { insertFoodLogs } from "../../lib/db/queries/nutrition";
 import { searchLocalFoods, type IndianFood } from "../../lib/data/indianFoodDB";
 import { Card } from "../../components/ui/Card";
@@ -55,6 +57,7 @@ export default function LogFoodModal() {
     fat_g: 0,
     fiber_g: null,
     confidence: "low",
+    needs_review: false,
   });
 
   const chooseLocalFood = (food: IndianFood) => {
@@ -69,6 +72,7 @@ export default function LogFoodModal() {
       fat_g: food.per100g.fat,
       fiber_g: food.per100g.fiber,
       confidence: food.dataQuality === "verified" ? "high" : "medium",
+      needs_review: false,
     }]);
     setParseNotes(food.warning ?? null);
   };
@@ -92,6 +96,15 @@ export default function LogFoodModal() {
         setSelectedMeal(result.meal_suggestion);
       }
     } catch (err) {
+      if (err instanceof AiError && err.code === "consent") {
+        router.push("/modals/ai-consent");
+      }
+      if (err instanceof AiError && err.code === "safety") {
+        setParseNotes(AI_SAFETY_RESPONSE);
+        setParsedItems(null);
+        Alert.alert("Support is available", AI_SAFETY_RESPONSE);
+        return;
+      }
       // Fallback: show raw input as editable
       Alert.alert(
         "Parse Failed",
@@ -116,6 +129,11 @@ export default function LogFoodModal() {
     } else {
       item[field] = value.trim() === "" ? 0 : Number(value);
     }
+    item.needs_review =
+      Math.abs(
+        Number(item.calories) -
+        (4 * Number(item.protein_g) + 4 * Number(item.carbs_g) + 9 * Number(item.fat_g)),
+      ) > 0.3 * Number(item.calories) + 20;
     updated[index] = item as unknown as ParsedFoodItem;
     setParsedItems(updated);
   };
@@ -333,6 +351,11 @@ export default function LogFoodModal() {
                       )}
                       {itemSource === "local" && (
                         <Text style={{ color: M3.colors.success, fontSize: 9, fontFamily: "DMSans_700Bold" }}>LOCAL</Text>
+                      )}
+                      {item.needs_review && (
+                        <View style={{ backgroundColor: M3.colors.warningContainer, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 }}>
+                          <Text style={{ color: M3.colors.warning, fontSize: 9, fontFamily: "DMSans_700Bold" }}>REVIEW ESTIMATE</Text>
+                        </View>
                       )}
                       <TouchableOpacity onPress={() => removeItem(index)}>
                         <Feather name="trash-2" size={14} color={M3.colors.error} />

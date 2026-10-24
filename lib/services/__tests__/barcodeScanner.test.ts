@@ -1,6 +1,15 @@
-import { validateAndNormalizeOFF } from "../barcodeScanner";
+import { buildOFFUserAgent, validateAndNormalizeOFF } from "../barcodeScanner";
 
 describe("Open Food Facts normalization", () => {
+  it("includes the configured contact in the required User-Agent", () => {
+    expect(buildOFFUserAgent(" support@example.com ")).toBe(
+      "NutriLift/1.0.0 (support@example.com)",
+    );
+    expect(() => buildOFFUserAgent(" ")).toThrow(
+      "Set EXPO_PUBLIC_OFF_CONTACT_EMAIL",
+    );
+  });
+
   it("preserves zero-valued macros and converts sodium grams to milligrams", () => {
     const food = validateAndNormalizeOFF(
       {

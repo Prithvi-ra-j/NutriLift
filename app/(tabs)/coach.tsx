@@ -12,20 +12,23 @@ import {
 import { Input } from "../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useAIStore } from "../../lib/stores/ai.store";
-import { generateCoachResponse, isGroqConfigured, type CoachMessage } from "../../lib/groq";
 import { buildCoachContext } from "../../lib/ai/context-builder";
+import { AiError } from "../../lib/ai/gateway";
+import { coachPrompt } from "../../lib/ai/prompts/coach";
+import { generateCoachReply } from "../../lib/ai/coach";
+import { getMinimumCalorieFloor } from "../../lib/ai/preferences";
+import { AI_SAFETY_RESPONSE, containsEatingSafetyRisk } from "../../lib/ai/riskPhrases";
+import { getAiPreference } from "../../lib/data/aiPreferences";
 import { getConversationHistory, insertConversationMessage, clearConversationHistory } from "../../lib/db/queries/reports";
-import { getDailyNutrition } from "../../lib/db/queries/nutrition";
-import { getSessionsForDate } from "../../lib/db/queries/workout";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { AiConversation, DailyNutrition, WorkoutSession } from "../../lib/db/schema";
+import type { AiConversation } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
-import { useToday } from "../../lib/time/useToday";
 import { logger } from "../../lib/logger";
 import { fireAndLog } from "../../lib/async";
-import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
+import { isSupabaseConfigured } from "../../lib/supabase/client";
 
 // Suggested prompts for coach
 const COACH_SUGGESTED_PROMPTS = [
@@ -39,20 +42,9 @@ const COACH_SUGGESTED_PROMPTS = [
 
 export default function CoachScreen() {
   const { messages, isGenerating, setMessages, addMessage, setGenerating, setError } = useAIStore();
-  const today = useToday();
-  const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
-  const [session, setSession] = useState<WorkoutSession | null>(null);
-  const todayRequestId = useRef(0);
-
   const [input, setInput] = useState("");
-  const [groqConfigured, setGroqConfigured] = useState<boolean | null>(null);
-  const [requestCount, setRequestCount] = useState(0);
+  const [isReady, setIsReady] = useState<boolean | null>(null);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-
-  const checkConfiguration = useCallback(() => {
-    const configured = isGroqConfigured();
-    setGroqConfigured(configured);
-  }, []);
 
   const loadHistory = useCallback(async () => {
     const history = await getConversationHistory(50);
@@ -60,27 +52,9 @@ export default function CoachScreen() {
   }, []);
 
   useEffect(() => {
-    checkConfiguration();
+    setIsReady(isSupabaseConfigured);
     fireAndLog(loadHistory(), "Coach conversation history load failed");
-  }, [checkConfiguration, loadHistory]);
-
-  useEffect(() => {
-    const request = beginRequest(todayRequestId);
-    Promise.all([getDailyNutrition(today), getSessionsForDate(today)])
-      .then(([nutritionData, sessions]) => {
-        if (!isLatestRequest(todayRequestId, request)) return;
-        setNutrition(nutritionData);
-        setSession(sessions[0] ?? null);
-      })
-      .catch((loadError: unknown) => {
-        logger.error("Coach context load failed", {
-          error: loadError instanceof Error ? loadError.message : String(loadError),
-        });
-      });
-    return () => {
-      invalidateRequests(todayRequestId);
-    };
-  }, [today]);
+  }, [loadHistory]);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -88,65 +62,83 @@ export default function CoachScreen() {
 
   const sendMessage = async (text: string) => {
     if (!text.trim() || isGenerating) return;
-    setInput("");
     setError(null);
+    const userText = text.trim();
 
-    // Build user message
-    const userMsg: AiConversation = {
-      id: uuid.v4() as string,
-      role: "user",
-      content: text.trim(),
-      context_snapshot: null,
-      created_at: Math.floor(Date.now() / 1000),
-    };
+    if (containsEatingSafetyRisk(userText)) {
+      addMessage({
+        id: uuid.v4() as string,
+        role: "assistant",
+        content: AI_SAFETY_RESPONSE,
+        context_snapshot: null,
+        prompt_version: `${coachPrompt.id}@${coachPrompt.version}`,
+        created_at: Math.floor(Date.now() / 1000),
+      });
+      setInput("");
+      return;
+    }
 
-    addMessage(userMsg);
-    await insertConversationMessage(userMsg);
+    let consent: string | null;
+    try {
+      consent = await getAiPreference("ai_consent_v1");
+    } catch (error) {
+      logger.error("AI consent lookup failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      setError("Could not verify AI consent. Please try again.");
+      return;
+    }
+    if (consent !== "accepted") {
+      router.push("/modals/ai-consent");
+      return;
+    }
+    setInput("");
     setGenerating(true);
 
     try {
-      // Build context
-      const context = await buildCoachContext(nutrition, session);
+      const context = await buildCoachContext();
 
-      // Build message history for Groq (limit to last 5 messages to stay under token limit)
-      const conversationMessages: CoachMessage[] = messages.slice(-5).map((m) => ({
+      const conversationMessages = messages
+        .filter((message) =>
+          message.role !== "user" || !containsEatingSafetyRisk(message.content)
+        )
+        .slice(-5)
+        .map((m) => ({
         role: m.role as "user" | "assistant",
         content: m.content,
       }));
-      conversationMessages.push({ role: "user", content: text.trim() });
+      conversationMessages.push({ role: "user" as const, content: userText });
 
-      let responseContent = "";
-      const assistantMsgId = uuid.v4() as string;
-
-      // Add placeholder message for streaming
-      const placeholderMsg: AiConversation = {
-        id: assistantMsgId,
-        role: "assistant",
-        content: "...",
+      const userMsg: AiConversation = {
+        id: uuid.v4() as string,
+        role: "user",
+        content: userText,
         context_snapshot: null,
+        prompt_version: `${coachPrompt.id}@${coachPrompt.version}`,
         created_at: Math.floor(Date.now() / 1000),
       };
-      addMessage(placeholderMsg);
+      addMessage(userMsg);
+      await insertConversationMessage(userMsg);
 
-      // Generate response with Groq
-      responseContent = await generateCoachResponse(
-        context,
-        conversationMessages
+      const minimumCalories = await getMinimumCalorieFloor();
+      const responseContent = await generateCoachReply(
+        coachPrompt.build({ data: context, minimumCalories }),
+        conversationMessages,
+        context.targets,
+        minimumCalories,
       );
 
-      // Increment request count
-      setRequestCount(prev => prev + 1);
-
-      // Update the placeholder with real content
       const finalMsg: AiConversation = {
-        ...placeholderMsg,
+        id: uuid.v4() as string,
+        role: "assistant",
         content: responseContent,
         context_snapshot: JSON.stringify({ context_keys: Object.keys(context) }),
+        prompt_version: `${coachPrompt.id}@${coachPrompt.version}`,
+        created_at: Math.floor(Date.now() / 1000),
       };
 
       await insertConversationMessage(finalMsg);
 
-      // Reload messages to get the final state
       const history = await getConversationHistory(50);
       setMessages(history);
     } catch (err) {
@@ -156,10 +148,15 @@ export default function CoachScreen() {
       const errMsg: AiConversation = {
         id: uuid.v4() as string,
         role: "assistant",
-        content: `Error: ${errorMsg}. Please check your Groq API configuration.`,
+        content: err instanceof AiError ? err.message : "The coach could not respond. Please try again.",
         context_snapshot: null,
+        prompt_version: `${coachPrompt.id}@${coachPrompt.version}`,
         created_at: Math.floor(Date.now() / 1000),
       };
+      addMessage(errMsg);
+      if (!(err instanceof AiError)) {
+        logger.error("Coach request failed", { error: errorMsg });
+      }
       addMessage(errMsg);
     } finally {
       setGenerating(false);
@@ -171,7 +168,7 @@ export default function CoachScreen() {
     setMessages([]);
   };
 
-  if (groqConfigured === null) {
+  if (isReady === null) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: M3.colors.background }}>
         <View style={{ padding: 20, gap: 16 }}>
@@ -196,11 +193,11 @@ export default function CoachScreen() {
             <Text style={{ color: M3.colors.onSurface, fontSize: 17, fontFamily: "DMSans_700Bold" }}>
               NutriLift Coach
             </Text>
-            {groqConfigured === true && (
+            {isReady === true && (
               <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: M3.colors.success }} />
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-                  Ready{requestCount > 0 ? ` · ${requestCount} sent` : ""}
+                  Ready
                 </Text>
               </View>
             )}
@@ -224,8 +221,8 @@ export default function CoachScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Groq API warning ── */}
-        {groqConfigured === false && (
+        {/* ── AI configuration warning ── */}
+        {isReady === false && (
           <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: 8, padding: 12, flexDirection: "row", gap: 8 }}>
             <Feather name="alert-circle" size={14} color={M3.colors.error} />
             <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
@@ -258,7 +255,7 @@ export default function CoachScreen() {
                   How can I help your training today?
                 </Text>
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular", textAlign: "center", lineHeight: 20 }}>
-                  Brutally honest. Scientifically rigorous.
+                  Direct, factual, and kind.
                 </Text>
               </View>
 

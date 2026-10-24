@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { parseInBodyText, type InBodyParseResult } from "../../lib/ai/parsers";
+import { AiError } from "../../lib/ai/gateway";
 import { insertBodyStat } from "../../lib/db/queries/body";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
@@ -19,6 +20,8 @@ import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import { useToday } from "../../lib/time/useToday";
 import { isLocalDateString } from "../../lib/time/localDate";
+import type { MeasurementTimeOfDay } from "../../lib/db/schema";
+import { MeasurementTimeOfDaySelector } from "../../components/ui/MeasurementTimeOfDaySelector";
 
 export default function InBodyPasteModal() {
   const params = useLocalSearchParams<{ date?: string }>();
@@ -30,6 +33,8 @@ export default function InBodyPasteModal() {
   const [dateOverride, setDateOverride] = useState(
     isLocalDateString(params.date) ? params.date : today,
   );
+  const [measurementTimeOfDay, setMeasurementTimeOfDay] =
+    useState<MeasurementTimeOfDay | null>(null);
 
   const handleParse = async () => {
     if (!pasteText.trim()) return;
@@ -39,7 +44,13 @@ export default function InBodyPasteModal() {
       setParsed(result);
       if (result.date) setDateOverride(result.date);
     } catch (err) {
-      Alert.alert("Parse Failed", "Could not parse InBody data. Please check the input and try again.");
+      if (err instanceof AiError && err.code === "consent") {
+        router.push("/modals/ai-consent");
+      }
+      Alert.alert(
+        err instanceof AiError && err.code === "safety" ? "Support is available" : "Parse Failed",
+        err instanceof Error ? err.message : "Could not parse InBody data. Please check the input and try again.",
+      );
     } finally {
       setIsParsing(false);
     }
@@ -47,12 +58,17 @@ export default function InBodyPasteModal() {
 
   const handleSave = async () => {
     if (!parsed) return;
+    if (!measurementTimeOfDay) {
+      Alert.alert("Choose measurement time", "Select when the InBody measurement was taken.");
+      return;
+    }
     setIsSaving(true);
     try {
       await insertBodyStat({
         id: uuid.v4() as string,
         date: dateOverride,
         type: "inbody",
+        measurement_time_of_day: measurementTimeOfDay,
         weight_kg: parsed.weight_kg,
         body_fat_pct: parsed.body_fat_pct,
         body_fat_mass_kg: parsed.body_fat_mass_kg,
@@ -174,6 +190,16 @@ export default function InBodyPasteModal() {
                   }}
                 />
               </View>
+
+              <Card>
+                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginBottom: 8 }}>
+                  When was this measurement taken?
+                </Text>
+                <MeasurementTimeOfDaySelector
+                  value={measurementTimeOfDay}
+                  onChange={setMeasurementTimeOfDay}
+                />
+              </Card>
 
               <Card>
                 <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>

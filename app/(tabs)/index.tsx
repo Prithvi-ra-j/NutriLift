@@ -24,6 +24,7 @@ import { useToday } from "../../lib/time/useToday";
 import { addDays, dayOfWeek, parseLocalDate } from "../../lib/time/localDate";
 import { logger } from "../../lib/logger";
 import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
+import { getTrackingPauseStatus, isTrackingPausedOnDate } from "../../lib/pauseMode";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -50,7 +51,8 @@ function getDayTypeBadgeColor(dayType: string): string {
 
 interface AdherenceDot {
   date: string;
-  status: "green" | "amber" | "red" | "empty";
+  logged: boolean;
+  skipped: boolean;
 }
 
 export default function DashboardScreen() {
@@ -62,6 +64,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [adherenceDots, setAdherenceDots] = useState<AdherenceDot[]>([]);
+  const [trackingPaused, setTrackingPaused] = useState(false);
   const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
   const [profile, setProfile] = useState<Awaited<ReturnType<typeof getProfile>>>(null);
   const [targets, setTargets] = useState<
@@ -95,7 +98,7 @@ export default function DashboardScreen() {
     const request = beginRequest(requestId);
     setLoadError(null);
     try {
-      const [nutritionData, sessionsData, last7Days, recoveryData, profileData, targetData] =
+      const [nutritionData, sessionsData, last7Days, recoveryData, profileData, targetData, pauseStatus] =
         await Promise.all([
           getDailyNutrition(today),
           getSessionsForDate(today),
@@ -103,12 +106,14 @@ export default function DashboardScreen() {
           getRecoveryLog(today),
           getProfile(),
           getTargetsForDate(today),
+          getTrackingPauseStatus(today),
         ]);
 
       if (!isLatestRequest(requestId, request)) return;
       setNutrition(nutritionData);
       setProfile(profileData);
       setTargets(targetData);
+      setTrackingPaused(pauseStatus.paused);
       
       // Handle session and day type
       if (sessionsData[0]) {
@@ -124,19 +129,17 @@ export default function DashboardScreen() {
         setTodayDayType(getTodayDayType(today));
       }
 
-      // Build 7-day adherence dots
+      // Build neutral logging-status dots rather than scoring missed days.
       const dots: AdherenceDot[] = [];
       for (let i = 6; i >= 0; i--) {
         const dateStr = addDays(today, -i);
+        const skipped = isTrackingPausedOnDate(dateStr, pauseStatus.from, pauseStatus.until);
         const dayData = last7Days.find((n) => n.date === dateStr);
-
-        let status: AdherenceDot["status"] = "empty";
-        if (dayData) {
-          if (dayData.protein_target_met === 1) status = "green";
-          else if ((dayData.adherence_score ?? 0) >= 60) status = "amber";
-          else status = "red";
-        }
-        dots.push({ date: dateStr, status });
+        dots.push({
+          date: dateStr,
+          logged: !skipped && (dayData?.food_count ?? 0) > 0,
+          skipped,
+        });
       }
       setAdherenceDots(dots);
 
@@ -330,7 +333,7 @@ export default function DashboardScreen() {
         </View>
 
         {/* ── Protein Pace ── */}
-        {proteinRemaining > 0 && (
+        {!trackingPaused && proteinRemaining > 0 && (
           <Card elevated>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
               <Feather name="target" size={16} color={M3.colors.secondary} />
@@ -345,51 +348,49 @@ export default function DashboardScreen() {
           </Card>
         )}
 
-        {/* ── 7-Day Adherence Strip ── */}
+        {/* ── 7-Day Logging Status ── */}
         <View style={{ paddingHorizontal: 4 }}>
           <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-            7-DAY PROTEIN ADHERENCE
+            {trackingPaused
+              ? "TRACKING PAUSED — DAYS ARE SKIPPED"
+              : `NUTRITION LOGGED ${adherenceDots.filter((dot) => dot.logged).length} OF LAST 7 DAYS${adherenceDots.some((dot) => dot.skipped) ? ` · ${adherenceDots.filter((dot) => dot.skipped).length} SKIPPED` : ""}`}
           </Text>
-          <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-            {adherenceDots.map((dot, i) => {
-              const dotColor =
-                dot.status === "green"
-                  ? M3.colors.success
-                  : dot.status === "amber"
-                  ? M3.colors.warning
-                  : dot.status === "red"
-                  ? M3.colors.error
-                  : M3.colors.surfaceContainer;
-              const dayLabel = parseLocalDate(dot.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1);
-              return (
-                <View key={i} style={{ alignItems: "center", gap: 4 }}>
-                  <View
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 14,
-                      backgroundColor: dotColor + "22",
-                      borderWidth: 2,
-                      borderColor: dotColor,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {dot.status !== "empty" && (
-                      <Feather
-                        name={dot.status === "green" ? "check" : dot.status === "amber" ? "minus" : "x"}
-                        size={12}
-                        color={dotColor}
-                      />
-                    )}
+          {trackingPaused ? (
+            <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
+              No adherence score is shown while tracking is paused.
+            </Text>
+          ) : (
+            <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              {adherenceDots.map((dot) => {
+                const dayLabel = parseLocalDate(dot.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1);
+                return (
+                  <View key={dot.date} style={{ alignItems: "center", gap: 4 }}>
+                    <View
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 14,
+                        backgroundColor: dot.logged ? M3.colors.primaryContainer : M3.colors.surfaceContainer,
+                        borderWidth: 2,
+                        borderColor: dot.logged ? M3.colors.primary : M3.colors.outline,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      {dot.logged ? (
+                        <Feather name="check" size={12} color={M3.colors.onPrimaryContainer} />
+                      ) : dot.skipped ? (
+                        <Feather name="minus" size={12} color={M3.colors.onSurfaceVariant} />
+                      ) : null}
+                    </View>
+                    <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
+                      {dayLabel}
+                    </Text>
                   </View>
-                  <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
-                    {dayLabel}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         {/* ── Workout Status ── */}

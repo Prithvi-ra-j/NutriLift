@@ -4,9 +4,16 @@ import { num } from "../domain/barcode";
 
 // API Configuration
 const OFF_BASE = "https://world.openfoodfacts.org/api/v2/product";
-const USER_AGENT = process.env.EXPO_PUBLIC_OFF_CONTACT_EMAIL?.trim()
-  ? `NutriLift/1.0.0 (${process.env.EXPO_PUBLIC_OFF_CONTACT_EMAIL.trim()})`
-  : "NutriLift/1.0.0";
+
+export function buildOFFUserAgent(
+  contactEmail = process.env.EXPO_PUBLIC_OFF_CONTACT_EMAIL,
+): string {
+  const email = contactEmail?.trim();
+  if (!email) {
+    throw new Error("Set EXPO_PUBLIC_OFF_CONTACT_EMAIL before looking up Open Food Facts products.");
+  }
+  return `NutriLift/1.0.0 (${email})`;
+}
 
 export interface FoodResult {
   status?: "NOT_FOUND";
@@ -61,7 +68,7 @@ async function lookupOpenFoodFacts(barcode: string): Promise<FoodResult> {
   try {
     const response = await fetch(`${OFF_BASE}/${barcode}.json`, {
       signal: controller.signal,
-      headers: { "User-Agent": USER_AGENT },
+      headers: { "User-Agent": buildOFFUserAgent() },
     });
     if (!response.ok) {
       throw new Error(`Open Food Facts returned HTTP ${response.status}.`);

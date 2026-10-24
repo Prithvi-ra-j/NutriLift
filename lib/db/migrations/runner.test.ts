@@ -69,7 +69,7 @@ describe("database migrations", () => {
       await migrate(database, migrations);
 
       expect(native.prepare("PRAGMA user_version").get()).toEqual({
-        user_version: 6,
+        user_version: migrations.length,
       });
       expect(
         native.prepare("SELECT exercise_type FROM exercise_logs WHERE id = 'exercise-1'").get(),
@@ -148,7 +148,7 @@ describe("database migrations", () => {
 
       await migrate(database, migrations);
       expect(native.prepare("PRAGMA user_version").get()).toEqual({
-        user_version: 6,
+        user_version: migrations.length,
       });
     } finally {
       native.close();
@@ -174,7 +174,7 @@ describe("database migrations", () => {
         "migration failed",
       );
       expect(native.prepare("PRAGMA user_version").get()).toEqual({
-        user_version: 6,
+        user_version: migrations.length,
       });
       expect(
         native.prepare("SELECT name FROM sqlite_master WHERE name = 'rollback_probe'").get(),

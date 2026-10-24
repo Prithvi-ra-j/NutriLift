@@ -139,6 +139,7 @@ export const bodyStats = sqliteTable("body_stats", {
   seg_fat_left_leg: real("seg_fat_left_leg"),
   raw_paste: text("raw_paste"), // original pasted InBody text
   source: text("source"), // 'manual' | 'inbody_paste'
+  measurement_time_of_day: text("measurement_time_of_day").$type<MeasurementTimeOfDay | null>(),
   updated_at: text("updated_at"),
   deleted_at: text("deleted_at"),
 });
@@ -222,6 +223,7 @@ export const aiConversations = sqliteTable("ai_conversations", {
   role: text("role").notNull(), // 'user' | 'assistant'
   content: text("content").notNull(),
   context_snapshot: text("context_snapshot"), // JSON of what data was sent
+  prompt_version: text("prompt_version").notNull().default("legacy@0"),
   created_at: integer("created_at").notNull(),
 });
 
@@ -367,6 +369,14 @@ export const appSettings = sqliteTable("app_settings", {
   updated_at: text("updated_at").notNull(),
 });
 
+export const aiSummaryCache = sqliteTable("ai_summary_cache", {
+  period: text("period").primaryKey(),
+  input_hash: text("input_hash").notNull(),
+  output_text: text("output_text").notNull(),
+  prompt_version: text("prompt_version").notNull(),
+  updated_at: text("updated_at").notNull(),
+});
+
 // ─── Type Exports ─────────────────────────────────────────────────────────────
 export type FoodLog = typeof foodLogs.$inferSelect;
 export type NewFoodLog = typeof foodLogs.$inferInsert;
@@ -388,6 +398,8 @@ export type NewPersonalRecord = typeof personalRecords.$inferInsert;
 
 export type BodyStat = typeof bodyStats.$inferSelect;
 export type NewBodyStat = typeof bodyStats.$inferInsert;
+
+export type MeasurementTimeOfDay = "morning" | "afternoon" | "evening";
 
 export type RecoveryLog = typeof recoveryLogs.$inferSelect;
 export type NewRecoveryLog = typeof recoveryLogs.$inferInsert;

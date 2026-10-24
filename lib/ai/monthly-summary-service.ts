@@ -10,7 +10,9 @@ import {
   getWeeklySummariesForMonth,
   getPreviousMonthlySummaries 
 } from "../db/queries/reports";
-import { generateMonthlySummary } from "../groq/generateCoachResponse";
+import { generateMonthlySummary } from "./generators";
+import { getOrGenerateAiSummary } from "./summaryCache";
+import { monthlyPrompt } from "./prompts/monthly";
 import type { MonthlyReport } from "../db/schema";
 import { localDateString } from "../time/localDate";
 import { logger } from "../logger";
@@ -22,10 +24,6 @@ import { logger } from "../logger";
 export async function getOrGenerateMonthlySummary(month: string): Promise<MonthlyReport | null> {
   // Check if summary already exists
   const existing = await getMonthlySummary(month);
-  if (existing && existing.ai_summary) {
-    return existing;
-  }
-
   // Don't generate summary for current month (incomplete data)
   const today = new Date();
   const [year, monthNum] = month.split('-').map(Number);
@@ -79,7 +77,7 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
     } : {};
 
     // Generate AI summary
-    const aiSummary = await generateMonthlySummary({
+    const summaryInput = {
       month,
       weekly_summaries: weeklySummaries.map(w => ({
         week_start: w.week_start,
@@ -92,7 +90,13 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
         ...recoveryStats,
         ...bodyStatsData,
       },
-    });
+    };
+    const aiSummary = await getOrGenerateAiSummary(
+      `monthly:${month}`,
+      `${monthlyPrompt.id}@${monthlyPrompt.version}`,
+      summaryInput,
+      () => generateMonthlySummary(summaryInput),
+    );
 
     // Store or update in database
     if (existing) {

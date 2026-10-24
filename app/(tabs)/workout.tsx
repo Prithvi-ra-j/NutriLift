@@ -42,6 +42,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
+import { useToast } from "../../components/ui/Toast";
 import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
@@ -134,6 +135,7 @@ function formFromSet(set: SetLog, exerciseLogId: string, exerciseName: string, e
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function WorkoutScreen() {
+  const { show: showToast } = useToast();
   const today = useToday();
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const selectedDate = pickedDate ?? today;
@@ -500,6 +502,7 @@ export default function WorkoutScreen() {
         { ...newSet, is_pr: isPR ? 1 : 0 },
       ],
     }));
+    showToast({ message: "Set logged.", kind: "success" });
 
     // Keep weight, clear variable fields
     setAddSetForm((prev) =>

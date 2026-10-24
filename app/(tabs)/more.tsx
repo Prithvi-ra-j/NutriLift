@@ -7,6 +7,7 @@ import {
   Alert,
   Switch,
   Platform,
+  TextInput,
 } from "react-native";
 import { Input } from "../../components/ui/Input";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -33,6 +34,15 @@ import { getProfile, getTargetsForDate } from "../../lib/data/profile";
 import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { exportDatabaseBackup } from "../../lib/data/exportAll";
 import { rebuildAllDerived } from "../../lib/db/queries/rebuild";
+import {
+  getAiContextPreferences,
+  getMinimumCalorieFloor,
+  setAiContextPreference,
+  setMinimumCalorieFloor,
+} from "../../lib/ai/preferences";
+import { getAiPreference } from "../../lib/data/aiPreferences";
+import { getTrackingPauseStatus, pauseTracking, resumeTracking } from "../../lib/pauseMode";
+import { addDays } from "../../lib/time/localDate";
 
 type MoreSection = "menu" | "body" | "supplements" | "recovery" | "reports" | "account" | "settings";
 type RestoreAvailability = "checking" | "available" | "local-data" | "no-backup" | "unavailable" | "error";
@@ -74,17 +84,40 @@ export default function MoreScreen() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [aiConsent, setAiConsent] = useState(false);
+  const [includeBodyMeasurements, setIncludeBodyMeasurements] = useState(false);
+  const [includeInjuriesAndNotes, setIncludeInjuriesAndNotes] = useState(false);
+  const [minimumCalorieFloor, setMinimumCalorieFloorState] = useState("1500");
+  const [trackingPause, setTrackingPause] = useState<{ paused: boolean; until: string | null }>({
+    paused: false,
+    until: null,
+  });
   const isWeb = Platform.OS === "web";
   const supplementNames = [...new Set(supplementLogs.map((log) => log.supplement_name))];
 
   const loadData = useCallback(async () => {
-    const [weight, suppLogs, recoveryLog, reportsData, profileData, targetData] = await Promise.all([
+    const [
+      weight,
+      suppLogs,
+      recoveryLog,
+      reportsData,
+      profileData,
+      targetData,
+      aiPreferences,
+      calorieFloor,
+      consent,
+      pauseStatus,
+    ] = await Promise.all([
       getLatestWeight(),
       getSupplementLogsForDate(today),
       getRecoveryLog(today),
       getAllReports(),
       getProfile(),
       getTargetsForDate(today),
+      getAiContextPreferences(),
+      getMinimumCalorieFloor(),
+      getAiPreference("ai_consent_v1"),
+      getTrackingPauseStatus(today),
     ]);
 
     setLatestWeight(weight?.weight_kg ?? null);
@@ -92,6 +125,11 @@ export default function MoreScreen() {
     setReports(reportsData);
     setProfile(profileData);
     setTargets(targetData);
+    setIncludeBodyMeasurements(aiPreferences.includeBodyMeasurements);
+    setIncludeInjuriesAndNotes(aiPreferences.includeInjuriesAndNotes);
+    setMinimumCalorieFloorState(String(calorieFloor));
+    setAiConsent(consent === "accepted");
+    setTrackingPause(pauseStatus);
 
     if (recoveryLog) {
       setSleepHr(recoveryLog.sleep_duration_hr?.toString() ?? "7");
@@ -220,6 +258,22 @@ export default function MoreScreen() {
     await upsertSupplementLog(today, supplementName, !currentTaken);
     const updated = await getSupplementLogsForDate(today);
     setSupplementLogs(updated);
+  };
+
+  const toggleTrackingPause = async () => {
+    try {
+      if (trackingPause.paused) {
+        await resumeTracking(today);
+      } else {
+        await pauseTracking(today, addDays(today, 6));
+      }
+      await loadData();
+    } catch (error) {
+      Alert.alert(
+        "Tracking setting not saved",
+        error instanceof Error ? error.message : "Could not update tracking pause.",
+      );
+    }
   };
 
   const saveRecovery = async () => {
@@ -740,12 +794,124 @@ export default function MoreScreen() {
         {/* ── Settings ── */}
         {activeSection === "settings" && (
           <>
+            <Card>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
+                TRACKING PAUSE
+              </Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 18, marginBottom: 12 }}>
+                {trackingPause.paused
+                  ? `Tracking is paused through ${trackingPause.until}. Paused days are skipped, not scored.`
+                  : "Pause scoring for illness, travel, or rest. Logging remains available."}
+              </Text>
+              <Button
+                label={trackingPause.paused ? "Resume tracking" : "Pause for 7 days"}
+                variant={trackingPause.paused ? "secondary" : "primary"}
+                onPress={toggleTrackingPause}
+              />
+            </Card>
             <ListRow
               icon="user"
               title={profile ? "Edit profile" : "Set up profile"}
               subtitle="Personalize your local profile"
               onPress={() => router.push("/modals/profile-setup")}
             />
+            <Card>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
+                AI PRIVACY AND SAFETY
+              </Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 18, marginBottom: 12 }}>
+                {aiConsent
+                  ? "AI features are enabled. You can withdraw consent at any time."
+                  : "AI features are disabled until you review and accept the data-use notice."}
+              </Text>
+              <Button
+                label="Review AI consent"
+                icon="shield"
+                onPress={() => router.push("/modals/ai-consent")}
+              />
+              <View style={{ height: 12 }} />
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingVertical: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
+                    Include body measurements in coach context
+                  </Text>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 3 }}>
+                    Off by default; shares only latest weight and body-fat readings.
+                  </Text>
+                </View>
+                <Switch
+                  value={includeBodyMeasurements}
+                  onValueChange={async (enabled) => {
+                    try {
+                      await setAiContextPreference("ai_include_body_measurements", enabled);
+                      setIncludeBodyMeasurements(enabled);
+                    } catch (error) {
+                      Alert.alert("Setting not saved", error instanceof Error ? error.message : "Could not save this preference.");
+                    }
+                  }}
+                />
+              </View>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingVertical: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: M3.colors.onSurface, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
+                    Include injuries and coach notes
+                  </Text>
+                  <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 3 }}>
+                    Off by default; sends only your saved coach notes.
+                  </Text>
+                </View>
+                <Switch
+                  value={includeInjuriesAndNotes}
+                  onValueChange={async (enabled) => {
+                    try {
+                      await setAiContextPreference("ai_include_injuries_notes", enabled);
+                      setIncludeInjuriesAndNotes(enabled);
+                    } catch (error) {
+                      Alert.alert("Setting not saved", error instanceof Error ? error.message : "Could not save this preference.");
+                    }
+                  }}
+                />
+              </View>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", marginTop: 8, marginBottom: 6 }}>
+                Minimum calorie floor (kcal/day; only raise from 1500)
+              </Text>
+              <TextInput
+                value={minimumCalorieFloor}
+                onChangeText={setMinimumCalorieFloorState}
+                keyboardType="number-pad"
+                onEndEditing={async () => {
+                  const floor = Number(minimumCalorieFloor);
+                  try {
+                    await setMinimumCalorieFloor(floor);
+                    setMinimumCalorieFloorState(String(floor));
+                  } catch (error) {
+                    setMinimumCalorieFloorState(String(await getMinimumCalorieFloor()));
+                    Alert.alert("Invalid calorie floor", error instanceof Error ? error.message : "The calorie floor could not be saved.");
+                  }
+                }}
+                style={{
+                  backgroundColor: M3.colors.surface,
+                  borderRadius: M3.shape.medium,
+                  borderWidth: 1,
+                  borderColor: M3.colors.outline,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  color: M3.colors.onSurface,
+                  fontSize: 14,
+                  fontFamily: "DMSans_500Medium",
+                }}
+              />
+            </Card>
+
+            <Card>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 8, letterSpacing: 0.5 }}>
+                SUPPLEMENTS AND MEDICAL
+              </Text>
+              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular", lineHeight: 18 }}>
+                NutriLift is not medical advice. The supplement log is a plain tracker. Talk to a qualified clinician about pain, medication, or supplements.
+              </Text>
+            </Card>
+
             <Card>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
                 PROFILE

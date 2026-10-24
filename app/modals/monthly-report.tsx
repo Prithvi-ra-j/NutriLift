@@ -10,7 +10,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { generateMonthlyReport } from "../../lib/groq";
+import { generateMonthlyReport } from "../../lib/ai/generators";
+import type { MonthlyReportResult } from "../../lib/ai/schemas";
+import { AiError } from "../../lib/ai/gateway";
 import { getProfile } from "../../lib/data/profile";
 import { getLast30DaysNutrition } from "../../lib/db/queries/nutrition";
 import { getSessionsInRange, getAllPRs } from "../../lib/db/queries/workout";
@@ -22,14 +24,13 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
-import type { MonthlyReport } from "../../lib/groq";
 import { useToday } from "../../lib/time/useToday";
 
 export default function MonthlyReportModal() {
   const today = useToday();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState("");
-  const [report, setReport] = useState<MonthlyReport | null>(null);
+  const [report, setReport] = useState<MonthlyReportResult | null>(null);
 
   const currentMonth = today.slice(0, 7);
 
@@ -82,6 +83,9 @@ export default function MonthlyReportModal() {
       setReport(reportData);
       setProgress("");
     } catch (err) {
+      if (err instanceof AiError && err.code === "consent") {
+        router.push("/modals/ai-consent");
+      }
       Alert.alert("Generation Failed", `Could not generate report: ${err instanceof Error ? err.message : "Unknown error"}`);
       setProgress("");
     } finally {

@@ -11,7 +11,8 @@
     "audit": "npm audit --omit=dev --audit-level=high || echo 'Non-blocking dependency audit found vulnerabilities; inspect the log.'",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "verify": "npm run typecheck && npm run lint && npm test -- --ci"
+    "check:readme": "node --experimental-strip-types tools/check-readme.ts",
+    "verify": "npm run typecheck && npm run lint && npm test -- --ci && npm run check:readme"
   },
   "dependencies": {
     "@expo-google-fonts/bebas-neue": "^0.4.1",
@@ -82,7 +83,8 @@
     "globalSetup": "<rootDir>/jest.global-setup.js",
     "testPathIgnorePatterns": [
       "/node_modules/",
-      "<rootDir>/apex/"
+      "<rootDir>/apex/",
+      "<rootDir>/supabase/functions/"
     ],
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@sentry/react-native|native-base|react-native-svg|@testing-library/react-native)"

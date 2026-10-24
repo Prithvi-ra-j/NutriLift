@@ -5,6 +5,8 @@ import { up as syncColumns } from "./003_sync_columns";
 import { up as profile } from "./004_profile";
 import { up as domainRules } from "./005_domain_rules";
 import { up as syncQueue } from "./006_sync_queue";
+import { up as ai } from "./007_ai";
+import { up as bodyMeasurementTime } from "./008_body_measurement_time";
 
 export const migrations: Migration[] = [
   { version: 1, name: "baseline", up: baseline },
@@ -13,4 +15,6 @@ export const migrations: Migration[] = [
   { version: 4, name: "profile", up: profile },
   { version: 5, name: "domain_rules", up: domainRules },
   { version: 6, name: "sync_queue", up: syncQueue },
+  { version: 7, name: "ai", up: ai },
+  { version: 8, name: "body_measurement_time", up: bodyMeasurementTime },
 ];

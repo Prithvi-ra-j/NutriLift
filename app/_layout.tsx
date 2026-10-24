@@ -19,6 +19,7 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
 import { M3 } from "../design-system/tokens";
 import { MigrationFailureScreen } from "../components/MigrationFailureScreen";
+import { ToastProvider } from "../components/ui/Toast";
 import { requestSync, startSyncTriggers } from "../lib/sync/syncEngine";
 import { purgeUploadedDeletedRows } from "../lib/db/purge";
 import { purgeUploadedQueue } from "../lib/integrations/life-os/syncRepository";
@@ -226,8 +227,9 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: M3.colors.background }}>
-        <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false }}>
+        <ToastProvider>
+          <StatusBar style="light" />
+          <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="modals/profile-setup"
@@ -235,6 +237,13 @@ export default function RootLayout() {
               presentation: "modal",
               headerShown: false,
               gestureEnabled: false,
+            }}
+          />
+          <Stack.Screen
+            name="modals/ai-consent"
+            options={{
+              presentation: "modal",
+              headerShown: false,
             }}
           />
           <Stack.Screen
@@ -294,7 +303,8 @@ export default function RootLayout() {
               headerShown: false,
             }}
           />
-        </Stack>
+          </Stack>
+        </ToastProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
   );

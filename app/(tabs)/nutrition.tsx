@@ -28,8 +28,9 @@ import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";
 import { logger } from "../../lib/logger";
-import { dayOfWeek, parseLocalDate } from "../../lib/time/localDate";
+import { addDays, dayOfWeek, parseLocalDate } from "../../lib/time/localDate";
 import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
+import { getTrackingPauseStatus, isTrackingPausedOnDate } from "../../lib/pauseMode";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -71,6 +72,10 @@ export default function NutritionScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
+  const [trackingPause, setTrackingPause] = useState<{ from: string | null; until: string | null }>({
+    from: null,
+    until: null,
+  });
   const [targets, setTargets] = useState<
     Pick<Awaited<ReturnType<typeof getTargetsForDate>>, "calories" | "protein_g" | "carbs_g" | "fat_g">
   >(DEFAULT_TARGETS);
@@ -81,22 +86,25 @@ export default function NutritionScreen() {
     const request = beginRequest(requestId);
     setLoadError(null);
     try {
-      const [nutritionData, logsData, weekData, targetData] = await Promise.all([
+      const trendDates = Array.from({ length: 7 }, (_, index) => addDays(today, index - 6));
+      const [nutritionData, logsData, weekData, targetData, pauseStatus] = await Promise.all([
         getDailyNutrition(selectedDate),
         getFoodLogsForDate(selectedDate),
         getLast7DaysNutrition(),
         getTargetsForDate(selectedDate),
+        getTrackingPauseStatus(today),
       ]);
       const weekTargets = await Promise.all(
-        weekData.map(async (day) => {
-          const dayTargets = await getTargetsForDate(day.date);
-          return [day.date, dayTargets.protein_g] as const;
+        trendDates.map(async (date) => {
+          const dayTargets = await getTargetsForDate(date);
+          return [date, dayTargets.protein_g] as const;
         }),
       );
       if (!isLatestRequest(requestId, request)) return;
       setNutrition(nutritionData);
       setFoodLogs(logsData);
       setLast7Days(weekData);
+      setTrackingPause({ from: pauseStatus.from, until: pauseStatus.until });
       setTargets(targetData);
       setProteinTargetsByDate(Object.fromEntries(weekTargets));
     } catch (error) {
@@ -112,7 +120,7 @@ export default function NutritionScreen() {
       setIsLoading(false);
       }
     }
-  }, [selectedDate]);
+  }, [selectedDate, today]);
 
   useEffect(() => {
     loadData();
@@ -385,35 +393,41 @@ export default function NutritionScreen() {
         ))}
 
         {/* ── Weekly Trend ── */}
-        {last7Days.length > 0 && (
-          <Card>
+        <Card>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-              7-DAY PROTEIN TREND
+              7-DAY PROTEIN LOGGING
             </Text>
             <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 6, height: 60 }}>
-              {last7Days.map((day, i) => {
-                const target = proteinTargetsByDate[day.date] ?? DEFAULT_TARGETS.protein_g;
-                const pct = Math.min(1, day.total_protein_g / target);
-                const hit = day.protein_target_met === 1;
+              {Array.from({ length: 7 }, (_, index) => addDays(today, index - 6)).map((date) => {
+                const day = last7Days.find((entry) => entry.date === date);
+                const skipped = isTrackingPausedOnDate(date, trackingPause.from, trackingPause.until);
+                const target = proteinTargetsByDate[date] ?? DEFAULT_TARGETS.protein_g;
+                const pct = day ? Math.min(1, day.total_protein_g / target) : 0;
+                const hit = day?.protein_target_met === 1;
                 return (
-                  <View key={i} style={{ flex: 1, alignItems: "center", gap: 4 }}>
-                    <View
-                      style={{
-                        width: "100%",
-                        height: Math.max(4, pct * 48),
-                        backgroundColor: hit ? M3.colors.success : M3.colors.error,
-                        borderRadius: 3,
-                      }}
-                    />
+                  <View key={date} style={{ flex: 1, alignItems: "center", gap: 4 }}>
+                    {skipped || !day ? (
+                      <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, height: 48 }}>
+                        —
+                      </Text>
+                    ) : (
+                      <View
+                        style={{
+                          width: "100%",
+                          height: Math.max(4, pct * 48),
+                          backgroundColor: hit ? M3.colors.success : M3.colors.onSurfaceMuted,
+                          borderRadius: 3,
+                        }}
+                      />
+                    )}
                     <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 9, fontFamily: "DMSans_400Regular" }}>
-                      {parseLocalDate(day.date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
+                      {parseLocalDate(date).toLocaleDateString("en-US", { weekday: "short" }).slice(0, 1)}
                     </Text>
                   </View>
                 );
               })}
             </View>
-          </Card>
-        )}
+        </Card>
 
         {foodLogs.length === 0 && (
           <View style={{ alignItems: "center", paddingVertical: 40, gap: 12 }}>

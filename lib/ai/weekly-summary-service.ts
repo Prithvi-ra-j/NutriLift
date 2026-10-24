@@ -3,8 +3,10 @@ import { getDailyNutritionRange } from "../db/queries/nutrition";
 import { getSessionsForDateRange } from "../db/queries/workout";
 import { getRecoveryLogsForDateRange } from "../db/queries/recovery";
 import { getBodyStatsForDateRange } from "../db/queries/body";
-import { getWeeklySummary, insertWeeklySummary, getPreviousWeeklySummaries } from "../db/queries/reports";
-import { generateWeeklySummary } from "../groq/generateCoachResponse";
+import { getWeeklySummary, insertWeeklySummary, updateWeeklySummary, getPreviousWeeklySummaries } from "../db/queries/reports";
+import { generateWeeklySummary } from "./generators";
+import { getOrGenerateAiSummary } from "./summaryCache";
+import { weeklyPrompt } from "./prompts/weekly";
 import type { WeeklySummary } from "../db/schema";
 import { logger } from "../logger";
 import { localDateString } from "../time/localDate";
@@ -16,10 +18,6 @@ import { localDateString } from "../time/localDate";
 export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: string): Promise<WeeklySummary | null> {
   // Check if summary already exists
   const existing = await getWeeklySummary(weekStart);
-  if (existing) {
-    return existing;
-  }
-
   // Don't generate summary for current week (incomplete data)
   if (weekEnd >= localDateString()) {
     return null; // Current week - don't generate yet
@@ -92,14 +90,36 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
         : {};
 
     // Generate AI summary
-    const aiSummary = await generateWeeklySummary({
+    const summaryInput = {
       week_start: weekStart,
       week_end: weekEnd,
       nutrition: nutritionStats,
       workouts: workoutStats,
       recovery: recoveryStats,
       body: bodyStatsData,
-    });
+    };
+    const aiSummary = await getOrGenerateAiSummary(
+      `weekly:${weekStart}`,
+      `${weeklyPrompt.id}@${weeklyPrompt.version}`,
+      summaryInput,
+      () => generateWeeklySummary(summaryInput),
+    );
+
+    if (existing) {
+      if (existing.ai_summary !== aiSummary) {
+        await updateWeeklySummary(existing.id, {
+          ai_summary: aiSummary,
+          stats_json: JSON.stringify({
+            nutrition: nutritionStats,
+            workouts: workoutStats,
+            recovery: recoveryStats,
+            body: bodyStatsData,
+          }),
+        });
+        return { ...existing, ai_summary: aiSummary };
+      }
+      return existing;
+    }
 
     // Store in database
     const summary: WeeklySummary = {

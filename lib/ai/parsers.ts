@@ -1,48 +1,58 @@
-import { parseFoodFromText } from "../groq/parseFood";
-import { parseExerciseFromText } from "../groq/parseExercise";
-import { parseInBodyText } from "../groq/parseInBody";
-
-// Re-export types for backward compatibility
-export type {
-  ParsedFoodItem,
-  FoodParseResult,
-} from "../groq/parseFood";
-
-export type {
-  ParsedSet,
-  ParsedExercise,
+import { ExerciseParseSchema, FoodParseSchema, InBodyParseSchema } from "./schemas";
+import type {
   ExerciseParseResult,
-} from "../groq/parseExercise";
+  FoodParseResult,
+  InBodyParseResult,
+  ParsedFoodItem,
+} from "./schemas";
+import { requestStructured } from "./structured";
+import { exerciseParsePrompt } from "./prompts/exercise-parse";
+import { foodParsePrompt } from "./prompts/food-parse";
+import { inbodyPrompt } from "./prompts/inbody";
 
 export type {
+  ExerciseParseResult,
+  FoodParseResult,
   InBodyParseResult,
-} from "../groq/parseInBody";
+  ParsedFoodItem,
+} from "./schemas";
+export type ParsedSet = ExerciseParseResult["exercises"][number]["sets"][number];
+export type ParsedExercise = ExerciseParseResult["exercises"][number];
 
-// ─── Parsers ──────────────────────────────────────────────────────────────────
-
-export async function parseFoodInput(input: string) {
-  try {
-    return await parseFoodFromText(input);
-  } catch (error) {
-    throw new Error(`Food parsing failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+export function parseFoodFromText(text: string): Promise<FoodParseResult> {
+  return requestStructured(
+    foodParsePrompt,
+    text,
+    FoodParseSchema,
+  );
 }
 
-export async function parseExerciseInput(input: string) {
-  try {
-    return await parseExerciseFromText(input);
-  } catch (error) {
-    throw new Error(`Exercise parsing failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+export async function parseFoodFromVoice(transcription: string): Promise<FoodParseResult> {
+  const cleaned = transcription
+    .toLowerCase()
+    .replace(/\bi ate\b/gi, "")
+    .replace(/\bi had\b/gi, "")
+    .replace(/\bfor (breakfast|lunch|dinner|snack)\b/gi, "")
+    .trim();
+  return parseFoodFromText(cleaned);
 }
 
-// Re-export for backward compatibility
-export { parseInBodyText } from "../groq/parseInBody";
-
-export async function parseInBodyInput(text: string) {
-  try {
-    return await parseInBodyText(text);
-  } catch (error) {
-    throw new Error(`InBody parsing failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-  }
+export function parseExerciseFromText(text: string): Promise<ExerciseParseResult> {
+  return requestStructured(
+    exerciseParsePrompt,
+    text,
+    ExerciseParseSchema,
+  );
 }
+
+export function parseInBodyText(text: string): Promise<InBodyParseResult> {
+  return requestStructured(
+    inbodyPrompt,
+    text,
+    InBodyParseSchema,
+  );
+}
+
+export const parseFoodInput = parseFoodFromText;
+export const parseExerciseInput = parseExerciseFromText;
+export const parseInBodyInput = parseInBodyText;

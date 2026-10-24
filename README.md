@@ -1,154 +1,82 @@
 # NutriLift
 
-NutriLift is a local-first fitness and nutrition tracker built with Expo and React Native. It supports workout logging, nutrition tracking, body-composition records, recovery signals, AI coaching, and a prepared Supabase sync layer.
+NutriLift is an Android fitness and nutrition tracker built with Expo and React Native.
+It stores workout and nutrition records in a local SQLite database.
+Optional cloud sync and AI requests use authenticated Supabase services.
 
-The app remains fully usable without a network connection. User data is stored locally in SQLite and, once configured, selected health records are queued for authenticated Supabase sync.
+## Features
 
-## Capabilities
+<!-- features:start -->
+| Feature | State | Test file |
+| --- | --- | --- |
+| Barcode food data normalization | Working | `lib/services/__tests__/barcodeScanner.test.ts` |
+| AI request and output safety validation | Working | `lib/ai/__tests__/aiSafetySchemas.test.ts` |
+| Coach response validation and target clamping | Working | `lib/ai/__tests__/coach.test.ts` |
+| Summary feature-flag defaults | Working | `lib/__tests__/featureFlags.test.ts` |
+| Body-composition comment safety gate | Working | `lib/analytics/__tests__/bodyCompSafety.test.ts` |
+| Toast queue and undo action | Beta | `components/ui/__tests__/Toast.test.tsx` |
+| Workout progression rules | Beta | `lib/domain/__tests__/domain.test.ts` |
+| Supabase sync transport | Beta | `lib/integrations/life-os/syncClient.test.ts` |
+<!-- features:end -->
 
-- Workout sessions, exercises, sets, volume, and personal records
-- Food logging by manual entry, voice input, barcode, and food lookup
-- Daily nutrition totals and adherence tracking
-- Weight, InBody, sleep, HRV, energy, soreness, and stress records
-- AI-assisted nutrition parsing, coaching, and progress summaries through Groq
-- Progress-report PDF export
-- Local-first queued sync with deterministic record IDs, tombstones, retries, and user-scoped Supabase records
+The feature table is checked against [`docs/features.json`](docs/features.json) by `npm run check:readme`.
 
-## Technology
+## Quick start
 
-| Area | Implementation |
+Requirements: Node.js 22.13 or later, npm, and an Android emulator or device.
+
+```bash
+npm ci
+```
+
+Copy `.env.example` to `.env`, add the Supabase project URL and public anon key if using cloud features, then start Expo:
+
+```bash
+npx expo start
+```
+
+Run the native Android app with `npm run android`. The app targets Android; a web build is not supported.
+
+## Environment
+
+| Name | Used by | Secret |
+| --- | --- | --- |
+| `EXPO_PUBLIC_SUPABASE_URL` | Supabase client and cloud sync | No |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Supabase client and cloud sync; protected by RLS | No |
+| `EXPO_PUBLIC_OFF_CONTACT_EMAIL` | Open Food Facts User-Agent for barcode lookup; set in local/EAS build configuration | No |
+
+Only public configuration belongs in app build environment variables. `.env.example` contains the two Supabase values; barcode lookup additionally requires a project contact email. Provider keys and the Supabase service-role key are server-side secrets; see [`docs/RUNBOOK.md`](docs/RUNBOOK.md). Never bundle them in the app.
+
+## Commands
+
+| Command | Purpose |
 | --- | --- |
-| Mobile | Expo SDK 58, React Native, Expo Router |
-| Language | TypeScript |
-| Local data | Expo SQLite and Drizzle ORM |
-| State | Zustand and Immer |
-| AI | Groq |
-| Secure session storage | Expo Secure Store |
-| Cloud sync | Supabase Auth, Postgres, and Row Level Security |
+| `npm run start` | Start the Expo development server |
+| `npm run android` | Build and run the native Android app |
+| `npm run typecheck` | Run TypeScript checks |
+| `npm run lint` | Run ESLint |
+| `npm test -- --ci` | Run Jest tests |
+| `npm run verify` | Run typecheck, lint, tests, and README consistency checks |
+| `npm run test:supabase` | Run local Supabase SQL tests; Docker must be available |
 
-## Prerequisites
+## Architecture and data
 
-- Node.js 18 or later
-- npm
-- Android Studio and an emulator for native Android builds, or Expo Go for development
-- A Supabase project and authenticated account for AI features
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the data flow and invariants. SQLite uses the existing `apex.db` filename so upgrades do not orphan installed users' data. Supabase sync is opt-in and user-scoped; configure and validate the intended project before applying migrations.
 
-## Install And Run
+## Release
 
-```bash
-npm install --legacy-peer-deps
-cp .env.example .env
-npm start
-```
-
-Start an Android build with:
+Android preview APKs use the internal `preview` EAS profile. Production Android releases use the `production` profile and build an app bundle:
 
 ```bash
-npm run android
+eas build --platform android --profile preview
+eas build --platform android --profile production
 ```
 
-Start the web target with:
+Native permission, package, or database-migration changes require a new binary. Use an OTA update only for JavaScript changes compatible with the installed runtime fingerprint.
 
-```bash
-npm run web
-```
+## Troubleshooting
 
-The `--legacy-peer-deps` flag is currently required because of the Expo/Jest peer-dependency combination in this project.
-
-## Environment Configuration
-
-Create `.env` from `.env.example` and configure the values required by the features you use.
-
-```dotenv
-EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-Never put a Groq API key or Supabase service-role key in the mobile app. The client only uses the project URL and public anon key. Sync stays disabled until both values are valid.
-
-AI calls go through the authenticated `ai-chat` Edge Function. Apply the gateway migration, set the server-side secret, then deploy the function:
-
-```bash
-supabase db push
-supabase secrets set GROQ_API_KEY=your_groq_api_key
-supabase functions deploy ai-chat
-```
-
-The function verifies the Supabase JWT, accepts only the configured model, and enforces request-size, output-token, and daily per-user limits.
-
-## Local Data And Sync
-
-NutriLift stores app data on-device in SQLite. The current database filename is retained as `apex.db` solely for backward compatibility with existing installations; it is not user-facing and should not be renamed without a data migration.
-
-The sync contract is implemented under `lib/integrations/life-os/`:
-
-- records have deterministic `external_id` values
-- changes are queued locally before upload
-- sync state uses a source-update cursor
-- deletes are emitted as tombstones
-- personal-record tombstones preserve their original external IDs
-- Supabase rows are written to `public.sync_records`
-
-The prepared Supabase schema and Row Level Security policies are in:
-
-```text
-supabase/migrations/202609200001_nutrilift_sync.sql
-```
-
-Apply that migration only after creating the intended Supabase project and configuring Auth. NutriLift and any connected consumer must use the same Supabase project, the same signed-in user, and the `sync_records` table.
-
-## Project Layout
-
-```text
-app/                         Expo Router screens and modals
-components/                  Shared application UI
-design-system/               Theme tokens
-lib/db/                      SQLite client, schema, and data queries
-lib/integrations/life-os/    Sync contract, mappers, queue, and client
-lib/supabase/                Supabase client and authentication helpers
-lib/groq/                    AI prompts and Groq services
-supabase/migrations/         Cloud schema and RLS policies
-supabase/functions/          Authenticated server-side integrations
-src/__tests__/               Focused sync contract tests
-android/                     Native Android project
-```
-
-## Quality Checks
-
-Run the focused sync tests:
-
-```bash
-npx jest --runInBand src/__tests__/nutrilift-sync.test.ts src/__tests__/nutrilift-record-mappers.test.ts
-```
-
-Run the TypeScript check:
-
-```bash
-npx tsc --noEmit --pretty false
-```
-
-Run the full configured test suite:
-
-```bash
-npm test
-```
-
-Run the local Supabase database tests (Docker Desktop must be running):
-
-```bash
-npx supabase start
-npm run test:supabase
-npx supabase stop
-```
-
-The local Supabase CLI and database configuration are included in the project. These database tests do not require a hosted Supabase project or credentials.
-
-## Android Identity
-
-NutriLift uses `com.prithvi.nutrilift` as its Android application ID and native package namespace. A native rebuild is required after this identifier change.
-
-## Current Limits
-
-- Live Supabase deployment and end-to-end authentication still require a real Supabase project and configured environment variables.
-- Sync is designed for native SQLite. It is unavailable on web when the native database is not present.
-- AI capabilities require a deployed `ai-chat` Edge Function, an authenticated Supabase user, and network access.
+- **Cloud features are unavailable:** check the two public Supabase values, Auth configuration, and that the user is signed in.
+- **AI requests fail:** confirm the authenticated Edge Functions and server-side secrets are configured; do not put provider keys in `.env`.
+- **Database migration fails:** keep the app data intact, capture the error, and use the migration recovery guidance in [`docs/RUNBOOK.md`](docs/RUNBOOK.md).
+- **SQL tests cannot connect:** start Docker Desktop and the local Supabase stack before running `npm run test:supabase`.

@@ -1,10 +1,6 @@
-import { supabase } from "../supabase/client";
+import { transcribe } from "./gateway";
 
 export async function transcribeAudio(audioUri: string): Promise<string> {
-  if (!supabase) {
-    throw new Error("AI is unavailable until Supabase is configured.");
-  }
-
   const form = new FormData();
   const audioFile = {
     uri: audioUri,
@@ -13,15 +9,10 @@ export async function transcribeAudio(audioUri: string): Promise<string> {
   } as unknown as Blob;
   form.append("audio", audioFile, "voice.m4a");
 
-  const { data, error } = await supabase.functions.invoke("ai-transcribe", {
-    body: form,
-  });
-
-  if (error) {
-    throw new Error(error.message || "Transcription failed.");
-  }
-
-  return (data as { text?: string } | null)?.text ?? "";
+  const result = await transcribe(form, audioUri);
+  const text = result.text.trim();
+  if (!text) throw new Error("Transcription returned no speech.");
+  return text;
 }
 
 export const transcribeAudioMultilingual = transcribeAudio;

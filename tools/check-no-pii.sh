@@ -4,6 +4,7 @@ set -eu
 # Local-only denylist: create tools/pii-patterns.local with one extended-regex
 # pattern per line. It is intentionally gitignored and must not contain user data
 # in tracked source. CI can inject PII_PATTERNS_FILE from a protected secret/file.
+# Registered Expo ownership and native application identifiers are intentional exceptions.
 PATTERNS_FILE="${PII_PATTERNS_FILE:-tools/pii-patterns.local}"
 if [ ! -f "$PATTERNS_FILE" ]; then
   echo "PII check cannot run: missing local denylist at $PATTERNS_FILE" >&2
