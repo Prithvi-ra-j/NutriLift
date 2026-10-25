@@ -114,9 +114,8 @@ Deno.serve(async (request) => {
     console.error("[ai-chat] upstream request failed", { userId: authenticated.userId });
     return errorResponse("AI provider is temporarily unavailable.", 502);
   }
-  clearTimeout(timeout);
-
   if (!upstreamResponse.ok) {
+    clearTimeout(timeout);
     await refundAfterFailure(authenticated.userId, quotaLease);
     if (upstreamResponse.status === 429) {
       const retryAfter = Number(upstreamResponse.headers.get("Retry-After"));
@@ -136,10 +135,15 @@ Deno.serve(async (request) => {
   let responseBody: unknown;
   try {
     responseBody = await upstreamResponse.json();
-  } catch {
+  } catch (error) {
+    clearTimeout(timeout);
     await refundAfterFailure(authenticated.userId, quotaLease);
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return errorResponse("AI provider timed out.", 504);
+    }
     return errorResponse("AI provider returned an invalid response.", 502);
   }
+  clearTimeout(timeout);
 
   const usage = responseBody && typeof responseBody === "object"
     ? (responseBody as Record<string, unknown>).usage

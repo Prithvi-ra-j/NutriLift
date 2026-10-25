@@ -158,7 +158,6 @@ export default function CoachScreen() {
       if (!(err instanceof AiError)) {
         logger.error("Coach request failed", { error: errorMsg });
       }
-      addMessage(errMsg);
     } finally {
       setGenerating(false);
     }

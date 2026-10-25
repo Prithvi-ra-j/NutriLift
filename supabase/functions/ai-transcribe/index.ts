@@ -6,6 +6,7 @@ import {
   refundQuota,
   type QuotaLease,
 } from "../_shared/ai.ts";
+import { readBoundedMultipart } from "../_shared/multipart.ts";
 
 const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
 const UPSTREAM_TIMEOUT_MS = 25_000;
@@ -34,12 +35,14 @@ Deno.serve(async (request) => {
     return errorResponse("Transcription configuration is incomplete.", 500);
   }
 
-  let formData: FormData;
-  try {
-    formData = await request.formData();
-  } catch {
+  const multipart = await readBoundedMultipart(request, MAX_AUDIO_BYTES);
+  if (multipart.status === "too_large") {
+    return errorResponse("Audio upload must not exceed 5 MB.", 413);
+  }
+  if (multipart.status === "invalid") {
     return errorResponse("Audio upload is required.", 400);
   }
+  const formData = multipart.formData;
   const audioEntries = formData.getAll("audio");
   if (audioEntries.length !== 1 || [...formData.keys()].some((key) => key !== "audio")) {
     return errorResponse("Exactly one audio file is required.", 400);
@@ -90,9 +93,8 @@ Deno.serve(async (request) => {
     console.error("[ai-transcribe] upstream request failed", { userId: authenticated.userId });
     return errorResponse("Transcription provider is temporarily unavailable.", 502);
   }
-  clearTimeout(timeout);
-
   if (!upstreamResponse.ok) {
+    clearTimeout(timeout);
     await refundAfterFailure(authenticated.userId, quotaLease);
     if (upstreamResponse.status === 429) {
       const retryAfter = Number(upstreamResponse.headers.get("Retry-After"));
@@ -112,10 +114,15 @@ Deno.serve(async (request) => {
   let payload: unknown;
   try {
     payload = await upstreamResponse.json();
-  } catch {
+  } catch (error) {
+    clearTimeout(timeout);
     await refundAfterFailure(authenticated.userId, quotaLease);
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return errorResponse("Transcription provider timed out.", 504);
+    }
     return errorResponse("Transcription provider returned an invalid response.", 502);
   }
+  clearTimeout(timeout);
   if (!payload || typeof payload !== "object" || typeof (payload as { text?: unknown }).text !== "string") {
     await refundAfterFailure(authenticated.userId, quotaLease);
     return errorResponse("Transcription provider returned an invalid response.", 502);

@@ -81,7 +81,7 @@ export default function VoiceInputModal() {
         throw new Error("No audio recorded");
       }
 
-      logger.info("Transcribing audio for voice log", { uri });
+      logger.info("Transcribing audio for voice log");
       const transcribedText = await transcribeAudioMultilingual(uri);
       if (containsEatingSafetyRisk(transcribedText)) {
         setTranscript("");
