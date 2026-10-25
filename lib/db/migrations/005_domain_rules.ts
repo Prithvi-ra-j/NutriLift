@@ -46,6 +46,7 @@ export async function up(db: MigrationDatabase): Promise<void> {
     WHERE estimated_1rm_kg IS NULL;
 
     UPDATE barcode_cache SET cache_status = 'found' WHERE cache_status IS NULL;
+    UPDATE barcode_cache SET data_quality = 'consistent' WHERE data_quality = 'verified';
     CREATE INDEX IF NOT EXISTS idx_barcode_cache_expiry ON barcode_cache(expires_at);
   `);
 }

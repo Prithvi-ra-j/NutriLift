@@ -22,9 +22,11 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
+import { logger } from "../../lib/logger";
 import { useToday } from "../../lib/time/useToday";
-import { isLocalDateString } from "../../lib/time/localDate";
+import { localDateParam } from "../../lib/time/localDate";
 import { nowUnix } from "../../lib/time/clock";
+import { createManualFoodDraft, isValidFoodLog } from "../../lib/domain/nutrition";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -45,17 +47,13 @@ export default function LogFoodModal() {
   const [parseNotes, setParseNotes] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const logDate = isLocalDateString(params.date) ? params.date : today;
+  const logDate = localDateParam(params.date, today);
   const localSuggestions = parsedItems ? [] : searchLocalFoods(input);
 
   const makeManualItem = (name: string): ParsedFoodItem => ({
-    name,
+    ...createManualFoodDraft(name),
     quantity: "100 g",
     quantity_g: 100,
-    calories: 0,
-    protein_g: 0,
-    carbs_g: 0,
-    fat_g: 0,
     fiber_g: null,
     confidence: "low",
     needs_review: false,
@@ -72,7 +70,7 @@ export default function LogFoodModal() {
       carbs_g: food.per100g.carbs,
       fat_g: food.per100g.fat,
       fiber_g: food.per100g.fiber,
-      confidence: food.dataQuality === "verified" ? "high" : "medium",
+      confidence: food.dataQuality === "consistent" ? "high" : "medium",
       needs_review: false,
     }]);
     setParseNotes(food.warning ?? null);
@@ -128,13 +126,15 @@ export default function LogFoodModal() {
     if (field === "name" || field === "quantity" || field === "confidence") {
       item[field] = value;
     } else {
-      item[field] = value.trim() === "" ? 0 : Number(value);
+      item[field] = value.trim() === "" ? Number.NaN : Number(value);
     }
-    item.needs_review =
-      Math.abs(
-        Number(item.calories) -
-        (4 * Number(item.protein_g) + 4 * Number(item.carbs_g) + 9 * Number(item.fat_g)),
-      ) > 0.3 * Number(item.calories) + 20;
+      item.needs_review = [item.calories, item.protein_g, item.carbs_g, item.fat_g].every(
+        (macro) => typeof macro === "number" && Number.isFinite(macro),
+      ) &&
+        Math.abs(
+          Number(item.calories) -
+          (4 * Number(item.protein_g) + 4 * Number(item.carbs_g) + 9 * Number(item.fat_g)),
+        ) > 0.3 * Number(item.calories) + 20;
     updated[index] = item as unknown as ParsedFoodItem;
     setParsedItems(updated);
   };
@@ -145,9 +145,7 @@ export default function LogFoodModal() {
   };
 
   const handleSave = async () => {
-    if (!parsedItems || parsedItems.length === 0 || parsedItems.some((item) =>
-      !item.name.trim() || !Number.isFinite(item.calories) || item.calories <= 0
-    )) return;
+    if (!parsedItems || !canSaveItems) return;
     setIsSaving(true);
     try {
       const now = nowUnix();
@@ -158,9 +156,9 @@ export default function LogFoodModal() {
           name: item.name,
           quantity_g: item.quantity_g,
           calories: item.calories,
-          protein_g: item.protein_g,
-          carbs_g: item.carbs_g,
-          fat_g: item.fat_g,
+          protein_g: Number.isFinite(item.protein_g) ? item.protein_g : 0,
+          carbs_g: Number.isFinite(item.carbs_g) ? item.carbs_g : 0,
+          fat_g: Number.isFinite(item.fat_g) ? item.fat_g : 0,
           fiber_g: item.fiber_g,
           sugar_g: null,
           sodium_mg: null,
@@ -169,7 +167,10 @@ export default function LogFoodModal() {
           created_at: now,
         })));
       router.back();
-    } catch (err) {
+    } catch (error) {
+      logger.error("Food log save failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       Alert.alert("Save Failed", "Could not save food log. Please try again.");
     } finally {
       setIsSaving(false);
@@ -178,10 +179,10 @@ export default function LogFoodModal() {
 
   const totalMacros = parsedItems?.reduce(
     (acc, item) => ({
-      calories: acc.calories + item.calories,
-      protein: acc.protein + item.protein_g,
-      carbs: acc.carbs + item.carbs_g,
-      fat: acc.fat + item.fat_g,
+      calories: acc.calories + (Number.isFinite(item.calories) ? item.calories : 0),
+      protein: acc.protein + (Number.isFinite(item.protein_g) ? item.protein_g : 0),
+      carbs: acc.carbs + (Number.isFinite(item.carbs_g) ? item.carbs_g : 0),
+      fat: acc.fat + (Number.isFinite(item.fat_g) ? item.fat_g : 0),
     }),
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
@@ -189,12 +190,13 @@ export default function LogFoodModal() {
     parsedItems !== null &&
     parsedItems.length > 0 &&
     parsedItems.every((item) =>
-      item.name.trim().length > 0 &&
-      Number.isFinite(item.calories) &&
-      item.calories > 0 &&
-      [item.protein_g, item.carbs_g, item.fat_g].every(
-        (macro) => Number.isFinite(macro) && macro >= 0,
-      ),
+      isValidFoodLog({
+        name: item.name,
+        calories: item.calories,
+        protein_g: Number.isFinite(item.protein_g) ? item.protein_g : 0,
+        carbs_g: Number.isFinite(item.carbs_g) ? item.carbs_g : 0,
+        fat_g: Number.isFinite(item.fat_g) ? item.fat_g : 0,
+      }),
     );
 
   return (
@@ -285,14 +287,6 @@ export default function LogFoodModal() {
             />
           </View>
 
-          <Button
-            label={isParsing ? "Parsing..." : "Parse with AI"}
-            icon="cpu"
-            loading={isParsing}
-            disabled={!input.trim()}
-            onPress={handleParse}
-          />
-
           {localSuggestions.length > 0 && (
             <View style={{ gap: 8 }}>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
@@ -312,6 +306,14 @@ export default function LogFoodModal() {
               ))}
             </View>
           )}
+
+          <Button
+            label={isParsing ? "Parsing..." : "Parse with AI"}
+            icon="cpu"
+            loading={isParsing}
+            disabled={!input.trim()}
+            onPress={handleParse}
+          />
 
           {/* ── Parse Notes ── */}
           {parseNotes && (
@@ -376,7 +378,7 @@ export default function LogFoodModal() {
                           {label}
                         </Text>
                         <TextInput
-                          value={String(item[field] ?? "")}
+                          value={Number.isFinite(item[field]) ? String(item[field]) : ""}
                           onChangeText={(v) => updateItem(index, field, v)}
                           keyboardType="decimal-pad"
                           style={{
@@ -429,7 +431,7 @@ export default function LogFoodModal() {
               />
               {!canSaveItems && (
                 <Text style={{ color: M3.colors.warning, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                  Enter a name, calories above zero, and valid non-negative macros for every item.
+                  Enter a name and calories above zero. Blank macros are saved as zero.
                 </Text>
               )}
             </>

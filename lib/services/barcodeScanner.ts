@@ -61,7 +61,7 @@ export async function lookupBarcode(barcode: string): Promise<FoodResult> {
   return result;
 }
 
-async function lookupOpenFoodFacts(barcode: string): Promise<FoodResult> {
+export async function lookupOpenFoodFacts(barcode: string): Promise<FoodResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6000);
 

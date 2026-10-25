@@ -37,6 +37,10 @@ export function isLocalDateString(value: unknown): value is string {
   }
 }
 
+export function localDateParam(value: unknown, fallback: string): string {
+  return isLocalDateString(value) ? value : fallback;
+}
+
 export function addDays(value: string, days: number): string {
   if (!Number.isInteger(days)) {
     throw new RangeError("The number of days must be an integer.");

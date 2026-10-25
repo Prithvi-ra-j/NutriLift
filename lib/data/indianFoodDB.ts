@@ -35,7 +35,7 @@ export interface IndianFood {
     };
     factor: number;
   };
-  dataQuality: 'verified' | 'estimated';
+  dataQuality: 'consistent' | 'estimated';
 }
 
 export const INDIAN_FOOD_DB: IndianFood[] = [
@@ -55,7 +55,7 @@ export const INDIAN_FOOD_DB: IndianFood[] = [
       { label: '+ Ghee (1 tsp)', addFat: 4.5, addCal: 40 },
     ],
     notes: 'Weight before cooking. Values for dry-roasted tawa roti.',
-    dataQuality: 'verified'
+    dataQuality: 'consistent'
   },
   // Add more foods here...
 ];

@@ -18,13 +18,13 @@ import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import type { FoodResult } from "../../lib/services/barcodeScanner";
 import { useToday } from "../../lib/time/useToday";
-import { isLocalDateString } from "../../lib/time/localDate";
+import { localDateParam } from "../../lib/time/localDate";
 import { nowUnix } from "../../lib/time/clock";
 
 export default function NutritionCardModal() {
   const params = useLocalSearchParams<{ date?: string; foodData?: string; source?: string; barcode?: string }>();
   const today = useToday();
-  const logDate = isLocalDateString(params.date) ? params.date : today;
+  const logDate = localDateParam(params.date, today);
   
   // Parse food data
   const foodData: FoodResult | null = params.foodData

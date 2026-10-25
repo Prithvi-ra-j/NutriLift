@@ -75,6 +75,8 @@ describe("database migrations", () => {
 
       await migrate(database, migrations.slice(0, 3));
       native.exec(`
+        INSERT INTO barcode_cache (barcode, name, source, data_quality, cached_at)
+          VALUES ('0000000000000', 'Fixture water', 'openfoodfacts', 'verified', 1);
         INSERT INTO exercise_logs (id, session_id, date, exercise_name, exercise_type)
           VALUES ('fixture-exercise-2', 'fixture-session-1', '2025-01-02', 'Fixture Plank', 'duration');
         INSERT INTO set_logs (id, exercise_log_id, set_number, weight_kg, reps, duration_sec, logged_at)
@@ -95,6 +97,9 @@ describe("database migrations", () => {
       expect(
         native.prepare("SELECT estimated_1rm_kg FROM personal_records WHERE exercise_name = 'Fixture Exercise'").get(),
       ).toEqual({ estimated_1rm_kg: 66.6 });
+      expect(
+        native.prepare("SELECT data_quality FROM barcode_cache WHERE barcode = '0000000000000'").get(),
+      ).toEqual({ data_quality: "consistent" });
       expect(
         native.prepare("PRAGMA table_info(personal_records)").all(),
       ).toEqual(

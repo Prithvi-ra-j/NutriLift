@@ -3,6 +3,7 @@ import {
   daysBetween,
   dayOfWeek,
   isLocalDateString,
+  localDateParam,
   localDateString,
   parseLocalDate,
   startOfWeekMonday,
@@ -25,6 +26,11 @@ describe("local calendar arithmetic", () => {
     expect(localDateString(parseLocalDate("2026-02-28"))).toBe("2026-02-28");
     expect(isLocalDateString("2026-02-29")).toBe(false);
     expect(() => parseLocalDate("2026-02-29")).toThrow(RangeError);
+  });
+
+  it("preserves a valid past date from a route parameter", () => {
+    expect(localDateParam("2025-01-02", "2026-10-25")).toBe("2025-01-02");
+    expect(localDateParam("invalid", "2026-10-25")).toBe("2026-10-25");
   });
 
   it("handles month ends and leap days without UTC conversion", () => {

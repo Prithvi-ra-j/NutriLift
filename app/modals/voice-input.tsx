@@ -17,14 +17,14 @@ import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import { useToday } from "../../lib/time/useToday";
-import { isLocalDateString } from "../../lib/time/localDate";
+import { localDateParam } from "../../lib/time/localDate";
 import { nowUnix } from "../../lib/time/clock";
 import { logger } from "../../lib/logger";
 
 export default function VoiceInputModal() {
   const params = useLocalSearchParams<{ date?: string }>();
   const today = useToday();
-  const logDate = isLocalDateString(params.date) ? params.date : today;
+  const logDate = localDateParam(params.date, today);
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);

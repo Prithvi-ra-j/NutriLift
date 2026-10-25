@@ -12,6 +12,34 @@ export type NutritionTargets = {
   protein_g: number;
 };
 
+export type FoodLogValidationPoint = Pick<
+  FoodLogPoint,
+  "calories" | "protein_g" | "carbs_g" | "fat_g"
+> & {
+  name: string;
+};
+
+export function createManualFoodDraft(name: string): FoodLogValidationPoint {
+  return {
+    name,
+    calories: Number.NaN,
+    protein_g: Number.NaN,
+    carbs_g: Number.NaN,
+    fat_g: Number.NaN,
+  };
+}
+
+export function isValidFoodLog(log: FoodLogValidationPoint): boolean {
+  return (
+    log.name.trim().length > 0 &&
+    Number.isFinite(log.calories) &&
+    log.calories > 0 &&
+    [log.protein_g, log.carbs_g, log.fat_g].every(
+      (macro) => Number.isFinite(macro) && macro >= 0,
+    )
+  );
+}
+
 export function sumFoodLogs(logs: FoodLogPoint[]): NutritionTotals {
   return logs.reduce(
     (totals, log) => ({

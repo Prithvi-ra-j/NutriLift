@@ -2,7 +2,12 @@ import { e1rm } from "../e1rm";
 import { derivePRs } from "../prs";
 import { calculateVolume } from "../volume";
 import { shouldIncreaseLoad } from "../progression";
-import { adherenceScore, sumFoodLogs } from "../nutrition";
+import {
+  adherenceScore,
+  createManualFoodDraft,
+  isValidFoodLog,
+  sumFoodLogs,
+} from "../nutrition";
 import { num } from "../barcode";
 
 describe("strength domain", () => {
@@ -88,6 +93,31 @@ describe("strength domain", () => {
     ])).toBe(0);
   });
 
+  it("keeps volume invariant across every insertion order", () => {
+    const sets = [
+      { weightKg: 22.5, reps: 8, isWarmup: false, exerciseType: "weight_reps" },
+      { weightKg: 0, reps: 12, isWarmup: false, exerciseType: "bodyweight_reps" },
+      { weightKg: 80, reps: 3, isWarmup: true, exerciseType: "weight_reps" },
+      { weightKg: 35, reps: 10, isWarmup: false, exerciseType: "duration" },
+    ];
+    const expected = calculateVolume(sets);
+
+    const visitPermutations = (remaining: typeof sets, ordered: typeof sets = []) => {
+      if (remaining.length === 0) {
+        expect(calculateVolume(ordered)).toBe(expected);
+        return;
+      }
+      remaining.forEach((set, index) => {
+        visitPermutations(
+          [...remaining.slice(0, index), ...remaining.slice(index + 1)],
+          [...ordered, set],
+        );
+      });
+    };
+
+    visitPermutations(sets);
+  });
+
   it("checks progression across distinct dates and requires consistent weights", () => {
     const ready = ["2026-01-05", "2026-01-03"].map((date, index) => ({
       sessionId: `session-${index}`,
@@ -139,6 +169,29 @@ describe("nutrition domain", () => {
     expect(adherenceScore(sumFoodLogs(logs), { calories: 1000, protein_g: 50 }, 2)).toBe(100);
     expect(adherenceScore({ calories: 2000, protein_g: 75 }, { calories: 1000, protein_g: 50 }, 2)).toBe(40);
     expect(() => adherenceScore(sumFoodLogs(logs), { calories: 0, protein_g: 50 }, 2)).toThrow(RangeError);
+  });
+
+  it("rejects empty or zero-calorie entries while allowing zero macros", () => {
+    const validEntry = {
+      name: "Plain water",
+      calories: 1,
+      protein_g: 0,
+      carbs_g: 0,
+      fat_g: 0,
+    };
+    expect(isValidFoodLog({ ...validEntry, calories: 0 })).toBe(false);
+    expect(isValidFoodLog({ ...validEntry, calories: Number.NaN })).toBe(false);
+    expect(isValidFoodLog({ ...validEntry, protein_g: Number.NaN })).toBe(false);
+    expect(isValidFoodLog({ ...validEntry, name: "  " })).toBe(false);
+    expect(isValidFoodLog(validEntry)).toBe(true);
+  });
+
+  it("keeps a manual draft invalid until the user enters calories", () => {
+    const draft = createManualFoodDraft("Typed food");
+    expect(draft.name).toBe("Typed food");
+    expect(Number.isNaN(draft.calories)).toBe(true);
+    expect(isValidFoodLog(draft)).toBe(false);
+    expect(isValidFoodLog({ ...draft, calories: 120, protein_g: 0, carbs_g: 0, fat_g: 0 })).toBe(true);
   });
 });
 
