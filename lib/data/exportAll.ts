@@ -29,11 +29,14 @@ const EXPORT_TABLES = [
   "yearly_summaries",
   "sync_tombstones",
   "sync_queue",
+  "sync_checkpoint",
+  "sync_uploaded_deletions",
   "sync_state",
   "custom_exercises",
   "user_profile",
   "target_history",
   "app_settings",
+  "ai_summary_cache",
 ] as const;
 
 export async function exportDatabaseBackup(): Promise<string> {
