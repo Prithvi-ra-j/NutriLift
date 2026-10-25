@@ -1,7 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { getTableConfig } from "drizzle-orm/sqlite-core";
+import { buildSanitizedV0Fixture } from "../../data/sanitizedMigrationFixture";
 import * as schema from "../schema";
 import { migrations } from "./index";
 import { migrate, type MigrationDatabase } from "./runner";
@@ -42,7 +41,15 @@ describe("database migrations", () => {
     try {
       await migrations[0].up(database);
       native.exec(
-        readFileSync(join(__dirname, "__fixtures__", "v0-rows.sql"), "utf8"),
+        buildSanitizedV0Fixture({
+          foodLog: true,
+          dailyNutrition: true,
+          workoutSession: true,
+          exerciseLog: true,
+          setLog: true,
+          recoveryLog: true,
+          personalRecord: true,
+        }),
       );
       expect(native.prepare("PRAGMA user_version").get()).toEqual({
         user_version: 0,
@@ -51,9 +58,9 @@ describe("database migrations", () => {
       await migrate(database, migrations.slice(0, 3));
       native.exec(`
         INSERT INTO exercise_logs (id, session_id, date, exercise_name, exercise_type)
-          VALUES ('exercise-2', 'session-1', '2025-01-02', 'Plank', 'duration');
+          VALUES ('fixture-exercise-2', 'fixture-session-1', '2025-01-02', 'Fixture Plank', 'duration');
         INSERT INTO set_logs (id, exercise_log_id, set_number, weight_kg, reps, duration_sec, logged_at)
-          VALUES ('set-2', 'exercise-2', 1, 0, 45, 45, 1735778400);
+          VALUES ('fixture-set-2', 'fixture-exercise-2', 1, 0, 45, 45, 1735778400);
       `);
 
       await migrate(database, migrations);
@@ -62,13 +69,13 @@ describe("database migrations", () => {
         user_version: migrations.length,
       });
       expect(
-        native.prepare("SELECT exercise_type FROM exercise_logs WHERE id = 'exercise-1'").get(),
+        native.prepare("SELECT exercise_type FROM exercise_logs WHERE id = 'fixture-exercise-1'").get(),
       ).toEqual({ exercise_type: "weight_reps" });
       expect(
-        native.prepare("SELECT reps FROM set_logs WHERE id = 'set-2'").get(),
+        native.prepare("SELECT reps FROM set_logs WHERE id = 'fixture-set-2'").get(),
       ).toEqual({ reps: 0 });
       expect(
-        native.prepare("SELECT estimated_1rm_kg FROM personal_records WHERE exercise_name = 'Bench Press'").get(),
+        native.prepare("SELECT estimated_1rm_kg FROM personal_records WHERE exercise_name = 'Fixture Exercise'").get(),
       ).toEqual({ estimated_1rm_kg: 66.6 });
       expect(
         native.prepare("PRAGMA table_info(personal_records)").all(),
@@ -99,12 +106,12 @@ describe("database migrations", () => {
 
       expect(
         native
-          .prepare("SELECT updated_at FROM food_logs WHERE id = 'food-1'")
+          .prepare("SELECT updated_at FROM food_logs WHERE id = 'fixture-food-1'")
           .get(),
       ).toEqual({ updated_at: "2025-01-02T00:40:00.000Z" });
       expect(
         native
-          .prepare("SELECT updated_at FROM set_logs WHERE id = 'set-1'")
+          .prepare("SELECT updated_at FROM set_logs WHERE id = 'fixture-set-1'")
           .get(),
       ).toEqual({ updated_at: "2025-01-02T00:40:00.000Z" });
       expect(

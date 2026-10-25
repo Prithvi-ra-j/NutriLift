@@ -32,7 +32,10 @@ import { logger } from "../../lib/logger";
 import { useToday } from "../../lib/time/useToday";
 import { getProfile, getTargetsForDate } from "../../lib/data/profile";
 import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
-import { exportDatabaseBackup } from "../../lib/data/exportAll";
+import {
+  exportDatabaseBackup,
+  exportSanitizedMigrationFixture,
+} from "../../lib/data/exportAll";
 import { rebuildAllDerived } from "../../lib/db/queries/rebuild";
 import {
   getAiContextPreferences,
@@ -88,6 +91,7 @@ export default function MoreScreen() {
   const [includeBodyMeasurements, setIncludeBodyMeasurements] = useState(false);
   const [includeInjuriesAndNotes, setIncludeInjuriesAndNotes] = useState(false);
   const [minimumCalorieFloor, setMinimumCalorieFloorState] = useState("1500");
+  const [isExportingFixture, setIsExportingFixture] = useState(false);
   const [trackingPause, setTrackingPause] = useState<{ paused: boolean; until: string | null }>({
     paused: false,
     until: null,
@@ -990,6 +994,32 @@ export default function MoreScreen() {
                 }
               }}
             />
+
+            <Button
+              label="Export sanitized migration fixture"
+              icon="shield"
+              variant="secondary"
+              loading={isExportingFixture}
+              disabled={isExportingFixture || isWeb}
+              onPress={async () => {
+                setIsExportingFixture(true);
+                try {
+                  await exportSanitizedMigrationFixture();
+                } catch (error) {
+                  Alert.alert(
+                    "Fixture export failed",
+                    error instanceof Error
+                      ? error.message
+                      : "The sanitized fixture could not be created.",
+                  );
+                } finally {
+                  setIsExportingFixture(false);
+                }
+              }}
+            />
+            <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 6 }}>
+              Creates a generic v0 SQL fixture from populated table categories. Your live data is not changed or included.
+            </Text>
 
             <ListRow
               icon="download"

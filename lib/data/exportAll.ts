@@ -2,8 +2,12 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
 import { sqlite } from "../db/client";
-import { inTx } from "../db/tx";
+import { inTx, runExclusive } from "../db/tx";
 import { nowIso } from "../time/clock";
+import {
+  buildSanitizedV0Fixture,
+  type MigrationFixtureSources,
+} from "./sanitizedMigrationFixture";
 
 const EXPORT_TABLES = [
   "food_logs",
@@ -68,6 +72,72 @@ export async function exportDatabaseBackup(): Promise<string> {
     mimeType: "application/json",
     dialogTitle: "Export NutriLift data",
     UTI: "public.json",
+  });
+
+  return uri;
+}
+
+export async function exportSanitizedMigrationFixture(): Promise<string> {
+  if (Platform.OS === "web") {
+    throw new Error("Sanitized migration fixtures are available in the Android app.");
+  }
+
+  const directory = FileSystem.documentDirectory;
+  if (!directory) {
+    throw new Error("The app's document directory is unavailable.");
+  }
+
+  const sources = await runExclusive(async () => {
+    const hasRows = async (table: string): Promise<boolean> => {
+      const row = await sqlite.getFirstAsync<{ present: number }>(
+        `SELECT EXISTS (SELECT 1 FROM "${table}") AS present`,
+      );
+      return row?.present === 1;
+    };
+
+    const [
+      foodLog,
+      dailyNutrition,
+      workoutSession,
+      exerciseLog,
+      setLog,
+      recoveryLog,
+      personalRecord,
+    ] = await Promise.all([
+      hasRows("food_logs"),
+      hasRows("daily_nutrition"),
+      hasRows("workout_sessions"),
+      hasRows("exercise_logs"),
+      hasRows("set_logs"),
+      hasRows("recovery_logs"),
+      hasRows("personal_records"),
+    ]);
+
+    const result: MigrationFixtureSources = {
+      foodLog,
+      dailyNutrition,
+      workoutSession,
+      exerciseLog,
+      setLog,
+      recoveryLog,
+      personalRecord,
+    };
+    return result;
+  });
+
+  const fixture = buildSanitizedV0Fixture(sources);
+  const uri = `${directory}nutrilift-v0-sanitized-fixture.sql`;
+  await FileSystem.writeAsStringAsync(uri, fixture, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+
+  if (!(await Sharing.isAvailableAsync())) {
+    throw new Error("File sharing is unavailable on this device.");
+  }
+  await Sharing.shareAsync(uri, {
+    mimeType: "application/sql",
+    dialogTitle: "Export sanitized migration fixture",
+    UTI: "public.data",
   });
 
   return uri;
