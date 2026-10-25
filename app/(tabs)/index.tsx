@@ -441,7 +441,10 @@ export default function DashboardScreen() {
         {/* ── Quick Log FAB area ── */}
         <View style={{ flexDirection: "row", gap: 12 }}>
           <TouchableOpacity
-            onPress={() => router.push("/modals/log-food")}
+            onPress={() => router.push({
+              pathname: "/modals/log-food",
+              params: { meal: "breakfast", date: today },
+            })}
             style={{
               flex: 1,
               backgroundColor: M3.colors.primaryContainer,

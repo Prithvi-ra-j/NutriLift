@@ -18,7 +18,11 @@ import {
 } from "../schema";
 import { inTx } from "../tx";
 import { nowIso } from "../../time/clock";
-import { localDateString } from "../../time/localDate";
+import {
+  addDays,
+  localDateString,
+  startOfWeekMonday,
+} from "../../time/localDate";
 import {
   clearTombstoneInTransaction,
 } from "../../integrations/life-os/syncRepository";
@@ -709,6 +713,40 @@ export async function getPreviousSessionForDayType(
 
 export async function getCustomExercises(): Promise<CustomExercise[]> {
   return db.select().from(customExercises).orderBy(desc(customExercises.created_at));
+}
+
+export interface WorkoutDayData {
+  session: WorkoutSession | null;
+  exercises: ExerciseLog[];
+  setsByExercise: Record<string, SetLog[]>;
+  customExercises: CustomExercise[];
+  completedDayTypes: Set<string>;
+}
+
+export async function getWorkoutDay(date: string): Promise<WorkoutDayData> {
+  const monday = startOfWeekMonday(date);
+  const sunday = addDays(monday, 6);
+  const [sessions, customExerciseRows, weekSessions] = await Promise.all([
+    getSessionsForDate(date),
+    getCustomExercises(),
+    getSessionsInRange(monday, sunday),
+  ]);
+  const session = sessions[0] ?? null;
+  const exercises = session ? await getExercisesForSession(session.id) : [];
+  const setsEntries = await Promise.all(
+    exercises.map(async (exercise) => [
+      exercise.id,
+      await getSetsForExercise(exercise.id),
+    ] as const),
+  );
+
+  return {
+    session,
+    exercises,
+    setsByExercise: Object.fromEntries(setsEntries),
+    customExercises: customExerciseRows,
+    completedDayTypes: new Set(weekSessions.map((item) => item.day_type)),
+  };
 }
 
 export async function insertCustomExercise(exercise: NewCustomExercise): Promise<void> {

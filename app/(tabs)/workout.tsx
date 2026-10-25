@@ -11,10 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import {
-  getSessionsForDate,
-  getSessionsInRange,
-  getExercisesForSession,
-  getSetsForExercise,
+  getWorkoutDay,
   insertSession,
   insertExerciseLog,
   addTemplateExercises,
@@ -26,7 +23,6 @@ import {
   checkDoubleProgression,
   getLastWeightForExercise,
   calculateEpley1RM,
-  getCustomExercises,
   insertCustomExercise,
 } from "../../lib/db/queries/workout";
 import {
@@ -48,7 +44,7 @@ import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";
 import { nowIso, nowUnix } from "../../lib/time/clock";
-import { addDays, dayOfWeek, startOfWeekMonday } from "../../lib/time/localDate";
+import { addDays, dayOfWeek } from "../../lib/time/localDate";
 import { logger } from "../../lib/logger";
 import { fireAndLog } from "../../lib/async";
 import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
@@ -195,42 +191,21 @@ export default function WorkoutScreen() {
 
   // ─── Load ──────────────────────────────────────────────────────────────────
 
-  const loadCompletedDayTypes = useCallback(async (date: string): Promise<Set<string>> => {
-    const monday = startOfWeekMonday(date);
-    const sunday = addDays(monday, 6);
-    const sessions = await getSessionsInRange(monday, sunday);
-    return new Set(sessions.map((item) => item.day_type));
-  }, []);
-
   const loadWorkout = useCallback(async () => {
     const request = beginRequest(requestId);
     setLoadError(null);
     try {
-      const [sessions, customExercisesData, completed] = await Promise.all([
-        getSessionsForDate(selectedDate),
-        getCustomExercises(),
-        loadCompletedDayTypes(selectedDate),
-      ]);
-      const loadedSession = sessions[0] ?? null;
-      const loadedExercises = loadedSession
-        ? await getExercisesForSession(loadedSession.id)
-        : [];
-      const loadedSetsEntries = await Promise.all(
-        loadedExercises.map(async (exercise) => [
-          exercise.id,
-          await getSetsForExercise(exercise.id),
-        ] as const),
-      );
+      const day = await getWorkoutDay(selectedDate);
       if (!isLatestRequest(requestId, request)) return;
 
-      setSession(loadedSession);
-      setExercises(loadedExercises);
-      setSets(Object.fromEntries(loadedSetsEntries));
-      setCustomExercises(customExercisesData);
-      setCompletedDayTypes(completed);
+      setSession(day.session);
+      setExercises(day.exercises);
+      setSets(day.setsByExercise);
+      setCustomExercises(day.customExercises);
+      setCompletedDayTypes(day.completedDayTypes);
       setSelectedDayType(
-        loadedSession
-          ? loadedSession.day_type as DayType
+        day.session
+          ? day.session.day_type as DayType
           : getDefaultDayType(selectedDate),
       );
       setAddSetForm(null);
@@ -248,7 +223,7 @@ export default function WorkoutScreen() {
         setIsLoading(false);
       }
     }
-  }, [loadCompletedDayTypes, selectedDate]);
+  }, [selectedDate]);
 
   useEffect(() => {
     loadWorkout();
