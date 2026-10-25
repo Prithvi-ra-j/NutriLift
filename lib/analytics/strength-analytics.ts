@@ -1,5 +1,5 @@
-import { calculateEpley1RM } from "../db/queries/workout";
-import type { WorkoutSession, ExerciseLog, SetLog, PersonalRecord } from "../db/schema";
+import { calculateEpley1RM } from "../data/repositories/workout";
+import type { WorkoutSession, ExerciseLog, SetLog, PersonalRecord } from "../data/db/schema";
 
 export interface StrengthSummary {
   totalSessions: number;

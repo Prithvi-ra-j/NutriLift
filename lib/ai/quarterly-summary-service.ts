@@ -5,11 +5,11 @@ import {
   updateQuarterlySummary,
   getMonthlySummariesForQuarter,
   getPreviousQuarterlySummaries 
-} from "../db/queries/reports";
+} from "../data/repositories/reports";
 import { generateQuarterlySummary } from "./generators";
 import { getOrGenerateAiSummary } from "./summaryCache";
 import { quarterlyPrompt } from "./prompts/quarterly";
-import type { QuarterlySummary } from "../db/schema";
+import type { QuarterlySummary } from "../data/db/schema";
 import { localDateString } from "../time/localDate";
 import { logger } from "../logger";
 import { isFeatureEnabled } from "../featureFlags";

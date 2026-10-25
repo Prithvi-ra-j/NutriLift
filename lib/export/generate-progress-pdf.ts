@@ -5,7 +5,7 @@
 
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
-import { db } from "../db/client";
+import { db } from "../data/db/client";
 import { 
   foodLogs, 
   dailyNutrition, 
@@ -15,7 +15,7 @@ import {
   bodyStats,
   recoveryLogs,
   personalRecords
-} from "../db/schema";
+} from "../data/db/schema";
 import { desc, gte, sql } from "drizzle-orm";
 import { getProfile, getTargetsForDate } from "../data/profile";
 import { html as htmlTemplate } from "./html";

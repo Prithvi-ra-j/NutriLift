@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import { getTableConfig } from "drizzle-orm/sqlite-core";
-import { buildSanitizedV0Fixture } from "../../data/sanitizedMigrationFixture";
+import { buildSanitizedV0Fixture } from "../../sanitizedMigrationFixture";
 import * as schema from "../schema";
 import { migrations } from "./index";
 import { migrate, type MigrationDatabase } from "./runner";

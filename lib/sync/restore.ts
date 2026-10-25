@@ -1,6 +1,6 @@
 import { Platform } from "react-native";
-import { sqlite } from "../db/client";
-import { inTx } from "../db/tx";
+import { sqlite } from "../data/db/client";
+import { inTx } from "../data/db/tx";
 import { nowIso } from "../time/clock";
 import { isSupabaseConfigured, supabase } from "../supabase/client";
 import { legacySyncRecordSchema, syncRecordSchema } from "./schemas";

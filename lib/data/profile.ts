@@ -1,14 +1,14 @@
 import { desc, eq, lte } from "drizzle-orm";
 import { DEFAULT_TARGETS } from "../constants/defaults";
-import { db } from "../db/client";
-import { inTx } from "../db/tx";
+import { db } from "./db/client";
+import { inTx } from "./db/tx";
 import {
   targetHistory,
   userProfile,
   type NewTargetHistory,
   type NewUserProfile,
   type UserProfile,
-} from "../db/schema";
+} from "./db/schema";
 import { nowIso } from "../time/clock";
 
 export type ProfileInput = Omit<NewUserProfile, "id" | "updated_at">;

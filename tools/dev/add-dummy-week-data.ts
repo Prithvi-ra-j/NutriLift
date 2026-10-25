@@ -4,8 +4,8 @@
  * This will populate nutrition, workout, and recovery data
  */
 
-import { db } from "../../lib/db/client";
-import { foodLogs, dailyNutrition, workoutSessions, exerciseLogs, setLogs, recoveryLogs } from "../../lib/db/schema";
+import { db } from "../../lib/data/db/client";
+import { foodLogs, dailyNutrition, workoutSessions, exerciseLogs, setLogs, recoveryLogs } from "../../lib/data/db/schema";
 import uuid from "react-native-uuid";
 import { addDays, localDateString, startOfWeekMonday } from "../../lib/time/localDate";
 

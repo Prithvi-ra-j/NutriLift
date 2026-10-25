@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import Constants from "expo-constants";
 import * as Clipboard from "expo-clipboard";
-import { sqlite } from "../lib/db/client";
+import { getMigrationDiagnostics } from "../lib/data/diagnostics";
 import { exportDatabaseBackup, isDatabaseBackupExportable } from "../lib/data/exportAll";
 import { logger } from "../lib/logger";
 import { M3 } from "../design-system/tokens";
@@ -71,17 +71,11 @@ export function MigrationFailureScreen({
   useEffect(() => {
     let active = true;
 
-    sqlite
-      .getFirstAsync<{ user_version: number }>("PRAGMA user_version")
-      .then(async (result) => {
+    getMigrationDiagnostics()
+      .then((diagnostics) => {
         if (!active) return;
-        setDatabaseVersion(String(result?.user_version ?? "Unavailable"));
-        const quickCheck = await sqlite.getFirstAsync<{ quick_check: string }>(
-          "PRAGMA quick_check",
-        );
-        if (quickCheck?.quick_check !== "ok") return;
-        const exportable = await isDatabaseBackupExportable();
-        if (active) setBackupAvailable(exportable);
+        setDatabaseVersion(diagnostics.databaseVersion);
+        setBackupAvailable(diagnostics.backupAvailable);
       })
       .catch((error: unknown) => {
         logger.warn("Could not read migration diagnostics", {

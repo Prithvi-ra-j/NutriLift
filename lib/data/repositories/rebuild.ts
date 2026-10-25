@@ -1,6 +1,6 @@
 import { eq, isNull } from "drizzle-orm";
-import { db } from "../client";
-import { inTx } from "../tx";
+import { db } from "../db/client";
+import { inTx } from "../db/tx";
 import { nowIso } from "../../time/clock";
 import {
   dailyNutrition,
@@ -9,7 +9,7 @@ import {
   personalRecords,
   appSettings,
   workoutSessions,
-} from "../schema";
+} from "../db/schema";
 import { recomputeDailyNutritionInTransaction } from "./nutrition";
 import { recomputePRsForExercise, updateSessionVolume } from "./workout";
 import { buildPersonalRecordExternalId } from "../../integrations/life-os/recordMappers";

@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { M3 } from "../../design-system/tokens";
-import type { MeasurementTimeOfDay } from "../../lib/db/schema";
+import type { MeasurementTimeOfDay } from "../../lib/data/types";
 
 const options: { value: MeasurementTimeOfDay; label: string }[] = [
   { value: "morning", label: "Morning" },

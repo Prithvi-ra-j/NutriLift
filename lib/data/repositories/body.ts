@@ -1,8 +1,8 @@
 import { eq, and, desc, lte, gte } from "drizzle-orm";
-import { db } from "../client";
-import { bodyStats, type BodyStat, type NewBodyStat } from "../schema";
-import { inTx } from "../tx";
-import { alive } from "../alive";
+import { db } from "../db/client";
+import { bodyStats, type BodyStat, type NewBodyStat } from "../db/schema";
+import { inTx } from "../db/tx";
+import { alive } from "../db/alive";
 import { nowIso } from "../../time/clock";
 import { addDays, localDateString } from "../../time/localDate";
 

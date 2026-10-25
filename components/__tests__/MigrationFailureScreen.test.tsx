@@ -1,19 +1,18 @@
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import * as Clipboard from "expo-clipboard";
-import { sqlite } from "../../lib/db/client";
 import {
   exportDatabaseBackup,
-  isDatabaseBackupExportable,
 } from "../../lib/data/exportAll";
 import { MigrationFailureScreen } from "../MigrationFailureScreen";
 
-jest.mock("../../lib/db/client", () => ({
-  sqlite: { getFirstAsync: jest.fn() },
+const mockGetMigrationDiagnostics = jest.fn();
+jest.mock("../../lib/data/diagnostics", () => ({
+  getMigrationDiagnostics: (...args: unknown[]) =>
+    mockGetMigrationDiagnostics(...args),
 }));
 
 jest.mock("../../lib/data/exportAll", () => ({
   exportDatabaseBackup: jest.fn(),
-  isDatabaseBackupExportable: jest.fn(),
 }));
 
 jest.mock("expo-clipboard", () => ({
@@ -29,18 +28,16 @@ jest.mock("../../lib/logger", () => ({
   logger: { error: jest.fn(), warn: jest.fn() },
 }));
 
-const mockedDatabase = jest.mocked(sqlite);
-const mockedExportability = jest.mocked(isDatabaseBackupExportable);
 const mockedExport = jest.mocked(exportDatabaseBackup);
 const mockedClipboard = jest.mocked(Clipboard.setStringAsync);
 
 describe("MigrationFailureScreen", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedDatabase.getFirstAsync
-      .mockResolvedValueOnce({ user_version: 4 } as never)
-      .mockResolvedValueOnce({ quick_check: "ok" } as never);
-    mockedExportability.mockResolvedValue(true);
+    mockGetMigrationDiagnostics.mockResolvedValue({
+      databaseVersion: "4",
+      backupAvailable: true,
+    });
     mockedExport.mockResolvedValue("file:///backup.json");
     mockedClipboard.mockResolvedValue(true);
   });
@@ -79,21 +76,20 @@ describe("MigrationFailureScreen", () => {
   });
 
   it("does not offer a backup when SQLite integrity check fails", async () => {
-    mockedDatabase.getFirstAsync.mockReset();
-    mockedDatabase.getFirstAsync
-      .mockResolvedValueOnce({ user_version: 4 } as never)
-      .mockResolvedValueOnce({ quick_check: "corrupt" } as never);
+    mockGetMigrationDiagnostics.mockResolvedValue({
+      databaseVersion: "4",
+      backupAvailable: false,
+    });
 
     const ui = await render(
       <MigrationFailureScreen message="migration failed" onRetry={jest.fn()} />,
     );
 
     await waitFor(() => {
-      expect(mockedDatabase.getFirstAsync).toHaveBeenCalledTimes(2);
+      expect(mockGetMigrationDiagnostics).toHaveBeenCalledTimes(1);
     });
     expect(
       ui.queryByRole("button", { name: "Export database backup" }),
     ).toBeNull();
-    expect(mockedExportability).not.toHaveBeenCalled();
   });
 });

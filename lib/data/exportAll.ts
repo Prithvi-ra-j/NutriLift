@@ -1,8 +1,8 @@
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { Platform } from "react-native";
-import { sqlite } from "../db/client";
-import { inTx, runExclusive } from "../db/tx";
+import { sqlite } from "./db/client";
+import { inTx, runExclusive } from "./db/tx";
 import { nowIso } from "../time/clock";
 import {
   buildSanitizedV0Fixture,

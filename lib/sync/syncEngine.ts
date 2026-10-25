@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import NetInfo from "@react-native-community/netinfo";
-import { onCommit } from "../db/tx";
+import { onCommit } from "../data/db/tx";
 import { onForeground } from "../lifecycle/foreground";
 import { logger } from "../logger";
 import { createSingleFlight } from "./singleFlight";

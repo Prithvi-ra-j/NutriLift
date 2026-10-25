@@ -1,4 +1,4 @@
-import type { BodyStat } from "../db/schema";
+import type { BodyStat } from "../data/db/schema";
 import { addDays } from "../time/localDate";
 
 type BodyValueField = "weight_kg" | "body_fat_pct";

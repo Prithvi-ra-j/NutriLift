@@ -1,8 +1,8 @@
 import { eq } from "drizzle-orm";
 import { sha256 } from "@noble/hashes/sha256";
-import { aiSummaryCache } from "../db/schema";
-import { db } from "../db/client";
-import { inTx } from "../db/tx";
+import { aiSummaryCache } from "../data/db/schema";
+import { db } from "../data/db/client";
+import { inTx } from "../data/db/tx";
 import { nowIso } from "../time/clock";
 
 const inFlight = new Map<string, Promise<string>>();

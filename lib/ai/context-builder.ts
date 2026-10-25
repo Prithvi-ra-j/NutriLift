@@ -1,7 +1,7 @@
-import { getDailyNutritionRange } from "../db/queries/nutrition";
-import { getSessionsForDateRange, getAllPRs } from "../db/queries/workout";
-import { getBodyStatsForDateRange } from "../db/queries/body";
-import { getRecoveryLogsForDateRange } from "../db/queries/recovery";
+import { getDailyNutritionRange } from "../data/repositories/nutrition";
+import { getSessionsForDateRange, getAllPRs } from "../data/repositories/workout";
+import { getBodyStatsForDateRange } from "../data/repositories/body";
+import { getRecoveryLogsForDateRange } from "../data/repositories/recovery";
 import { getProfile, getTargetsForDate } from "../data/profile";
 import { getAiContextPreferences, getMinimumCalorieFloor } from "./preferences";
 import { AI_SAFETY_RESPONSE, containsEatingSafetyRisk } from "./riskPhrases";

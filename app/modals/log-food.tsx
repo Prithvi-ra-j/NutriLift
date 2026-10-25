@@ -15,7 +15,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { parseFoodInput, type ParsedFoodItem } from "../../lib/ai/parsers";
 import { AiError } from "../../lib/ai/gateway";
 import { AI_SAFETY_RESPONSE } from "../../lib/ai/riskPhrases";
-import { insertFoodLogs } from "../../lib/db/queries/nutrition";
+import { insertFoodLogs } from "../../lib/data";
 import { searchLocalFoods, type IndianFood } from "../../lib/data/indianFoodDB";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";

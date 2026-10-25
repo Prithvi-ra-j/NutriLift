@@ -1,7 +1,7 @@
 import { sqlite } from "./client";
 import { inTx } from "./tx";
-import { nowUnix } from "../time/clock";
-import { buildPersonalRecordExternalId } from "../integrations/life-os/recordMappers";
+import { nowUnix } from "../../time/clock";
+import { buildPersonalRecordExternalId } from "../../integrations/life-os/recordMappers";
 
 const RETENTION_SECONDS = 30 * 24 * 60 * 60;
 

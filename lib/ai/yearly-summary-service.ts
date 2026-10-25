@@ -5,13 +5,13 @@ import {
   updateYearlySummary,
   getQuarterlySummariesForYear,
   getPreviousYearlySummaries 
-} from "../db/queries/reports";
-import { getAllPRs } from "../db/queries/workout";
-import { getBodyStatsForDateRange } from "../db/queries/body";
+} from "../data/repositories/reports";
+import { getAllPRs } from "../data/repositories/workout";
+import { getBodyStatsForDateRange } from "../data/repositories/body";
 import { generateYearlySummary } from "./generators";
 import { getOrGenerateAiSummary } from "./summaryCache";
 import { yearlyPrompt } from "./prompts/yearly";
-import type { YearlySummary } from "../db/schema";
+import type { YearlySummary } from "../data/db/schema";
 import { logger } from "../logger";
 import { isFeatureEnabled } from "../featureFlags";
 import { nowUnix } from "../time/clock";

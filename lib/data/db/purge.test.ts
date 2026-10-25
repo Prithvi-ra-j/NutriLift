@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { purgeUploadedDeletedRows } from "./purge";
 import type { MigrationDatabase } from "./migrations/runner";
 import { migrations } from "./migrations";
-import { buildPersonalRecordExternalId } from "../integrations/life-os/recordMappers";
+import { buildPersonalRecordExternalId } from "../../integrations/life-os/recordMappers";
 
 let mockNative: DatabaseSync | null = null;
 
@@ -37,7 +37,7 @@ jest.mock("./client", () => ({
   },
 }));
 
-jest.mock("../logger", () => ({
+jest.mock("../../logger", () => ({
   logger: {
     error: jest.fn(),
     warn: jest.fn(),

@@ -1,4 +1,4 @@
-import type { DailyNutrition } from "../db/schema";
+import type { DailyNutrition } from "../data/db/schema";
 import { isTrackingPausedOnDate } from "../pauseMode";
 
 type NutritionRow = Pick<

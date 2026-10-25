@@ -1,19 +1,19 @@
 import uuid from "react-native-uuid";
-import { getDailyNutritionRange } from "../db/queries/nutrition";
-import { getSessionsForDateRange } from "../db/queries/workout";
-import { getRecoveryLogsForDateRange } from "../db/queries/recovery";
-import { getBodyStatsForDateRange } from "../db/queries/body";
+import { getDailyNutritionRange } from "../data/repositories/nutrition";
+import { getSessionsForDateRange } from "../data/repositories/workout";
+import { getRecoveryLogsForDateRange } from "../data/repositories/recovery";
+import { getBodyStatsForDateRange } from "../data/repositories/body";
 import { 
   getMonthlySummary, 
   insertReport, 
   updateReport,
   getWeeklySummariesForMonth,
   getPreviousMonthlySummaries 
-} from "../db/queries/reports";
+} from "../data/repositories/reports";
 import { generateMonthlySummary } from "./generators";
 import { getOrGenerateAiSummary } from "./summaryCache";
 import { monthlyPrompt } from "./prompts/monthly";
-import type { MonthlyReport } from "../db/schema";
+import type { MonthlyReport } from "../data/db/schema";
 import { localDateString } from "../time/localDate";
 import { nowUnix } from "../time/clock";
 import { logger } from "../logger";

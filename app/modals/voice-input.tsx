@@ -11,7 +11,7 @@ import { AI_SAFETY_RESPONSE, containsEatingSafetyRisk } from "../../lib/ai/riskP
 import { getAiPreference } from "../../lib/data/aiPreferences";
 import { AiError } from "../../lib/ai/gateway";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
-import { insertFoodLog } from "../../lib/db/queries/nutrition";
+import { insertFoodLog } from "../../lib/data";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";

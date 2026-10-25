@@ -11,12 +11,12 @@ import {
   mapWorkoutSession,
   type SyncableRow,
 } from "../integrations/life-os/recordMappers";
-import { migrations } from "../db/migrations";
-import { migrate, type MigrationDatabase } from "../db/migrations/runner";
+import { migrations } from "../data/db/migrations";
+import { migrate, type MigrationDatabase } from "../data/db/migrations/runner";
 import { mapCloudRecordToRestoreItem, writeRestoreItems, type CloudSyncRow } from "./restore";
 import { toSupabaseSyncRow } from "../integrations/life-os/syncClient";
 
-jest.mock("../db/client", () => ({ sqlite: null }));
+jest.mock("../data/db/client", () => ({ sqlite: null }));
 
 function createDatabaseAdapter(native: DatabaseSync): MigrationDatabase & {
   getAllAsync: <T>(source: string) => Promise<T[]>;

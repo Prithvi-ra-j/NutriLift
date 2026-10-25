@@ -1,5 +1,5 @@
 import { Platform } from "react-native";
-import { sqlite } from "../../db/client";
+import { sqlite } from "../../data/db/client";
 import {
   mapBodyStat,
   mapDailyNutrition,
@@ -14,7 +14,7 @@ import {
   type SyncableRow,
 } from "./recordMappers";
 import { type SyncRecord } from "./exportSchema";
-import { inTx } from "../../db/tx";
+import { inTx } from "../../data/db/tx";
 import { nowIso, nowUnix } from "../../time/clock";
 import { validateRecord } from "../../sync/schemas";
 

@@ -7,7 +7,7 @@ import {
   type SyncTable,
 } from "./syncRepository";
 
-jest.mock("../../db/client", () => ({ sqlite: null }));
+jest.mock("../../data/db/client", () => ({ sqlite: null }));
 
 function asQueueDatabase(database: DatabaseSync): QueueDatabase {
   return {

@@ -1,4 +1,4 @@
-import type { BodyStat, MeasurementTimeOfDay } from "../db/schema";
+import type { BodyStat, MeasurementTimeOfDay } from "../data/db/schema";
 import { daysBetween } from "../time/localDate";
 
 export function getEligibleBodyCompTimeOfDay(

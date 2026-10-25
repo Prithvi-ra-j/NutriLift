@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { AiConversation } from "../db/schema";
+import type { AiConversation } from "../data/db/schema";
 
 interface AIState {
   messages: AiConversation[];

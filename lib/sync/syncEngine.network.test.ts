@@ -10,7 +10,7 @@ jest.mock("@react-native-community/netinfo", () => ({
   },
 }));
 
-jest.mock("../db/tx", () => ({ onCommit: jest.fn(() => jest.fn()) }));
+jest.mock("../data/db/tx", () => ({ onCommit: jest.fn(() => jest.fn()) }));
 jest.mock("../lifecycle/foreground", () => ({ onForeground: jest.fn(() => jest.fn()) }));
 jest.mock("../logger", () => ({ logger: { error: jest.fn(), warn: jest.fn() } }));
 jest.mock("../supabase/client", () => ({

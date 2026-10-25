@@ -103,6 +103,26 @@ module.exports = [
     rules: strict,
   },
   {
+    files: ["app/**/*.{js,jsx,ts,tsx}", "components/**/*.{js,jsx,ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/lib/data/db/**", "@db/**"],
+              message: "Screens and components must use the data-layer API, not database internals.",
+            },
+            {
+              group: ["drizzle-orm", "drizzle-orm/*", "expo-sqlite"],
+              message: "Screens and components must not depend directly on database libraries.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["lib/domain/**"],
     rules: {
       "no-restricted-imports": [

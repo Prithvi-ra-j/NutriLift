@@ -1,5 +1,5 @@
 import { eq, and, gte, lte, desc, sql, isNull, inArray, or } from "drizzle-orm";
-import { db } from "../client";
+import { db } from "../db/client";
 import {
   workoutSessions,
   exerciseLogs,
@@ -15,8 +15,8 @@ import {
   customExercises,
   type CustomExercise,
   type NewCustomExercise,
-} from "../schema";
-import { inTx } from "../tx";
+} from "../db/schema";
+import { inTx } from "../db/tx";
 import { nowIso } from "../../time/clock";
 import {
   addDays,

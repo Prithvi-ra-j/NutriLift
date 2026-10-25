@@ -11,7 +11,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import uuid from "react-native-uuid";
-import { insertFoodLog } from "../../lib/db/queries/nutrition";
+import { insertFoodLog } from "../../lib/data";
 import { logger } from "../../lib/logger";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";

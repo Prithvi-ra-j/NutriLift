@@ -8,7 +8,7 @@ import type {
   RecoveryLog,
   UserProfile,
   WorkoutSession,
-} from "../db/schema";
+} from "../data/db/schema";
 import { requestStructured } from "./structured";
 import { monthlyPrompt } from "./prompts/monthly";
 import { quarterlyPrompt } from "./prompts/quarterly";

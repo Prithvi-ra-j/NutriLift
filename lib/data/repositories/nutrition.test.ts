@@ -1,9 +1,9 @@
 import { DatabaseSync } from "node:sqlite";
 import { drizzle as drizzleProxy } from "drizzle-orm/sqlite-proxy";
 import { deleteFoodLog, getDailyNutrition, insertFoodLogs } from "./nutrition";
-import type { MigrationDatabase } from "../migrations/runner";
-import { migrations } from "../migrations";
-import * as schema from "../schema";
+import type { MigrationDatabase } from "../db/migrations/runner";
+import { migrations } from "../db/migrations";
+import * as schema from "../db/schema";
 
 let mockNative: DatabaseSync | null = null;
 let mockDatabase: ReturnType<typeof drizzleProxy> | null = null;
@@ -20,7 +20,7 @@ async function mockWithTransaction(task: () => Promise<void>): Promise<void> {
   }
 }
 
-jest.mock("../client", () => ({
+jest.mock("../db/client", () => ({
   get db() {
     if (!mockDatabase) throw new Error("The test Drizzle database is not initialized.");
     return mockDatabase;

@@ -10,7 +10,7 @@
  * Development-only data seeding helper.
  */
 
-import { db } from "../../lib/db/client";
+import { db } from "../../lib/data/db/client";
 import { 
   foodLogs, 
   dailyNutrition, 
@@ -21,7 +21,7 @@ import {
   bodyStats,
   supplementLogs,
   personalRecords
-} from "../../lib/db/schema";
+} from "../../lib/data/db/schema";
 import uuid from "react-native-uuid";
 import { eq } from "drizzle-orm";
 import { DEFAULT_TARGETS } from "../../lib/constants/defaults";

@@ -1,5 +1,5 @@
 import { sqlite } from "./client";
-import { logger } from "../logger";
+import { logger } from "../../logger";
 
 let chain: Promise<unknown> = Promise.resolve();
 const commitListeners = new Set<() => void>();

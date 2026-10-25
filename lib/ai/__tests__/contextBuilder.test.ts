@@ -10,17 +10,17 @@ const mockGetMinimumCalorieFloor = jest.fn();
 const mockGetTrackingPauseStatus = jest.fn();
 const mockGetEligibleBodyCompTimeOfDay = jest.fn();
 
-jest.mock("../../db/queries/nutrition", () => ({
+jest.mock("../../data/repositories/nutrition", () => ({
   getDailyNutritionRange: (...args: unknown[]) => mockGetDailyNutritionRange(...args),
 }));
-jest.mock("../../db/queries/workout", () => ({
+jest.mock("../../data/repositories/workout", () => ({
   getSessionsForDateRange: (...args: unknown[]) => mockGetSessionsForDateRange(...args),
   getAllPRs: (...args: unknown[]) => mockGetAllPRs(...args),
 }));
-jest.mock("../../db/queries/body", () => ({
+jest.mock("../../data/repositories/body", () => ({
   getBodyStatsForDateRange: (...args: unknown[]) => mockGetBodyStatsForDateRange(...args),
 }));
-jest.mock("../../db/queries/recovery", () => ({
+jest.mock("../../data/repositories/recovery", () => ({
   getRecoveryLogsForDateRange: (...args: unknown[]) => mockGetRecoveryLogsForDateRange(...args),
 }));
 jest.mock("../../data/profile", () => ({

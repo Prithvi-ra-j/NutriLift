@@ -1,9 +1,9 @@
 import { eq, and, gte, lte, desc, isNull } from "drizzle-orm";
-import { db } from "../client";
-import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../schema";
+import { db } from "../db/client";
+import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../db/schema";
 import { getTargetsForDate } from "../../data/profile";
 import { adherenceScore, sumFoodLogs } from "../../domain/nutrition";
-import { inTx } from "../tx";
+import { inTx } from "../db/tx";
 import { nowIso } from "../../time/clock";
 import { getAppSetting } from "../../data/appSettings";
 import { isTrackingPausedOnDate } from "../../pauseMode";

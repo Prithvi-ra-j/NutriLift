@@ -1,4 +1,4 @@
-import type { DailyNutrition, FoodLog } from "../db/schema";
+import type { DailyNutrition, FoodLog } from "../data/db/schema";
 import { DEFAULT_TARGETS } from "../constants/defaults";
 
 export interface NutritionSummary {

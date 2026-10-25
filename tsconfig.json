@@ -25,7 +25,7 @@
         "./lib/stores/*"
       ],
       "@db/*": [
-        "./lib/db/*"
+        "./lib/data/db/*"
       ],
       "@ai/*": [
         "./lib/ai/*"

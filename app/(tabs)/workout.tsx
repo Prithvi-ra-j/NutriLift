@@ -24,7 +24,7 @@ import {
   getLastWeightForExercise,
   calculateEpley1RM,
   insertCustomExercise,
-} from "../../lib/db/queries/workout";
+} from "../../lib/data";
 import {
   DAY_TYPES,
   EXERCISE_LIBRARY,
@@ -39,7 +39,7 @@ import { DateNavigator } from "../../components/ui/DateNavigator";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import { useToast } from "../../components/ui/Toast";
-import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/db/schema";
+import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../lib/data/types";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";

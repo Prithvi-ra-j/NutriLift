@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { parseInBodyText, type InBodyParseResult } from "../../lib/ai/parsers";
 import { AiError } from "../../lib/ai/gateway";
-import { insertBodyStat } from "../../lib/db/queries/body";
+import { insertBodyStat } from "../../lib/data";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
@@ -20,7 +20,7 @@ import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import { useToday } from "../../lib/time/useToday";
 import { isLocalDateString } from "../../lib/time/localDate";
-import type { MeasurementTimeOfDay } from "../../lib/db/schema";
+import type { MeasurementTimeOfDay } from "../../lib/data/types";
 import { MeasurementTimeOfDaySelector } from "../../components/ui/MeasurementTimeOfDaySelector";
 
 export default function InBodyPasteModal() {

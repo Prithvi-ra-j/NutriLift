@@ -12,8 +12,6 @@ import {
   DMSans_500Medium,
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
-import { runMigrations, sqlite } from "../lib/db/client";
-import { ensureDerivedDataForV5 } from "../lib/db/queries/rebuild";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { logger } from "../lib/logger";
@@ -21,12 +19,12 @@ import { M3 } from "../design-system/tokens";
 import { MigrationFailureScreen } from "../components/MigrationFailureScreen";
 import { ToastProvider } from "../components/ui/Toast";
 import { requestSync, startSyncTriggers } from "../lib/sync/syncEngine";
-import { purgeUploadedDeletedRows } from "../lib/db/purge";
-import { purgeUploadedQueue } from "../lib/integrations/life-os/syncRepository";
 import { onBackground, onForeground } from "../lib/lifecycle/foreground";
 import { supabase } from "../lib/supabase/client";
 import { hasCloudBackup, hasEmptyLocalDatabase, markRestorePrompted, restoreFromCloud } from "../lib/sync/restore";
 import { getProfile } from "../lib/data/profile";
+import { getAppSetting } from "../lib/data/appSettings";
+import { initializeDataLayer } from "../lib/data/startup";
 
 type GlobalErrorUtils = {
   getGlobalHandler: () => (error: Error, isFatal?: boolean) => void;
@@ -95,10 +93,8 @@ export default function RootLayout() {
     }
     restorePromptStarted.current = true;
     void (async () => {
-      const prompted = await sqlite.getFirstAsync<{ value: string }>(
-        "SELECT value FROM app_settings WHERE key = 'restore_prompted'",
-      );
-      if (prompted?.value === "1") {
+      const prompted = await getAppSetting("restore_prompted");
+      if (prompted === "1") {
         setRestoreCheckComplete(true);
         return;
       }
@@ -175,12 +171,7 @@ export default function RootLayout() {
   useEffect(() => {
     let active = true;
     logger.info("App starting - initializing database");
-    runMigrations()
-      .then(() => ensureDerivedDataForV5())
-      .then(() => {
-        return purgeUploadedDeletedRows();
-      })
-      .then(() => purgeUploadedQueue())
+    initializeDataLayer()
       .then(() => {
         if (!active) return;
         logger.info("Database migrations completed successfully");

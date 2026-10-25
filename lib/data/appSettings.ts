@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
-import { db } from "../db/client";
-import { appSettings } from "../db/schema";
-import { inTx } from "../db/tx";
+import { db } from "./db/client";
+import { appSettings } from "./db/schema";
+import { inTx } from "./db/tx";
 import { nowIso } from "../time/clock";
 
 export async function getAppSetting(key: string): Promise<string | null> {

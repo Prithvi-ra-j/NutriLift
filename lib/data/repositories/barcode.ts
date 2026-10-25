@@ -1,8 +1,8 @@
 import { eq, lt } from "drizzle-orm";
-import { db } from "../client";
-import { barcodeCache } from "../schema";
+import { db } from "../db/client";
+import { barcodeCache } from "../db/schema";
 import type { FoodResult } from "../../services/barcodeScanner";
-import { inTx } from "../tx";
+import { inTx } from "../db/tx";
 import { nowUnix } from "../../time/clock";
 
 export async function getBarcodeCache(barcode: string): Promise<FoodResult | null> {

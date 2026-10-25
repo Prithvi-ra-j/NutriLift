@@ -15,7 +15,7 @@ import {
   getFoodLogsForDate,
   deleteFoodLog,
   getLast7DaysNutrition,
-} from "../../lib/db/queries/nutrition";
+} from "../../lib/data";
 import { getTargetsForDate } from "../../lib/data/profile";
 import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { Card } from "../../components/ui/Card";
@@ -24,7 +24,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { FoodLog, DailyNutrition } from "../../lib/db/schema";
+import type { FoodLog, DailyNutrition } from "../../lib/data/types";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";
 import { logger } from "../../lib/logger";

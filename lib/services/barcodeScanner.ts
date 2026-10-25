@@ -42,7 +42,7 @@ export async function lookupBarcode(barcode: string): Promise<FoodResult> {
   // Step 1: Check local cache first (works offline)
   if (Platform.OS !== "web") {
     try {
-      const { getBarcodeCache } = await import("../db/queries/barcode");
+      const { getBarcodeCache } = await import("../data/repositories/barcode");
       const cached = await getBarcodeCache(barcode);
       if (cached) {
         logger.info("Barcode found in cache", { barcode });
@@ -55,7 +55,7 @@ export async function lookupBarcode(barcode: string): Promise<FoodResult> {
 
   const result = await lookupOpenFoodFacts(barcode);
   if (Platform.OS !== "web") {
-    const { saveBarcodeCache } = await import("../db/queries/barcode");
+    const { saveBarcodeCache } = await import("../data/repositories/barcode");
     await saveBarcodeCache(result);
   }
   return result;

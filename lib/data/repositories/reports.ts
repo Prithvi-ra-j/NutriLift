@@ -1,7 +1,7 @@
 import { eq, desc, and, gte, lte } from "drizzle-orm";
-import { db } from "../client";
-import { monthlyReports, aiConversations, weeklySummaries, quarterlySummaries, yearlySummaries, type MonthlyReport, type NewMonthlyReport, type AiConversation, type NewAiConversation, type WeeklySummary, type NewWeeklySummary, type QuarterlySummary, type NewQuarterlySummary, type YearlySummary, type NewYearlySummary } from "../schema";
-import { inTx } from "../tx";
+import { db } from "../db/client";
+import { monthlyReports, aiConversations, weeklySummaries, quarterlySummaries, yearlySummaries, type MonthlyReport, type NewMonthlyReport, type AiConversation, type NewAiConversation, type WeeklySummary, type NewWeeklySummary, type QuarterlySummary, type NewQuarterlySummary, type YearlySummary, type NewYearlySummary } from "../db/schema";
+import { inTx } from "../db/tx";
 import { addDays, localDateString, startOfWeekMonday } from "../../time/localDate";
 
 // ─── Monthly Report Queries ───────────────────────────────────────────────────

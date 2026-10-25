@@ -1,4 +1,4 @@
-import type { BodyStat } from "../db/schema";
+import type { BodyStat } from "../data/db/schema";
 import { addDays, daysBetween, localDateString, parseLocalDate } from "../time/localDate";
 
 export interface BodyCompositionSummary {
