@@ -36,6 +36,24 @@ function createDatabase(): {
 }
 
 describe("database migrations", () => {
+  it("migrates a fresh install to the latest version and creates custom exercises", async () => {
+    const { native, database } = createDatabase();
+    try {
+      await migrate(database, migrations);
+
+      expect(native.prepare("PRAGMA user_version").get()).toEqual({
+        user_version: migrations.length,
+      });
+      expect(
+        native
+          .prepare("SELECT name FROM sqlite_master WHERE name = 'custom_exercises'")
+          .get(),
+      ).toEqual({ name: "custom_exercises" });
+    } finally {
+      native.close();
+    }
+  });
+
   it("migrates a v0 install without losing rows and keeps the schema in parity", async () => {
     const { native, database } = createDatabase();
     try {
