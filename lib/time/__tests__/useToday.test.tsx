@@ -32,6 +32,23 @@ describe("useToday", () => {
     unmount();
   });
 
+  it("continues rolling over on subsequent local midnights", async () => {
+    jest.setSystemTime(new Date(2026, 9, 17, 23, 59, 59));
+    const { result, unmount } = await renderHook(() => useToday());
+    expect(result.current).toBe("2026-10-17");
+
+    await act(async () => {
+      jest.advanceTimersByTime(1_001);
+    });
+    expect(result.current).toBe("2026-10-18");
+
+    await act(async () => {
+      jest.advanceTimersByTime(86_400_000);
+    });
+    expect(result.current).toBe("2026-10-19");
+    unmount();
+  });
+
   it("refreshes and reschedules when the app foregrounds", async () => {
     let foreground: (() => void) | undefined;
     lifecycle.onForeground.mockImplementation((listener: () => void) => {

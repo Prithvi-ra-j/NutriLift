@@ -56,6 +56,20 @@ describe("local calendar arithmetic", () => {
     try {
       expect(localDateString(new Date("2026-10-17T20:00:00Z"))).toBe("2026-10-18");
       expect(localDateString(new Date("2026-10-17T18:29:00Z"))).toBe("2026-10-17");
+      expect(localDateString(new Date("2026-10-17T23:30:00Z"))).toBe("2026-10-18");
+      expect(localDateString(new Date("2026-10-17T19:00:00Z"))).toBe("2026-10-18");
+    } finally {
+      if (originalTimezone === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTimezone;
+    }
+  });
+
+  it("adds local calendar days across both daylight-saving transitions", () => {
+    const originalTimezone = process.env.TZ;
+    process.env.TZ = "America/New_York";
+    try {
+      expect(addDays("2026-03-07", 2)).toBe("2026-03-09");
+      expect(addDays("2026-10-31", 1)).toBe("2026-11-01");
     } finally {
       if (originalTimezone === undefined) delete process.env.TZ;
       else process.env.TZ = originalTimezone;

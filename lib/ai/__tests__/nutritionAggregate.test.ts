@@ -1,3 +1,8 @@
+jest.mock("../../pauseMode", () => ({
+  isTrackingPausedOnDate: (date: string, from: string | null, until: string | null) =>
+    Boolean(from && until && date >= from && date <= until),
+}));
+
 import { summarizeNutrition } from "../nutritionAggregate";
 
 describe("coach nutrition aggregates", () => {
