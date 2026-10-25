@@ -14,6 +14,7 @@ import { yearlyPrompt } from "./prompts/yearly";
 import type { YearlySummary } from "../db/schema";
 import { logger } from "../logger";
 import { isFeatureEnabled } from "../featureFlags";
+import { nowUnix } from "../time/clock";
 
 /**
  * Generate or retrieve AI-powered yearly summary
@@ -102,7 +103,7 @@ export async function getOrGenerateYearlySummary(year: string): Promise<YearlySu
     const summary: YearlySummary = {
       id: uuid.v4() as string,
       year,
-      generated_at: Math.floor(Date.now() / 1000),
+      generated_at: nowUnix(),
       ai_summary: aiSummary,
       transformation_story: aiSummary, // Same as ai_summary for now
       stats_json: JSON.stringify(aggregatedStats),

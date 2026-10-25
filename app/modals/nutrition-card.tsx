@@ -19,6 +19,7 @@ import { M3 } from "../../design-system/tokens";
 import type { FoodResult } from "../../lib/services/barcodeScanner";
 import { useToday } from "../../lib/time/useToday";
 import { isLocalDateString } from "../../lib/time/localDate";
+import { nowUnix } from "../../lib/time/clock";
 
 export default function NutritionCardModal() {
   const params = useLocalSearchParams<{ date?: string; foodData?: string; source?: string; barcode?: string }>();
@@ -95,7 +96,7 @@ export default function NutritionCardModal() {
         sodium_mg: null,
         source: source === "barcode" ? "barcode" : "manual",
         raw_input: barcode || null,
-        created_at: Date.now(),
+        created_at: nowUnix(),
       });
 
       logger.info("Food logged", {

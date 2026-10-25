@@ -47,6 +47,7 @@ import type { WorkoutSession, ExerciseLog, SetLog, CustomExercise } from "../../
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";
+import { nowIso, nowUnix } from "../../lib/time/clock";
 import { addDays, dayOfWeek, startOfWeekMonday } from "../../lib/time/localDate";
 import { logger } from "../../lib/logger";
 import { fireAndLog } from "../../lib/async";
@@ -265,13 +266,13 @@ export default function WorkoutScreen() {
       id: sessionId,
       date: selectedDate,
       day_type: selectedDayType,
-      started_at: Math.floor(Date.now() / 1000),
+      started_at: nowUnix(),
       ended_at: null,
       duration_min: null,
       total_volume_kg: 0,
       notes: null,
       rpe: null,
-      updated_at: new Date().toISOString(),
+      updated_at: nowIso(),
       deleted_at: null,
     };
     await insertSession(newSession);
@@ -322,7 +323,7 @@ export default function WorkoutScreen() {
       exercise_type: customExType,
       muscle_group: customExMuscle,
       equipment: customExEquip,
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: nowUnix(),
     };
     await insertCustomExercise(newEx);
     setShowCreateCustom(false);
@@ -488,7 +489,7 @@ export default function WorkoutScreen() {
       is_pr: 0,
       is_warmup: addSetForm.isWarmup ? 1 : 0,
       notes: null,
-      logged_at: Math.floor(Date.now() / 1000),
+      logged_at: nowUnix(),
       updated_at: null,
       deleted_at: null,
     };

@@ -1,6 +1,7 @@
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import { localDateString } from "./time/localDate";
+import { nowIso, nowUnix } from "./time/clock";
 
 type LogLevel = "info" | "warn" | "error" | "debug";
 
@@ -40,7 +41,8 @@ class Logger {
       }
 
       // Create log file with timestamp
-      const now = new Date();
+      const timestamp = nowIso();
+      const now = new Date(timestamp);
       const dateStr = localDateString(now);
       const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "-"); // HH-MM-SS
       const fileName = `app-${dateStr}_${timeStr}.log`;
@@ -49,7 +51,7 @@ class Logger {
       
       // Write initial log entry
       await this.writeToFile({
-        timestamp: now.toISOString(),
+        timestamp,
         level: "info",
         message: "=== Log session started ===",
       });
@@ -123,7 +125,7 @@ class Logger {
   private logToWebStorage(level: LogLevel, args: any[]) {
     try {
       const entry: LogEntry = {
-        timestamp: new Date().toISOString(),
+        timestamp: nowIso(),
         level,
         message: args.map((arg) => 
           typeof arg === "object" ? JSON.stringify(arg) : String(arg)
@@ -181,7 +183,7 @@ class Logger {
 
     try {
       const files = await FileSystem.readDirectoryAsync(this.logDir);
-      const now = Date.now();
+      const now = nowUnix() * 1000;
       const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
 
       for (const file of files) {
@@ -217,7 +219,7 @@ class Logger {
 
   private log(level: LogLevel, message: string, context?: any) {
     const entry: LogEntry = {
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso(),
       level,
       message,
       context,

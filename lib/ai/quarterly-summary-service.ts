@@ -13,6 +13,7 @@ import type { QuarterlySummary } from "../db/schema";
 import { localDateString } from "../time/localDate";
 import { logger } from "../logger";
 import { isFeatureEnabled } from "../featureFlags";
+import { nowUnix } from "../time/clock";
 
 /**
  * Generate or retrieve AI-powered quarterly summary
@@ -99,7 +100,7 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
       quarter,
       start_date: localDateString(startDate),
       end_date: localDateString(endDate),
-      generated_at: Math.floor(Date.now() / 1000),
+      generated_at: nowUnix(),
       ai_summary: aiSummary,
       stats_json: JSON.stringify(aggregatedStats),
     };

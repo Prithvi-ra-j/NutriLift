@@ -15,6 +15,7 @@ import { getOrGenerateAiSummary } from "./summaryCache";
 import { monthlyPrompt } from "./prompts/monthly";
 import type { MonthlyReport } from "../db/schema";
 import { localDateString } from "../time/localDate";
+import { nowUnix } from "../time/clock";
 import { logger } from "../logger";
 
 /**
@@ -114,7 +115,7 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
       const report: MonthlyReport = {
         id: uuid.v4() as string,
         month,
-        generated_at: Math.floor(Date.now() / 1000),
+        generated_at: nowUnix(),
         report_json: JSON.stringify({
           nutrition: nutritionStats,
           workouts: workoutStats,

@@ -24,6 +24,7 @@ import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";
 import { isLocalDateString } from "../../lib/time/localDate";
+import { nowUnix } from "../../lib/time/clock";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -149,7 +150,7 @@ export default function LogFoodModal() {
     )) return;
     setIsSaving(true);
     try {
-      const now = Math.floor(Date.now() / 1000);
+      const now = nowUnix();
       await insertFoodLogs(parsedItems.map((item) => ({
           id: uuid.v4() as string,
           date: logDate,

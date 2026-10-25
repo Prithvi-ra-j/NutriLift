@@ -18,6 +18,7 @@ import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import { useToday } from "../../lib/time/useToday";
 import { isLocalDateString } from "../../lib/time/localDate";
+import { nowUnix } from "../../lib/time/clock";
 import { logger } from "../../lib/logger";
 
 export default function VoiceInputModal() {
@@ -141,7 +142,7 @@ export default function VoiceInputModal() {
           sodium_mg: null,
           source: "voice",
           raw_input: transcript,
-          created_at: Date.now(),
+          created_at: nowUnix(),
         });
       }
 

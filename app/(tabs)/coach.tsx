@@ -29,6 +29,7 @@ import { M3 } from "../../design-system/tokens";
 import { logger } from "../../lib/logger";
 import { fireAndLog } from "../../lib/async";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
+import { nowUnix } from "../../lib/time/clock";
 
 // Suggested prompts for coach
 const COACH_SUGGESTED_PROMPTS = [
@@ -72,7 +73,7 @@ export default function CoachScreen() {
         content: AI_SAFETY_RESPONSE,
         context_snapshot: null,
         prompt_version: `${coachPrompt.id}@${coachPrompt.version}`,
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: nowUnix(),
       });
       setInput("");
       return;
@@ -115,7 +116,7 @@ export default function CoachScreen() {
         content: userText,
         context_snapshot: null,
         prompt_version: `${coachPrompt.id}@${coachPrompt.version}`,
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: nowUnix(),
       };
       addMessage(userMsg);
       await insertConversationMessage(userMsg);
@@ -134,7 +135,7 @@ export default function CoachScreen() {
         content: responseContent,
         context_snapshot: JSON.stringify({ context_keys: Object.keys(context) }),
         prompt_version: `${coachPrompt.id}@${coachPrompt.version}`,
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: nowUnix(),
       };
 
       await insertConversationMessage(finalMsg);
@@ -151,7 +152,7 @@ export default function CoachScreen() {
         content: err instanceof AiError ? err.message : "The coach could not respond. Please try again.",
         context_snapshot: null,
         prompt_version: `${coachPrompt.id}@${coachPrompt.version}`,
-        created_at: Math.floor(Date.now() / 1000),
+        created_at: nowUnix(),
       };
       addMessage(errMsg);
       if (!(err instanceof AiError)) {

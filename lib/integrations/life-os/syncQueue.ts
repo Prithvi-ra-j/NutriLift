@@ -1,4 +1,4 @@
-import { nowIso } from "../../time/clock";
+import { nowIso, nowUnix } from "../../time/clock";
 
 export type SyncQueueState = "pending" | "uploading" | "uploaded" | "failed" | "rejected" | "dead";
 
@@ -49,7 +49,7 @@ export function updateSyncQueueState(entry: SyncQueueEntry, nextState: SyncQueue
   };
 }
 
-export function nextRetryAt(attemptCount: number, now = Date.now()): string {
+export function nextRetryAt(attemptCount: number, now = nowUnix() * 1000): string {
   const delayMs = Math.min(30_000 * (2 ** Math.max(0, attemptCount)), 6 * 60 * 60 * 1000);
   return new Date(now + delayMs).toISOString();
 }

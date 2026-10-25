@@ -10,6 +10,7 @@ import { weeklyPrompt } from "./prompts/weekly";
 import type { WeeklySummary } from "../db/schema";
 import { logger } from "../logger";
 import { localDateString } from "../time/localDate";
+import { nowUnix } from "../time/clock";
 
 /**
  * Generate or retrieve AI-powered weekly summary
@@ -126,7 +127,7 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
       id: uuid.v4() as string,
       week_start: weekStart,
       week_end: weekEnd,
-      generated_at: Math.floor(Date.now() / 1000),
+      generated_at: nowUnix(),
       ai_summary: aiSummary,
       stats_json: JSON.stringify({
         nutrition: nutritionStats,

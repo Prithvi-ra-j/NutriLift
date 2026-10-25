@@ -25,6 +25,7 @@ import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import { useToday } from "../../lib/time/useToday";
+import { nowUnix } from "../../lib/time/clock";
 
 export default function MonthlyReportModal() {
   const today = useToday();
@@ -72,7 +73,7 @@ export default function MonthlyReportModal() {
       await insertReport({
         id: reportId,
         month: currentMonth,
-        generated_at: Math.floor(Date.now() / 1000),
+        generated_at: nowUnix(),
         report_json: JSON.stringify(reportData),
         pdf_path: null,
         ai_summary: reportData.ai_narrative ?? null,
