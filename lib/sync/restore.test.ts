@@ -9,6 +9,7 @@ import {
   mapSetLog,
   mapSupplementLog,
   mapWorkoutSession,
+  type SyncableRow,
 } from "../integrations/life-os/recordMappers";
 import { migrations } from "../db/migrations";
 import { migrate, type MigrationDatabase } from "../db/migrations/runner";
@@ -42,6 +43,62 @@ function createDatabaseAdapter(native: DatabaseSync): MigrationDatabase & {
       }
     },
   };
+}
+
+function seedDatabaseFromRecords(
+  native: DatabaseSync,
+  records: ReturnType<typeof mapWorkoutSession>[],
+): void {
+  const targetByType: Record<string, { table: string; key: string }> = {
+    "body.training.session": { table: "workout_sessions", key: "id" },
+    "body.training.exercise_log": { table: "exercise_logs", key: "id" },
+    "body.training.set_log": { table: "set_logs", key: "id" },
+    "body.performance": { table: "personal_records", key: "exercise_name" },
+    "body.measurement": { table: "body_stats", key: "id" },
+    "body.nutrition.adherence": { table: "daily_nutrition", key: "date" },
+    "body.nutrition.food_log": { table: "food_logs", key: "id" },
+    "body.nutrition.supplement_log": { table: "supplement_logs", key: "id" },
+    "body.recovery.sleep": { table: "recovery_logs", key: "date" },
+    "body.recovery.hrv": { table: "recovery_logs", key: "date" },
+    "body.recovery.energy": { table: "recovery_logs", key: "date" },
+    "body.recovery.soreness": { table: "recovery_logs", key: "date" },
+    "body.recovery.stress": { table: "recovery_logs", key: "date" },
+  };
+  const seeded = new Set<string>();
+
+  for (const record of records) {
+    const target = targetByType[record.recordType];
+    if (!target) throw new Error(`No seed table configured for ${record.recordType}.`);
+    const rowValue = record.payload.row;
+    if (typeof rowValue !== "object" || rowValue === null || Array.isArray(rowValue)) {
+      throw new Error(`Seed record ${record.externalId} has no row payload.`);
+    }
+    const row = rowValue as Record<string, unknown>;
+    const key = row[target.key];
+    if (key === null || key === undefined) throw new Error(`Seed row is missing ${target.key}.`);
+    const seedKey = `${target.table}:${String(key)}`;
+    if (seeded.has(seedKey)) continue;
+    seeded.add(seedKey);
+
+    const columns = Object.keys(row);
+    const values = columns.map((column) => {
+      const value = row[column];
+      if (value === null || value === undefined) return null;
+      if (typeof value === "string" || typeof value === "number") return value;
+      if (typeof value === "boolean") return value ? 1 : 0;
+      throw new Error(`Unsupported seed value for ${target.table}.${column}.`);
+    });
+    native.prepare(
+      `INSERT INTO "${target.table}" (${columns.map((column) => `"${column}"`).join(", ")})
+       VALUES (${columns.map(() => "?").join(", ")})`,
+    ).run(...values);
+  }
+}
+
+function readRow(native: DatabaseSync, table: string): SyncableRow {
+  const row = native.prepare(`SELECT * FROM "${table}" LIMIT 1`).get() as SyncableRow | undefined;
+  if (!row) throw new Error(`Expected seeded row in ${table}.`);
+  return row;
 }
 
 describe("cloud restore records", () => {
@@ -160,63 +217,68 @@ describe("cloud restore records", () => {
         updated_at: updatedAt,
       }),
     ];
-    const fakeCloud = new Map<string, ReturnType<typeof toSupabaseSyncRow>>();
-    for (const record of rows) {
-      const uploaded = toSupabaseSyncRow(record);
-      const stored = fakeCloud.get(uploaded.external_id);
-      if (!stored || uploaded.source_updated_at >= stored.source_updated_at) {
-        fakeCloud.set(uploaded.external_id, uploaded);
-      }
-    }
-    const cloudRows: CloudSyncRow[] = [...fakeCloud.values()].map((record) => ({
-      external_id: record.external_id,
-      record_type: record.record_type,
-      source_app: record.source_app,
-      occurred_at: record.occurred_at,
-      source_updated_at: record.source_updated_at,
-      payload: record.payload,
-      schema_version: record.schema_version,
-      deleted_at: record.deleted_at,
-    }));
-    const items = cloudRows
-      .map(mapCloudRecordToRestoreItem)
-      .filter((item) => item !== null);
-
-    const native = new DatabaseSync(":memory:");
+    const sourceNative = new DatabaseSync(":memory:");
+    const restoredNative = new DatabaseSync(":memory:");
     try {
-      const database = createDatabaseAdapter(native);
-      await migrate(database, migrations);
-      await database.withTransactionAsync(() => writeRestoreItems(database, items));
+      const sourceDatabase = createDatabaseAdapter(sourceNative);
+      const restoredDatabase = createDatabaseAdapter(restoredNative);
+      await migrate(sourceDatabase, migrations);
+      await migrate(restoredDatabase, migrations);
+      seedDatabaseFromRecords(sourceNative, rows);
 
-      expect(native.prepare("SELECT id, date, day_type FROM workout_sessions").all()).toEqual([
-        { id: "session-1", date: "2026-10-24", day_type: "Push A" },
-      ]);
-      expect(native.prepare("SELECT id, session_id FROM exercise_logs").all()).toEqual([
-        { id: "exercise-1", session_id: "session-1" },
-      ]);
-      expect(native.prepare("SELECT id, exercise_log_id, weight_kg FROM set_logs").all()).toEqual([
-        { id: "set-1", exercise_log_id: "exercise-1", weight_kg: 60 },
-      ]);
-      expect(native.prepare("SELECT id, name, calories FROM food_logs").all()).toEqual([
-        { id: "food-1", name: "Rice", calories: 190 },
-      ]);
-      expect(native.prepare("SELECT id, supplement_name, taken FROM supplement_logs").all()).toEqual([
-        { id: "supplement-1", supplement_name: "Creatine", taken: 1 },
-      ]);
-      expect(native.prepare("SELECT exercise_name, best_weight_kg FROM personal_records").all()).toEqual([
-        { exercise_name: "Bench Press", best_weight_kg: 60 },
-      ]);
-      expect(native.prepare("SELECT id, weight_kg FROM body_stats").all()).toEqual([
-        { id: "body-1", weight_kg: 70 },
-      ]);
-      expect(native.prepare("SELECT date, total_calories FROM daily_nutrition").all()).toEqual([
-        { date: "2026-10-24", total_calories: 190 },
-      ]);
-      expect(native.prepare("SELECT date, sleep_duration_hr, hrv FROM recovery_logs").all()).toEqual([
-        { date: "2026-10-24", sleep_duration_hr: 7.5, hrv: 55 },
-      ]);
+      const sourceRecords = [
+        mapWorkoutSession(readRow(sourceNative, "workout_sessions")),
+        mapFoodLog(readRow(sourceNative, "food_logs")),
+        mapSupplementLog(readRow(sourceNative, "supplement_logs")),
+        mapExerciseLog(readRow(sourceNative, "exercise_logs")),
+        mapSetLog(readRow(sourceNative, "set_logs")),
+        mapPersonalRecord(readRow(sourceNative, "personal_records")),
+        mapBodyStat(readRow(sourceNative, "body_stats")),
+        mapDailyNutrition(readRow(sourceNative, "daily_nutrition")),
+        ...mapRecoveryLog(readRow(sourceNative, "recovery_logs")),
+      ];
+      const fakeCloud = new Map<string, ReturnType<typeof toSupabaseSyncRow>>();
+      for (const record of sourceRecords) {
+        const uploaded = toSupabaseSyncRow(record);
+        const stored = fakeCloud.get(uploaded.external_id);
+        if (!stored || uploaded.source_updated_at >= stored.source_updated_at) {
+          fakeCloud.set(uploaded.external_id, uploaded);
+        }
+      }
+      const cloudRows: CloudSyncRow[] = [...fakeCloud.values()].map((record) => ({
+        external_id: record.external_id,
+        record_type: record.record_type,
+        source_app: record.source_app,
+        occurred_at: record.occurred_at,
+        source_updated_at: record.source_updated_at,
+        payload: record.payload,
+        schema_version: record.schema_version,
+        deleted_at: record.deleted_at,
+      }));
+      const items = cloudRows
+        .map(mapCloudRecordToRestoreItem)
+        .filter((item) => item !== null);
+
+      await restoredDatabase.withTransactionAsync(() => writeRestoreItems(restoredDatabase, items));
+
+      for (const table of [
+        "workout_sessions",
+        "food_logs",
+        "supplement_logs",
+        "body_stats",
+        "personal_records",
+        "daily_nutrition",
+        "recovery_logs",
+        "exercise_logs",
+        "set_logs",
+      ]) {
+        expect(restoredNative.prepare(`SELECT * FROM "${table}" ORDER BY rowid`).all()).toEqual(
+          sourceNative.prepare(`SELECT * FROM "${table}" ORDER BY rowid`).all(),
+        );
+      }
     } finally {
-      native.close();
+      sourceNative.close();
+      restoredNative.close();
     }
   });
 });

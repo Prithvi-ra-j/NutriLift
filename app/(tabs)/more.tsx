@@ -739,17 +739,17 @@ export default function MoreScreen() {
                 </View>
                 <TouchableOpacity
                   accessibilityLabel="Sync NutriLift data now"
-                  disabled={isWeb || !isSupabaseConfigured || !signedInEmail || isSyncing || syncSnapshot.status === "syncing"}
+                  disabled={isWeb || !isSupabaseConfigured || isSyncing || syncSnapshot.status === "syncing"}
                   onPress={syncNow}
                   activeOpacity={0.75}
                   style={{
-                    backgroundColor: !isWeb && isSupabaseConfigured && signedInEmail ? M3.colors.primary : M3.colors.surfaceVariant,
+                    backgroundColor: !isWeb && isSupabaseConfigured ? M3.colors.primary : M3.colors.surfaceVariant,
                     borderRadius: 8,
                     paddingHorizontal: 14,
                     paddingVertical: 10,
                   }}
                 >
-                  <Text style={{ color: !isWeb && isSupabaseConfigured && signedInEmail ? M3.colors.onPrimary : M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
+                  <Text style={{ color: !isWeb && isSupabaseConfigured ? M3.colors.onPrimary : M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_700Bold" }}>
                     {isSyncing || syncSnapshot.status === "syncing" ? "Syncing…" : isWeb ? "Android only" : "Sync now"}
                   </Text>
                 </TouchableOpacity>
@@ -761,7 +761,13 @@ export default function MoreScreen() {
                 {syncSnapshot.lastSuccessAt ? `Last success: ${syncSnapshot.lastSuccessAt}` : "No successful sync yet."}
               </Text>
               <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 6 }}>
-                {isWeb ? "Web uses a no-op database; use Android for local-first sync." : signedInEmail ? "Sync uploads locally queued changes to your Supabase account." : "Sign in above before syncing."}
+                {isWeb
+                  ? "Web uses a no-op database; use Android for local-first sync."
+                  : syncSnapshot.status === "offline"
+                    ? "Offline — changes stay on this device and will sync when you reconnect."
+                    : signedInEmail
+                      ? "Sync uploads locally queued changes to your Supabase account."
+                      : "Sign in above before syncing."}
               </Text>
               {syncSnapshot.rejected > 0 && (
                 <Button label="Retry rejected records" variant="secondary" onPress={retryRejected} disabled={isSyncing} style={{ marginTop: 12 }} />
