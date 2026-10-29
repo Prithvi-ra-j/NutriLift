@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Platform,
   Share,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -16,8 +15,11 @@ import * as FileSystem from "expo-file-system/legacy";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
+import { useToast } from "../../components/ui/Toast";
+import { confirmDestructive } from "../../components/ui/confirmDestructive";
 
 export default function ViewLogsModal() {
+  const { show } = useToast();
   const [logs, setLogs] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
@@ -66,26 +68,20 @@ export default function ViewLogsModal() {
         });
       }
     } catch (error) {
-      Alert.alert("Error", "Failed to share logs");
+      logger.error("Log sharing failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      show({ message: "Failed to share logs.", kind: "error" });
     }
   };
 
-  const handleClear = () => {
-    Alert.alert(
-      "Clear Logs",
-      "Are you sure you want to clear all logs?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Clear",
-          style: "destructive",
-          onPress: () => {
-            logger.clearWebLogs();
-            setLogs("Logs cleared");
-          },
-        },
-      ]
-    );
+  const handleClear = async () => {
+    if (!(await confirmDestructive("Clear Logs", "Are you sure you want to clear all logs?"))) {
+      return;
+    }
+    logger.clearWebLogs();
+    setLogs("Logs cleared");
+    show({ message: "Local logs cleared.", kind: "success" });
   };
 
   return (

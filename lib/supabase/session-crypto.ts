@@ -68,7 +68,12 @@ export function decryptSession(
   const expectedTag = hmac(sha256, authenticationKey, concatenate(AUTHENTICATION_CONTEXT, authenticatedData));
   let tagDifference = 0;
   for (let index = 0; index < MAC_BYTES; index += 1) {
-    tagDifference |= expectedTag[index] ^ suppliedTag[index];
+    const expectedByte = expectedTag[index];
+    const suppliedByte = suppliedTag[index];
+    if (expectedByte === undefined || suppliedByte === undefined) {
+      throw new Error("Encrypted Supabase session is truncated.");
+    }
+    tagDifference |= expectedByte ^ suppliedByte;
   }
   if (tagDifference !== 0) throw new Error("Encrypted Supabase session failed authentication.");
 

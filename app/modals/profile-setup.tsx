@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { useEffect, useReducer } from "react";
+import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Button } from "../../components/ui/Button";
@@ -9,21 +9,68 @@ import { getProfile, saveProfile } from "../../lib/data/profile";
 import type { ProfileInput } from "../../lib/data/profile";
 import { M3 } from "../../design-system/tokens";
 import { logger } from "../../lib/logger";
+import { useToast } from "../../components/ui/Toast";
+
+type ProfileSetupState = {
+  profile: Awaited<ReturnType<typeof getProfile>>;
+  displayName: string;
+  sex: string;
+  birthYear: string;
+  heightCm: string;
+  goalText: string;
+  coachNotes: string;
+  isLoading: boolean;
+  isSaving: boolean;
+};
+
+type ProfileSetupAction = {
+  [K in keyof ProfileSetupState]: {
+    field: K;
+    value: ProfileSetupState[K];
+  };
+}[keyof ProfileSetupState];
+
+const initialState: ProfileSetupState = {
+  profile: null,
+  displayName: "",
+  sex: "",
+  birthYear: "",
+  heightCm: "",
+  goalText: "",
+  coachNotes: "",
+  isLoading: true,
+  isSaving: false,
+};
+
+function profileSetupReducer(
+  state: ProfileSetupState,
+  action: ProfileSetupAction,
+): ProfileSetupState {
+  return { ...state, [action.field]: action.value };
+}
 
 export default function ProfileSetupModal() {
+  const { show } = useToast();
   const { firstRun } = useLocalSearchParams<{ firstRun?: string }>();
-  const [profile, setProfile] = useState<Awaited<ReturnType<typeof getProfile>>>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [sex, setSex] = useState("");
-  const [birthYear, setBirthYear] = useState("");
-  const [heightCm, setHeightCm] = useState("");
-  const [goalText, setGoalText] = useState("");
-  const [coachNotes, setCoachNotes] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [state, dispatch] = useReducer(profileSetupReducer, initialState);
+  const {
+    profile,
+    displayName,
+    sex,
+    birthYear,
+    heightCm,
+    goalText,
+    coachNotes,
+    isLoading,
+    isSaving,
+  } = state;
+  const setField = <K extends keyof ProfileSetupState>(
+    field: K,
+    value: ProfileSetupState[K],
+  ) => dispatch({ field, value } as ProfileSetupAction);
 
   const skipSetup = async () => {
-    setIsSaving(true);
+    setField("isSaving", true);
     try {
       await saveProfile({
         display_name: null,
@@ -38,9 +85,9 @@ export default function ProfileSetupModal() {
       logger.error("Could not save profile setup choice", {
         error: error instanceof Error ? error.message : String(error),
       });
-      Alert.alert("Could not continue", "Your setup choice could not be saved. Please try again.");
+      show({ message: "Your setup choice could not be saved. Please try again.", kind: "error" });
     } finally {
-      setIsSaving(false);
+      setField("isSaving", false);
     }
   };
 
@@ -49,38 +96,38 @@ export default function ProfileSetupModal() {
     getProfile()
       .then((savedProfile) => {
         if (!active) return;
-        setProfile(savedProfile);
-        setDisplayName(savedProfile?.display_name ?? "");
-        setSex(savedProfile?.sex ?? "");
-        setBirthYear(savedProfile?.birth_year?.toString() ?? "");
-        setHeightCm(savedProfile?.height_cm?.toString() ?? "");
-        setGoalText(savedProfile?.goal_text ?? "");
-        setCoachNotes(savedProfile?.coach_notes ?? "");
+        setField("profile", savedProfile);
+        setField("displayName", savedProfile?.display_name ?? "");
+        setField("sex", savedProfile?.sex ?? "");
+        setField("birthYear", savedProfile?.birth_year?.toString() ?? "");
+        setField("heightCm", savedProfile?.height_cm?.toString() ?? "");
+        setField("goalText", savedProfile?.goal_text ?? "");
+        setField("coachNotes", savedProfile?.coach_notes ?? "");
       })
       .catch((error: unknown) => {
         logger.error("Profile load failed", {
           error: error instanceof Error ? error.message : String(error),
         });
-        Alert.alert("Profile unavailable", "Your local profile could not be loaded.");
+        show({ message: "Your local profile could not be loaded.", kind: "error" });
       })
       .finally(() => {
-        if (active) setIsLoading(false);
+        if (active) setField("isLoading", false);
       });
     return () => {
       active = false;
     };
-  }, []);
+  }, [show]);
 
   const save = async () => {
     const year = birthYear.trim() ? Number(birthYear) : null;
     const height = heightCm.trim() ? Number(heightCm) : null;
     const currentYear = new Date().getFullYear();
     if (year !== null && (!Number.isInteger(year) || year < 1900 || year > currentYear)) {
-      Alert.alert("Check birth year", `Enter a year between 1900 and ${currentYear}.`);
+      show({ message: `Enter a birth year between 1900 and ${currentYear}.`, kind: "error" });
       return;
     }
     if (height !== null && (!Number.isFinite(height) || height <= 0 || height > 300)) {
-      Alert.alert("Check height", "Enter a height from 1 to 300 cm.");
+      show({ message: "Enter a height from 1 to 300 cm.", kind: "error" });
       return;
     }
 
@@ -93,7 +140,7 @@ export default function ProfileSetupModal() {
       coach_notes: coachNotes.trim() || null,
     };
 
-    setIsSaving(true);
+    setField("isSaving", true);
     try {
       await saveProfile(input);
       if (firstRun === "true" || !profile) router.replace("/(tabs)");
@@ -102,9 +149,9 @@ export default function ProfileSetupModal() {
       logger.error("Profile save failed", {
         error: error instanceof Error ? error.message : String(error),
       });
-      Alert.alert("Save failed", "Your profile was not saved. Please try again.");
+      show({ message: "Your profile was not saved. Please try again.", kind: "error" });
     } finally {
-      setIsSaving(false);
+      setField("isSaving", false);
     }
   };
 
@@ -122,10 +169,7 @@ export default function ProfileSetupModal() {
         subtitle="Optional details stay on this device."
         onClose={() => {
           if (firstRun === "true") {
-            Alert.alert("Profile setup", "You can finish profile setup later from Settings.", [
-              { text: "Continue setup", style: "cancel" },
-              { text: "Not now", onPress: () => void skipSetup() },
-            ]);
+            void skipSetup();
           } else {
             router.back();
           }
@@ -139,7 +183,7 @@ export default function ProfileSetupModal() {
           <Text style={labelStyle}>Display name</Text>
           <Input
             value={displayName}
-            onChangeText={setDisplayName}
+            onChangeText={(value) => setField("displayName", value)}
             placeholder="How should NutriLift address you?"
             maxLength={80}
             editable={!isLoading && !isSaving}
@@ -149,7 +193,7 @@ export default function ProfileSetupModal() {
           <Text style={labelStyle}>Sex (optional)</Text>
           <Input
             value={sex}
-            onChangeText={setSex}
+            onChangeText={(value) => setField("sex", value)}
             placeholder="Leave blank if you prefer"
             maxLength={40}
             editable={!isLoading && !isSaving}
@@ -159,7 +203,7 @@ export default function ProfileSetupModal() {
           <Text style={labelStyle}>Birth year (optional)</Text>
           <Input
             value={birthYear}
-            onChangeText={setBirthYear}
+            onChangeText={(value) => setField("birthYear", value)}
             keyboardType="number-pad"
             placeholder="YYYY"
             maxLength={4}
@@ -170,7 +214,7 @@ export default function ProfileSetupModal() {
           <Text style={labelStyle}>Height in cm (optional)</Text>
           <Input
             value={heightCm}
-            onChangeText={setHeightCm}
+            onChangeText={(value) => setField("heightCm", value)}
             keyboardType="decimal-pad"
             placeholder="e.g. 170"
             maxLength={6}
@@ -181,7 +225,7 @@ export default function ProfileSetupModal() {
           <Text style={labelStyle}>Goal (optional)</Text>
           <Input
             value={goalText}
-            onChangeText={setGoalText}
+            onChangeText={(value) => setField("goalText", value)}
             placeholder="A goal in your own words"
             maxLength={240}
             editable={!isLoading && !isSaving}
@@ -191,7 +235,7 @@ export default function ProfileSetupModal() {
           <Text style={labelStyle}>Coach notes (optional)</Text>
           <Input
             value={coachNotes}
-            onChangeText={setCoachNotes}
+            onChangeText={(value) => setField("coachNotes", value)}
             placeholder="Context you want to provide"
             multiline
             maxLength={1000}

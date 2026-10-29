@@ -12,6 +12,18 @@ export type NutritionTargets = {
   protein_g: number;
 };
 
+export type MealType = "breakfast" | "lunch" | "snack" | "dinner";
+
+export function mealForHour(hour: number): MealType {
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    throw new RangeError("Hour must be an integer from 0 to 23.");
+  }
+  if (hour >= 5 && hour < 11) return "breakfast";
+  if (hour >= 11 && hour < 15) return "lunch";
+  if (hour >= 15 && hour < 18) return "snack";
+  return "dinner";
+}
+
 export type FoodLogValidationPoint = Pick<
   FoodLogPoint,
   "calories" | "protein_g" | "carbs_g" | "fat_g"

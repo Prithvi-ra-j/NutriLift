@@ -27,7 +27,17 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
   const existing = await getMonthlySummary(month);
   // Don't generate summary for current month (incomplete data)
   const today = new Date();
-  const [year, monthNum] = month.split('-').map(Number);
+  const monthParts = /^(\d{4})-(\d{2})$/.exec(month);
+  const yearPart = monthParts?.[1];
+  const monthPart = monthParts?.[2];
+  if (yearPart === undefined || monthPart === undefined) {
+    throw new RangeError(`Invalid month: ${month}`);
+  }
+  const year = Number(yearPart);
+  const monthNum = Number(monthPart);
+  if (monthNum < 1 || monthNum > 12) {
+    throw new RangeError(`Invalid month: ${month}`);
+  }
   const monthDate = new Date(year, monthNum - 1, 1);
   
   if (monthDate.getFullYear() === today.getFullYear() && monthDate.getMonth() === today.getMonth()) {
@@ -73,9 +83,14 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
       avg_sleep_hr: recovery.reduce((sum, r) => sum + (r.sleep_duration_hr || 0), 0) / recovery.length,
     } : { avg_sleep_hr: 0 };
 
-    const bodyStatsData = bodyStats.length >= 2 ? {
-      weight_change_kg: bodyStats[bodyStats.length - 1].weight_kg! - bodyStats[0].weight_kg!,
-    } : {};
+    const firstWeight = bodyStats[0]?.weight_kg;
+    const lastWeight = bodyStats.at(-1)?.weight_kg;
+    const bodyStatsData =
+      bodyStats.length >= 2 &&
+      typeof firstWeight === "number" &&
+      typeof lastWeight === "number"
+        ? { weight_change_kg: lastWeight - firstWeight }
+        : {};
 
     // Generate AI summary
     const summaryInput = {

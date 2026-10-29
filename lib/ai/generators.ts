@@ -142,10 +142,14 @@ export async function generateMonthlyReport(
   const sortedWeights = [...data.weight_history]
     .filter((record) => record.weight_kg !== null)
     .sort((a, b) => a.date.localeCompare(b.date));
+  const firstWeight = sortedWeights[0]?.weight_kg;
+  const lastWeight = sortedWeights.at(-1)?.weight_kg;
   const body = preferences.includeBodyMeasurements
     ? {
-      weight_change_kg: sortedWeights.length > 1
-        ? Number((sortedWeights[sortedWeights.length - 1].weight_kg! - sortedWeights[0].weight_kg!).toFixed(1))
+      weight_change_kg: sortedWeights.length > 1 &&
+        typeof firstWeight === "number" &&
+        typeof lastWeight === "number"
+        ? Number((lastWeight - firstWeight).toFixed(1))
         : null,
       inbody_readings: data.inbody_records.length,
     }

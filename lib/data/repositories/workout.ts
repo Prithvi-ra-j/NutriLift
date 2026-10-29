@@ -16,7 +16,7 @@ import {
   type CustomExercise,
   type NewCustomExercise,
 } from "../db/schema";
-import { inTx } from "../db/tx";
+import { inRead, inTx } from "../db/tx";
 import { nowIso } from "../../time/clock";
 import {
   addDays,
@@ -248,35 +248,114 @@ export async function getSetsForExercise(exerciseLogId: string): Promise<SetLog[
     .orderBy(setLogs.set_number);
 }
 
-export async function insertSetLog(set: NewSetLog): Promise<{ isPR: boolean }> {
+export async function insertSetLog(set: NewSetLog): Promise<{
+  isPR: boolean;
+  saved: SetLog;
+  summary: {
+    session: WorkoutSession | null;
+    personalRecord: PersonalRecord | null;
+  };
+}> {
   return inTx(async () => {
     const exercise = await getExerciseForSet(set.exercise_log_id);
     if (!exercise) throw new Error(`Exercise log ${set.exercise_log_id} was not found.`);
     validateSetMetrics(exercise.exercise_type ?? "weight_reps", set);
+    const updatedAt = nowIso();
     await db.insert(setLogs).values({
       ...set,
       is_pr: 0,
-      updated_at: nowIso(),
+      updated_at: updatedAt,
       deleted_at: null,
     });
     const result = await recomputePRsForExercise(exercise.exercise_name);
     await updateSessionVolume(exercise.session_id);
-    return { isPR: result.prSetIds.has(set.id) };
+    const [saved] = await db
+      .select()
+      .from(setLogs)
+      .where(eq(setLogs.id, set.id))
+      .limit(1);
+    if (!saved) throw new Error(`Set log ${set.id} was not saved.`);
+    return {
+      isPR: result.prSetIds.has(set.id),
+      saved,
+      summary: {
+        session: await getSessionById(exercise.session_id),
+        personalRecord: await getPRForExercise(exercise.exercise_name),
+      },
+    };
   });
 }
 
-export async function deleteSetLog(id: string, exerciseLogId: string): Promise<void> {
-  await inTx(async () => {
+export async function deleteSetLog(
+  id: string,
+  exerciseLogId: string,
+): Promise<SetLog | null> {
+  return inTx(async () => {
     const exercise = await getExerciseForSet(exerciseLogId);
+    const [existing] = await db
+      .select()
+      .from(setLogs)
+      .where(and(
+        eq(setLogs.id, id),
+        eq(setLogs.exercise_log_id, exerciseLogId),
+        isNull(setLogs.deleted_at),
+      ));
+    if (!existing) return null;
     const deletedAt = nowIso();
     await db
       .update(setLogs)
       .set({ deleted_at: deletedAt, updated_at: deletedAt })
-      .where(and(eq(setLogs.id, id), isNull(setLogs.deleted_at)));
+      .where(and(
+        eq(setLogs.id, id),
+        eq(setLogs.exercise_log_id, exerciseLogId),
+        isNull(setLogs.deleted_at),
+      ));
     if (exercise) {
       await recomputePRsForExercise(exercise.exercise_name);
       await updateSessionVolume(exercise.session_id);
     }
+    return { ...existing, deleted_at: deletedAt, updated_at: deletedAt };
+  });
+}
+
+export async function restoreSetLog(
+  id: string,
+  exerciseLogId: string,
+): Promise<SetLog | null> {
+  return inTx(async () => {
+    const [existing] = await db
+      .select()
+      .from(setLogs)
+      .where(and(
+        eq(setLogs.id, id),
+        eq(setLogs.exercise_log_id, exerciseLogId),
+      ));
+    if (!existing?.deleted_at) return null;
+    const exercise = await getExerciseForSet(exerciseLogId);
+    if (!exercise) {
+      throw new Error(`Exercise log ${exerciseLogId} was not found.`);
+    }
+
+    await db
+      .update(setLogs)
+      .set({ deleted_at: null, updated_at: nowIso() })
+      .where(and(
+        eq(setLogs.id, id),
+        eq(setLogs.exercise_log_id, exerciseLogId),
+      ));
+    const result = await recomputePRsForExercise(exercise.exercise_name);
+    await updateSessionVolume(exercise.session_id);
+    const [restored] = await db
+      .select()
+      .from(setLogs)
+      .where(and(
+        eq(setLogs.id, id),
+        eq(setLogs.exercise_log_id, exerciseLogId),
+        isNull(setLogs.deleted_at),
+      ));
+    return restored
+      ? { ...restored, is_pr: result.prSetIds.has(id) ? 1 : 0 }
+      : null;
   });
 }
 
@@ -660,7 +739,8 @@ export async function getLastWeightForExercise(
   const workingSets = sets.filter((s) => !s.is_warmup);
   if (workingSets.length === 0) return null;
 
-  return workingSets[workingSets.length - 1].weight_kg;
+  const latestWorkingSet = workingSets.at(-1);
+  return latestWorkingSet?.weight_kg ?? null;
 }
 
 // ─── Previous Session Data ────────────────────────────────────────────────────
@@ -720,33 +800,31 @@ export interface WorkoutDayData {
   exercises: ExerciseLog[];
   setsByExercise: Record<string, SetLog[]>;
   customExercises: CustomExercise[];
-  completedDayTypes: Set<string>;
+  completedDayTypes: string[];
 }
 
 export async function getWorkoutDay(date: string): Promise<WorkoutDayData> {
-  const monday = startOfWeekMonday(date);
-  const sunday = addDays(monday, 6);
-  const [sessions, customExerciseRows, weekSessions] = await Promise.all([
-    getSessionsForDate(date),
-    getCustomExercises(),
-    getSessionsInRange(monday, sunday),
-  ]);
-  const session = sessions[0] ?? null;
-  const exercises = session ? await getExercisesForSession(session.id) : [];
-  const setsEntries = await Promise.all(
-    exercises.map(async (exercise) => [
-      exercise.id,
-      await getSetsForExercise(exercise.id),
-    ] as const),
-  );
+  return inRead(async () => {
+    const monday = startOfWeekMonday(date);
+    const sunday = addDays(monday, 6);
+    const sessions = await getSessionsForDate(date);
+    const customExerciseRows = await getCustomExercises();
+    const weekSessions = await getSessionsInRange(monday, sunday);
+    const session = sessions[0] ?? null;
+    const exercises = session ? await getExercisesForSession(session.id) : [];
+    const setsEntries: [string, SetLog[]][] = [];
+    for (const exercise of exercises) {
+      setsEntries.push([exercise.id, await getSetsForExercise(exercise.id)]);
+    }
 
-  return {
-    session,
-    exercises,
-    setsByExercise: Object.fromEntries(setsEntries),
-    customExercises: customExerciseRows,
-    completedDayTypes: new Set(weekSessions.map((item) => item.day_type)),
-  };
+    return {
+      session,
+      exercises,
+      setsByExercise: Object.fromEntries(setsEntries),
+      customExercises: customExerciseRows,
+      completedDayTypes: [...new Set(weekSessions.map((item) => item.day_type))],
+    };
+  });
 }
 
 export async function insertCustomExercise(exercise: NewCustomExercise): Promise<void> {

@@ -57,7 +57,9 @@ describe("database migrations", () => {
   it("migrates a v0 install without losing rows and keeps the schema in parity", async () => {
     const { native, database } = createDatabase();
     try {
-      await migrations[0].up(database);
+      const initialMigration = migrations.at(0);
+      if (!initialMigration) throw new Error("Expected an initial database migration.");
+      await initialMigration.up(database);
       native.exec(
         buildSanitizedV0Fixture({
           foodLog: true,

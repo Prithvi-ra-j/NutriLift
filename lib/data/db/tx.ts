@@ -15,6 +15,16 @@ export function runExclusive<T>(fn: () => Promise<T>): Promise<T> {
   return next;
 }
 
+export function inRead<T>(fn: () => Promise<T>): Promise<T> {
+  return runExclusive(async () => {
+    let result!: T;
+    await sqlite.withTransactionAsync(async () => {
+      result = await fn();
+    });
+    return result;
+  });
+}
+
 export function inTx<T>(fn: () => Promise<T>, notifyCommit = true): Promise<T> {
   return runExclusive(async () => {
     let result!: T;

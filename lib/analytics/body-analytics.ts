@@ -27,7 +27,17 @@ export function computeBodySummary(
   }
 
   const sorted = [...weightHistory].sort((a, b) => a.date.localeCompare(b.date));
-  const latest = sorted[sorted.length - 1];
+  const latest = sorted.at(-1);
+  if (!latest) {
+    return {
+      currentWeight: latestInBody?.weight_kg ?? null,
+      weightChange7d: null,
+      weightChange30d: null,
+      trend: "maintaining",
+      projectedBFDate: null,
+      onTrackForGoal: false,
+    };
+  }
   const currentWeight = latest.weight_kg;
 
   // 7-day change

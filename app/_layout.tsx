@@ -1,6 +1,6 @@
 import "../global.css";
 import { useEffect, useRef, useState } from "react";
-import { View, Text, ActivityIndicator, Platform, Alert } from "react-native";
+import { View, Text, ActivityIndicator, Platform } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -13,7 +13,9 @@ import {
   DMSans_700Bold,
 } from "@expo-google-fonts/dm-sans";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ErrorBoundary } from "../components/ErrorBoundary";
+import { FirstRunRestorePrompt } from "../components/FirstRunRestorePrompt";
 import { logger } from "../lib/logger";
 import { M3 } from "../design-system/tokens";
 import { MigrationFailureScreen } from "../components/MigrationFailureScreen";
@@ -21,9 +23,7 @@ import { ToastProvider } from "../components/ui/Toast";
 import { requestSync, startSyncTriggers } from "../lib/sync/syncEngine";
 import { onBackground, onForeground } from "../lib/lifecycle/foreground";
 import { supabase } from "../lib/supabase/client";
-import { hasCloudBackup, hasEmptyLocalDatabase, markRestorePrompted, restoreFromCloud } from "../lib/sync/restore";
 import { getProfile } from "../lib/data/profile";
-import { getAppSetting } from "../lib/data/appSettings";
 import { initializeDataLayer } from "../lib/data/startup";
 
 type GlobalErrorUtils = {
@@ -32,6 +32,13 @@ type GlobalErrorUtils = {
 };
 
 let globalErrorHandlerInstalled = false;
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
 
 function installGlobalErrorHandler(): void {
   if (globalErrorHandlerInstalled) return;
@@ -57,7 +64,6 @@ export default function RootLayout() {
   const [migrationAttempt, setMigrationAttempt] = useState(0);
   const [restoreCheckComplete, setRestoreCheckComplete] = useState(false);
   const [profileSetupRequired, setProfileSetupRequired] = useState(false);
-  const restorePromptStarted = useRef(false);
   const profileSetupPrompted = useRef(false);
 
   const [fontsLoaded] = useFonts({
@@ -83,65 +89,6 @@ export default function RootLayout() {
       unsubscribeBackground();
       supabase?.auth.stopAutoRefresh();
     };
-  }, [dbReady]);
-
-  useEffect(() => {
-    if (!dbReady) return;
-    if (Platform.OS === "web" || !supabase || restorePromptStarted.current) {
-      setRestoreCheckComplete(true);
-      return;
-    }
-    restorePromptStarted.current = true;
-    void (async () => {
-      const prompted = await getAppSetting("restore_prompted");
-      if (prompted === "1") {
-        setRestoreCheckComplete(true);
-        return;
-      }
-      if (!(await hasEmptyLocalDatabase()) || !(await hasCloudBackup())) {
-        setRestoreCheckComplete(true);
-        return;
-      }
-      Alert.alert(
-        "Cloud backup found",
-        "This device has no NutriLift logs. Would you like to restore your backup now?",
-        [
-          {
-            text: "Not now",
-            style: "cancel",
-            onPress: () => {
-              void markRestorePrompted().catch((error: unknown) => {
-                logger.error("Could not save the restore prompt choice", { error });
-              }).finally(() => {
-                setRestoreCheckComplete(true);
-              });
-            },
-          },
-          {
-            text: "Restore",
-            onPress: () => {
-              void markRestorePrompted()
-                .then(() => restoreFromCloud())
-                .then((count) => Alert.alert("Restore complete", `Restored ${count} records.`))
-                .catch((error: unknown) => {
-                  const message = error instanceof Error ? error.message : String(error);
-                  logger.error("First-run cloud restore failed", { error: message });
-                  Alert.alert("Restore failed", message);
-                })
-                .finally(() => {
-                  setRestoreCheckComplete(true);
-                });
-            },
-          },
-        ],
-        { cancelable: false },
-      );
-    })().catch((error: unknown) => {
-      logger.warn("Could not check for a first-run cloud backup", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      setRestoreCheckComplete(true);
-    });
   }, [dbReady]);
 
   useEffect(() => {
@@ -218,9 +165,15 @@ export default function RootLayout() {
   return (
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1, backgroundColor: M3.colors.background }}>
-        <ToastProvider>
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false }}>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <FirstRunRestorePrompt
+              dbReady={dbReady}
+              onComplete={setRestoreCheckComplete}
+              queryClient={queryClient}
+            />
+            <StatusBar style="light" />
+            <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="modals/profile-setup"
@@ -294,8 +247,9 @@ export default function RootLayout() {
               headerShown: false,
             }}
           />
-          </Stack>
-        </ToastProvider>
+            </Stack>
+          </ToastProvider>
+        </QueryClientProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>
   );

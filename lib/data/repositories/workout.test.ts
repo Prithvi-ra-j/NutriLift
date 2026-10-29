@@ -5,8 +5,11 @@ import {
   addTemplateExercises,
   getWorkoutDay,
   insertSetLog,
+  restoreSetLog,
   updateSetLog,
 } from "./workout";
+import { getHomeSummary } from "./home";
+import { getProgressOverview } from "./progress";
 import type { MigrationDatabase } from "../db/migrations/runner";
 import { migrations } from "../db/migrations";
 import * as schema from "../db/schema";
@@ -76,7 +79,7 @@ async function migrateTestDatabase(native: DatabaseSync): Promise<void> {
   );
 }
 
-describe("workout day repository on SQLite", () => {
+describe("screen data repositories on SQLite", () => {
   beforeEach(async () => {
     mockNative = new DatabaseSync(":memory:");
     mockNative.exec("PRAGMA foreign_keys = ON");
@@ -191,6 +194,48 @@ describe("workout day repository on SQLite", () => {
     expect([...day.completedDayTypes].sort()).toEqual(["Cardio", "Push A"]);
   });
 
+  it("returns a serializable home summary from one SQLite snapshot", async () => {
+    const summary = await getHomeSummary("2026-10-18");
+
+    expect(summary.sessions).toEqual([]);
+    expect(summary.profile).toBeNull();
+    expect(summary.trackingPause).toEqual({
+      paused: false,
+      from: null,
+      until: null,
+    });
+    expect(summary.targets).toMatchObject({
+      calories: 2200,
+      protein_g: 130,
+      carbs_g: 250,
+      fat_g: 70,
+    });
+    expect(JSON.parse(JSON.stringify(summary))).toEqual(summary);
+  });
+
+  it("limits progress weight data to the requested date range", async () => {
+    mockNative?.exec(`
+      INSERT INTO body_stats (id, date, type, weight_kg)
+      VALUES ('in-range', '2026-10-17', 'weight', 75);
+      INSERT INTO body_stats (id, date, type, weight_kg)
+      VALUES ('out-of-range', '2026-09-01', 'weight', 70);
+      INSERT INTO body_stats (id, date, type, weight_kg)
+      VALUES ('inbody', '2026-10-16', 'inbody', 74);
+    `);
+
+    const overview = await getProgressOverview({
+      selectedDate: "2026-10-18",
+      weightStartDate: "2026-10-01",
+      nutritionStartDate: "2026-10-01",
+      recoveryStartDate: "2026-10-01",
+      endDate: "2026-10-18",
+    });
+
+    expect(overview.weightHistory.map((record) => record.id)).toEqual(["in-range"]);
+    expect(overview.inBodyRecords.map((record) => record.id)).toEqual(["inbody"]);
+    expect(JSON.parse(JSON.stringify(overview))).toEqual(overview);
+  });
+
   it("recomputes PR flags and the record after set edits and deletion", async () => {
     mockNative?.exec(`
       INSERT INTO workout_sessions (id, date, day_type, started_at, total_volume_kg)
@@ -203,7 +248,7 @@ describe("workout day repository on SQLite", () => {
       VALUES ('second-exercise', 'second-session', '2026-10-21', 'Squat', 'weight_reps', 1);
     `);
 
-    await insertSetLog({
+    const firstSetResult = await insertSetLog({
       id: "first-set",
       exercise_log_id: "first-exercise",
       set_number: 1,
@@ -212,7 +257,11 @@ describe("workout day repository on SQLite", () => {
       logged_at: 1,
       is_warmup: 0,
     });
-    await insertSetLog({
+    expect(firstSetResult.saved.id).toBe("first-set");
+    expect(firstSetResult.isPR).toBe(true);
+    expect(firstSetResult.summary.session?.total_volume_kg).toBe(1500);
+    expect(firstSetResult.summary.personalRecord?.best_weight_kg).toBe(75);
+    const secondSetResult = await insertSetLog({
       id: "second-set",
       exercise_log_id: "second-exercise",
       set_number: 1,
@@ -221,6 +270,9 @@ describe("workout day repository on SQLite", () => {
       logged_at: 2,
       is_warmup: 0,
     });
+    expect(secondSetResult.saved.id).toBe("second-set");
+    expect(secondSetResult.isPR).toBe(false);
+    expect(secondSetResult.summary.session?.total_volume_kg).toBe(80);
     await expectPrStorageToMatchDerived();
     expect(
       mockNative?.prepare("SELECT best_weight_kg FROM personal_records WHERE exercise_name = 'Squat'").get(),
@@ -237,6 +289,17 @@ describe("workout day repository on SQLite", () => {
     expect(
       mockNative?.prepare("SELECT best_weight_kg FROM personal_records WHERE exercise_name = 'Squat'").get(),
     ).toEqual({ best_weight_kg: 75 });
+
+    const restored = await restoreSetLog("second-set", "second-exercise");
+    expect(restored).toMatchObject({
+      id: "second-set",
+      weight_kg: 110,
+      deleted_at: null,
+    });
+    await expectPrStorageToMatchDerived();
+    expect(
+      mockNative?.prepare("SELECT best_weight_kg FROM personal_records WHERE exercise_name = 'Squat'").get(),
+    ).toEqual({ best_weight_kg: 110 });
   });
 
   it("accepts pull-up and plank sets without treating duration as strength data", async () => {

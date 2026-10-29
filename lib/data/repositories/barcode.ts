@@ -17,6 +17,7 @@ export async function getBarcodeCache(barcode: string): Promise<FoodResult | nul
   }
 
   const cached = results[0];
+  if (!cached) return null;
   const now = nowUnix() * 1000;
   if (cached.expires_at !== null && cached.expires_at <= now) {
     await inTx(async () => {

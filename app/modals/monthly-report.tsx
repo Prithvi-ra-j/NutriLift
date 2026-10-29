@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -26,8 +25,10 @@ import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import { useToday } from "../../lib/time/useToday";
 import { nowUnix } from "../../lib/time/clock";
+import { useToast } from "../../components/ui/Toast";
 
 export default function MonthlyReportModal() {
+  const { show } = useToast();
   const today = useToday();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState("");
@@ -87,7 +88,10 @@ export default function MonthlyReportModal() {
       if (err instanceof AiError && err.code === "consent") {
         router.push("/modals/ai-consent");
       }
-      Alert.alert("Generation Failed", `Could not generate report: ${err instanceof Error ? err.message : "Unknown error"}`);
+      show({
+        message: `Could not generate report: ${err instanceof Error ? err.message : "Unknown error"}`,
+        kind: "error",
+      });
       setProgress("");
     } finally {
       setIsGenerating(false);

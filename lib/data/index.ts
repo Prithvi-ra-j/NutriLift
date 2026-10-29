@@ -22,6 +22,8 @@ export {
   getFoodLogsForDate,
   getLast30DaysNutrition,
   getLast7DaysNutrition,
+  getNutritionDay,
+  restoreFoodLog,
   getProteinHitRate,
   insertFoodLog,
   insertFoodLogs,
@@ -30,6 +32,7 @@ export {
   updateFoodLog,
 } from "./repositories/nutrition";
 export { ensureDerivedDataForV5, rebuildAllDerived } from "./repositories/rebuild";
+export { getHomeSummary } from "./repositories/home";
 export {
   getRecentRecoveryLogs,
   getRecoveryLog,
@@ -65,6 +68,17 @@ export {
   updateWeeklySummary,
   updateYearlySummary,
 } from "./repositories/reports";
+export { getProgressOverview } from "./repositories/progress";
+export {
+  useHomeSummary,
+  useLogSet,
+  useNutritionDay,
+  useProgress,
+  useWorkoutDay,
+  workoutDayQueryKey,
+} from "./hooks";
+export type { ProgressOverviewRange } from "./repositories/progress";
+export type { WorkoutDayData } from "./repositories/workout";
 export {
   addTemplateExercises,
   calculateEpley1RM,
@@ -89,6 +103,7 @@ export {
   insertSession,
   insertSetLog,
   recomputePRsForExercise,
+  restoreSetLog,
   updateExerciseLog,
   updateSession,
   updateSessionVolume,

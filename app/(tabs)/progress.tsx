@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,49 +8,67 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { getAllPRs } from "../../lib/data";
-import { getWeightHistory, getAllInBodyRecords } from "../../lib/data";
-import { getLast30DaysNutrition } from "../../lib/data";
-import { getRecentRecoveryLogs } from "../../lib/data";
+import { router, useFocusEffect } from "expo-router";
+import { useProgress } from "../../lib/data";
 import { computeNutritionSummary } from "../../lib/analytics/nutrition-analytics";
 import { computeBodySummary } from "../../lib/analytics/body-analytics";
 import { canCommentOnBodyComp, getEligibleBodyCompTimeOfDay } from "../../lib/analytics/bodyCompSafety";
 import { rollingBodyAverage } from "../../lib/analytics/body-averages";
-import { getTargetsForDate } from "../../lib/data/profile";
 import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { Card } from "../../components/ui/Card";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { SegmentedControl } from "../../components/ui/SegmentedControl";
-import type { PersonalRecord, BodyStat, DailyNutrition, RecoveryLog } from "../../lib/data/types";
 import { M3 } from "../../design-system/tokens";
 import { addDays, parseLocalDate, startOfWeekMonday } from "../../lib/time/localDate";
 import { useToday } from "../../lib/time/useToday";
 import { logger } from "../../lib/logger";
-import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
 
 type ProgressSection = "strength" | "body" | "nutrition" | "recovery";
 
 export default function ProgressScreen() {
   const today = useToday();
   const [activeSection, setActiveSection] = useState<ProgressSection>("body");
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const selectedDate = pickedDate ?? today;
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const requestId = useRef(0);
+  const range = {
+    selectedDate,
+    weightStartDate: addDays(today, -90),
+    nutritionStartDate: addDays(today, -29),
+    recoveryStartDate: addDays(today, -30),
+    endDate: today,
+  };
+  const {
+    data: overview,
+    error,
+    isError,
+    isFetching,
+    isLoading,
+    refetch,
+  } = useProgress(range);
 
-  const [prs, setPRs] = useState<PersonalRecord[]>([]);
-  const [weightHistory, setWeightHistory] = useState<BodyStat[]>([]);
-  const [inBodyRecords, setInBodyRecords] = useState<BodyStat[]>([]);
-  const [nutritionHistory, setNutritionHistory] = useState<DailyNutrition[]>([]);
-  const [recoveryLogs, setRecoveryLogs] = useState<RecoveryLog[]>([]);
-  const [targets, setTargets] = useState<
-    Pick<Awaited<ReturnType<typeof getTargetsForDate>>, "calories" | "protein_g" | "carbs_g" | "fat_g">
-  >(DEFAULT_TARGETS);
+  useFocusEffect(useCallback(() => {
+    void refetch();
+  }, [refetch]));
+
+  useEffect(() => {
+    if (error) {
+      logger.error("Progress load failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [error]);
+
+  const loadError = isError
+    ? "Could not load progress data. Please retry."
+    : null;
+  const prs = overview?.prs ?? [];
+  const weightHistory = overview?.weightHistory ?? [];
+  const inBodyRecords = overview?.inBodyRecords ?? [];
+  const nutritionHistory = overview?.nutritionHistory ?? [];
+  const recoveryLogs = overview?.recoveryLogs ?? [];
+  const targets = overview?.targets ?? DEFAULT_TARGETS;
 
   // Get week range for selected date
   const getWeekRange = (dateStr: string) => {
@@ -66,47 +84,6 @@ export default function ProgressScreen() {
 
   const weekRange = getWeekRange(selectedDate);
   const isCurrentWeek = weekRange.start === getWeekRange(today).start;
-
-  const loadData = useCallback(async () => {
-    const request = beginRequest(requestId);
-    setLoadError(null);
-    try {
-      const [prsData, weightData, inBodyData, nutritionData, recoveryData, targetData] = await Promise.all([
-        getAllPRs(),
-        getWeightHistory(90), // Get 90 days to cover multiple weeks
-        getAllInBodyRecords(),
-        getLast30DaysNutrition(),
-        getRecentRecoveryLogs(30), // Get 30 days to cover multiple weeks
-        getTargetsForDate(selectedDate),
-      ]);
-      if (!isLatestRequest(requestId, request)) return;
-      setPRs(prsData);
-      setWeightHistory(weightData);
-      setInBodyRecords(inBodyData);
-      setNutritionHistory(nutritionData);
-      setRecoveryLogs(recoveryData);
-      setTargets(targetData);
-    } catch (err) {
-      logger.error("Progress load failed", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-      if (isLatestRequest(requestId, request)) {
-        setLoadError("Could not load progress data. Please retry.");
-      }
-    } finally {
-      if (isLatestRequest(requestId, request)) {
-        setIsLoading(false);
-        setRefreshing(false);
-      }
-    }
-  }, [selectedDate]);
-
-  useEffect(() => {
-    loadData();
-    return () => {
-      invalidateRequests(requestId);
-    };
-  }, [loadData]);
 
   // Filter data for selected week
   const weekWeightHistory = weightHistory.filter(
@@ -176,7 +153,7 @@ export default function ProgressScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={M3.colors.primary} />
+          <RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => { void refetch(); }} tintColor={M3.colors.primary} />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -185,8 +162,7 @@ export default function ProgressScreen() {
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => {
-              setIsLoading(true);
-              loadData();
+              void refetch();
             }}
             style={{ padding: 14, borderRadius: 10, backgroundColor: M3.colors.errorContainer }}
           >

@@ -16,10 +16,11 @@ import {
   recoveryLogs,
   personalRecords
 } from "../data/db/schema";
-import { desc, gte, sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { getProfile, getTargetsForDate } from "../data/profile";
 import { html as htmlTemplate } from "./html";
 import { addDays, localDateString } from "../time/localDate";
+import { logger } from "../logger";
 
 interface ExportOptions {
   startDate?: string; // YYYY-MM-DD
@@ -565,7 +566,7 @@ async function fetchPRData() {
  */
 export async function generateProgressPDF(options: ExportOptions = {}): Promise<{ success: boolean; filePath?: string; error?: string }> {
   try {
-    console.log("📄 Generating progress PDF...");
+    logger.info("Generating progress PDF");
     
     // Generate HTML content
     const htmlContent = await generateHTML(options);
@@ -576,7 +577,7 @@ export async function generateProgressPDF(options: ExportOptions = {}): Promise<
       base64: false,
     });
     
-    console.log("✅ PDF generated:", uri);
+    logger.info("PDF generated", { uri });
     
     // Share the PDF
     if (await Sharing.isAvailableAsync()) {
@@ -586,12 +587,12 @@ export async function generateProgressPDF(options: ExportOptions = {}): Promise<
         UTI: 'com.adobe.pdf',
       });
     } else {
-      console.warn("Sharing is not available on this device");
+      logger.warn("Sharing is not available on this device");
     }
     
     return { success: true, filePath: uri };
   } catch (error) {
-    console.error("❌ Error generating PDF:", error);
+    logger.error("Error generating PDF", { error });
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

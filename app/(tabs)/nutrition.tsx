@@ -1,22 +1,19 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import {
-  getDailyNutrition,
-  getFoodLogsForDate,
   deleteFoodLog,
-  getLast7DaysNutrition,
+  restoreFoodLog,
+  useNutritionDay,
 } from "../../lib/data";
-import { getTargetsForDate } from "../../lib/data/profile";
 import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
@@ -24,13 +21,14 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { DateNavigator } from "../../components/ui/DateNavigator";
 import { ScreenHeader } from "../../components/ui/ScreenHeader";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { FoodLog, DailyNutrition } from "../../lib/data/types";
+import type { FoodLog } from "../../lib/data/types";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";
 import { logger } from "../../lib/logger";
 import { addDays, dayOfWeek, parseLocalDate } from "../../lib/time/localDate";
-import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
-import { getTrackingPauseStatus, isTrackingPausedOnDate } from "../../lib/pauseMode";
+import { isTrackingPausedOnDate } from "../../lib/pauseMode";
+import { confirmDestructive } from "../../components/ui/confirmDestructive";
+import { useToast } from "../../components/ui/Toast";
 
 type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
@@ -61,92 +59,74 @@ function groupByMeal(logs: FoodLog[]): MealGroup[] {
 }
 
 export default function NutritionScreen() {
+  const { show } = useToast();
   const today = useToday();
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const selectedDate = pickedDate ?? today;
-  const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
-  const [foodLogs, setFoodLogs] = useState<FoodLog[]>([]);
-
   const [expandedMeals, setExpandedMeals] = useState<Set<MealType>>(new Set());
-  const [refreshing, setRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [last7Days, setLast7Days] = useState<DailyNutrition[]>([]);
-  const [trackingPause, setTrackingPause] = useState<{ from: string | null; until: string | null }>({
-    from: null,
-    until: null,
-  });
-  const [targets, setTargets] = useState<
-    Pick<Awaited<ReturnType<typeof getTargetsForDate>>, "calories" | "protein_g" | "carbs_g" | "fat_g">
-  >(DEFAULT_TARGETS);
-  const [proteinTargetsByDate, setProteinTargetsByDate] = useState<Record<string, number>>({});
-  const requestId = useRef(0);
+  const {
+    data: day,
+    error,
+    isError,
+    isFetching,
+    isLoading,
+    refetch,
+  } = useNutritionDay(selectedDate, today);
 
-  const loadData = useCallback(async () => {
-    const request = beginRequest(requestId);
-    setLoadError(null);
-    try {
-      const trendDates = Array.from({ length: 7 }, (_, index) => addDays(today, index - 6));
-      const [nutritionData, logsData, weekData, targetData, pauseStatus] = await Promise.all([
-        getDailyNutrition(selectedDate),
-        getFoodLogsForDate(selectedDate),
-        getLast7DaysNutrition(),
-        getTargetsForDate(selectedDate),
-        getTrackingPauseStatus(today),
-      ]);
-      const weekTargets = await Promise.all(
-        trendDates.map(async (date) => {
-          const dayTargets = await getTargetsForDate(date);
-          return [date, dayTargets.protein_g] as const;
-        }),
-      );
-      if (!isLatestRequest(requestId, request)) return;
-      setNutrition(nutritionData);
-      setFoodLogs(logsData);
-      setLast7Days(weekData);
-      setTrackingPause({ from: pauseStatus.from, until: pauseStatus.until });
-      setTargets(targetData);
-      setProteinTargetsByDate(Object.fromEntries(weekTargets));
-    } catch (error) {
-      logger.error("Nutrition load failed", {
-      error: error instanceof Error ? error.message : String(error),
-      });
-      if (isLatestRequest(requestId, request)) {
-      setLoadError("Could not load nutrition data. Please retry.");
-      }
-    } finally {
-      if (isLatestRequest(requestId, request)) {
-      setRefreshing(false);
-      setIsLoading(false);
-      }
-    }
-  }, [selectedDate, today]);
+  useFocusEffect(useCallback(() => {
+    void refetch();
+  }, [refetch]));
 
   useEffect(() => {
-    loadData();
-    return () => {
-      invalidateRequests(requestId);
-    };
-  }, [loadData]);
+    if (error) {
+      logger.error("Nutrition load failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [error]);
 
-  const handleDeleteFood = (log: FoodLog) => {
-    Alert.alert("Delete Food", `Remove "${log.name}"?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteFoodLog(log.id, log.date);
-            await loadData();
-          } catch (error) {
-              logger.error("Food log deletion failed", {
-              error: error instanceof Error ? error.message : String(error),
-            });
-          }
+  const nutrition = day?.nutrition ?? null;
+  const foodLogs = day?.foodLogs ?? [];
+  const last7Days = day?.last7Days ?? [];
+  const trackingPause = {
+    from: day?.trackingPause.from ?? null,
+    until: day?.trackingPause.until ?? null,
+  };
+  const targets = day?.targets ?? DEFAULT_TARGETS;
+  const proteinTargetsByDate = day?.proteinTargetsByDate ?? {};
+  const loadError = isError
+    ? "Could not load nutrition data. Please retry."
+    : null;
+
+  const handleDeleteFood = async (log: FoodLog) => {
+    if (!(await confirmDestructive("Delete Food", `Remove "${log.name}"?`))) return;
+    try {
+      await deleteFoodLog(log.id, log.date);
+      await refetch();
+      show({
+        message: "Food entry deleted.",
+        kind: "success",
+        durationMs: 5_000,
+        action: {
+          label: "Undo",
+          onPress: () => {
+            void restoreFoodLog(log.id, log.date)
+              .then(() => refetch())
+              .catch((error: unknown) => {
+                logger.error("Food log undo failed", {
+                  error: error instanceof Error ? error.message : String(error),
+                });
+                show({ message: "Could not restore this food entry.", kind: "error" });
+              });
+          },
         },
-      },
-    ]);
+      });
+    } catch (error) {
+      logger.error("Food log deletion failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      show({ message: "Could not delete this food entry.", kind: "error" });
+    }
   };
 
   const toggleMeal = (meal: MealType) => {
@@ -181,7 +161,7 @@ export default function NutritionScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={M3.colors.primary} />
+          <RefreshControl refreshing={isFetching && !isLoading} onRefresh={() => { void refetch(); }} tintColor={M3.colors.primary} />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -204,8 +184,7 @@ export default function NutritionScreen() {
           <TouchableOpacity
             accessibilityRole="button"
             onPress={() => {
-              setIsLoading(true);
-              loadData();
+              void refetch();
             }}
             style={{ padding: 14, borderRadius: 10, backgroundColor: M3.colors.errorContainer }}
           >

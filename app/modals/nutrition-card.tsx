@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,11 +19,17 @@ import type { FoodResult } from "../../lib/services/barcodeScanner";
 import { useToday } from "../../lib/time/useToday";
 import { localDateParam } from "../../lib/time/localDate";
 import { nowUnix } from "../../lib/time/clock";
+import { useToast } from "../../components/ui/Toast";
+
+type MealType = "breakfast" | "lunch" | "snack" | "dinner";
+const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
 
 export default function NutritionCardModal() {
-  const params = useLocalSearchParams<{ date?: string; foodData?: string; source?: string; barcode?: string }>();
+  const { show } = useToast();
+  const params = useLocalSearchParams<{ date?: string; foodData?: string; source?: string; barcode?: string; meal?: string }>();
   const today = useToday();
   const logDate = localDateParam(params.date, today);
+  const initialMeal = MEALS.find((candidate) => candidate === params.meal) ?? "breakfast";
   
   // Parse food data
   const foodData: FoodResult | null = params.foodData
@@ -52,9 +57,7 @@ export default function NutritionCardModal() {
   );
   
   const [quantity, setQuantity] = useState("100");
-  const [meal, setMeal] = useState<"breakfast" | "lunch" | "snack" | "dinner">(
-    "breakfast"
-  );
+  const [meal, setMeal] = useState<MealType>(initialMeal);
 
   const dataQuality = foodData?.dataQuality || "user_entered";
   const warnings = foodData?.warnings || [];
@@ -62,7 +65,7 @@ export default function NutritionCardModal() {
   const handleLog = async () => {
     // Validation
     if (!name.trim()) {
-      Alert.alert("Error", "Please enter a food name");
+      show({ message: "Enter a food name.", kind: "error" });
       return;
     }
 
@@ -73,7 +76,7 @@ export default function NutritionCardModal() {
     const qty = parseFloat(quantity);
 
     if (isNaN(cal) || isNaN(pro) || isNaN(carb) || isNaN(f) || isNaN(qty)) {
-      Alert.alert("Error", "Please enter valid numbers for all fields");
+      show({ message: "Enter valid numbers for all fields.", kind: "error" });
       return;
     }
 
@@ -106,25 +109,20 @@ export default function NutritionCardModal() {
         calories: cal * factor,
       });
 
-      Alert.alert("Success", "Food logged successfully!", [
-        {
-          text: "OK",
-          onPress: () => {
-            router.back();
-            // Go back twice if came from scanner
-            if (source === "barcode") {
-              setTimeout(() => router.back(), 100);
-            }
-          },
-        },
-      ]);
+      show({ message: "Food logged successfully.", kind: "success" });
+      router.back();
+      if (source === "barcode") setTimeout(() => router.back(), 100);
     } catch (error) {
       logger.error("Failed to log food", { error });
-      Alert.alert("Error", "Failed to log food. Please try again.");
+      show({ message: "Failed to log food. Please try again.", kind: "error" });
     }
   };
 
-  const getQualityBadge = () => {
+  const getQualityBadge = (): {
+    icon: ComponentProps<typeof Ionicons>["name"];
+    color: string;
+    label: string;
+  } => {
     switch (dataQuality) {
       case "consistent":
         return { icon: "checkmark-circle", color: M3.colors.success, label: "Consistent" };
@@ -162,7 +160,7 @@ export default function NutritionCardModal() {
             marginBottom: 16,
           }}
         >
-          <Ionicons name={badge.icon as any} size={20} color={badge.color} />
+          <Ionicons name={badge.icon} size={20} color={badge.color} />
           <Text style={{ color: badge.color, fontSize: 13, fontFamily: "DMSans_500Medium" }}>
             {badge.label}
           </Text>

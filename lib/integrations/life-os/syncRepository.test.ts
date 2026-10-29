@@ -97,9 +97,11 @@ describe("sync queue leases", () => {
 
       const firstClaim = await claimQueueRows(database, 10, startedAt, 60_000);
       expect(firstClaim).toHaveLength(1);
-      expect(firstClaim[0].attempt_count).toBe(1);
+      const claimedRow = firstClaim.at(0);
+      if (!claimedRow) throw new Error("Expected the first queue claim.");
+      expect(claimedRow.attempt_count).toBe(1);
       const fakeCloud = new Map<string, string>();
-      fakeCloud.set(firstClaim[0].external_id, firstClaim[0].payload_json);
+      fakeCloud.set(claimedRow.external_id, claimedRow.payload_json);
 
       const duplicateClaimBeforeLeaseExpiry = await claimQueueRows(
         database,
@@ -116,10 +118,12 @@ describe("sync queue leases", () => {
         60_000,
       );
       expect(relaunchedClaim).toHaveLength(1);
-      expect(relaunchedClaim[0].external_id).toBe("nutrilift:food_log:food-1");
-      expect(relaunchedClaim[0].attempt_count).toBe(2);
+      const relaunchedRow = relaunchedClaim.at(0);
+      if (!relaunchedRow) throw new Error("Expected the relaunched queue claim.");
+      expect(relaunchedRow.external_id).toBe("nutrilift:food_log:food-1");
+      expect(relaunchedRow.attempt_count).toBe(2);
 
-      fakeCloud.set(relaunchedClaim[0].external_id, relaunchedClaim[0].payload_json);
+      fakeCloud.set(relaunchedRow.external_id, relaunchedRow.payload_json);
       await finishQueueRows(
         database,
         relaunchedClaim,

@@ -20,7 +20,8 @@ export async function migrate(
   }
 
   for (let index = 0; index < migrations.length; index += 1) {
-    if (migrations[index].version !== index + 1) {
+    const migration = migrations[index];
+    if (!migration || migration.version !== index + 1) {
       throw new Error("Database migrations must have contiguous versions starting at 1.");
     }
   }
@@ -29,7 +30,11 @@ export async function migrate(
     "PRAGMA user_version",
   );
   const current = row?.user_version ?? 0;
-  const latest = migrations[migrations.length - 1].version;
+  const latestMigration = migrations.at(-1);
+  if (!latestMigration) {
+    throw new Error("At least one database migration is required.");
+  }
+  const latest = latestMigration.version;
 
   if (current > latest) {
     throw new Error(

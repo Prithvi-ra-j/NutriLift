@@ -86,7 +86,17 @@ export async function getPreviousWeeklySummaries(limit: number = 3): Promise<Wee
 
 export async function getWeeklySummariesForMonth(month: string): Promise<WeeklySummary[]> {
   // month format: YYYY-MM
-  const [year, monthNum] = month.split('-').map(Number);
+  const monthParts = /^(\d{4})-(\d{2})$/.exec(month);
+  const yearPart = monthParts?.[1];
+  const monthPart = monthParts?.[2];
+  if (yearPart === undefined || monthPart === undefined) {
+    throw new RangeError(`Invalid month: ${month}`);
+  }
+  const year = Number(yearPart);
+  const monthNum = Number(monthPart);
+  if (monthNum < 1 || monthNum > 12) {
+    throw new RangeError(`Invalid month: ${month}`);
+  }
   const startDate = new Date(year, monthNum - 1, 1);
   const endDate = new Date(year, monthNum, 0); // Last day of month
   
@@ -146,8 +156,13 @@ export async function getPreviousMonthlySummaries(limit: number = 2): Promise<Mo
 
 export async function getMonthlySummariesForQuarter(quarter: string): Promise<MonthlyReport[]> {
   // quarter format: YYYY-Q1, YYYY-Q2, etc.
-  const [year, q] = quarter.split('-');
-  const quarterNum = parseInt(q.replace('Q', ''));
+  const quarterParts = /^(\d{4})-Q([1-4])$/.exec(quarter);
+  const year = quarterParts?.[1];
+  const quarterPart = quarterParts?.[2];
+  if (year === undefined || quarterPart === undefined) {
+    throw new RangeError(`Invalid quarter: ${quarter}`);
+  }
+  const quarterNum = Number(quarterPart);
   
   const startMonth = (quarterNum - 1) * 3 + 1;
   const months: string[] = [];

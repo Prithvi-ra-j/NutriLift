@@ -136,7 +136,14 @@ function normalizeLegacyRow(
         muscleSoreness: "muscle_soreness",
         stressLevel: "stress_level",
       };
-      return { date, [columnByField[field]]: payload[field] ?? null, updated_at: updatedAt };
+      if (field === undefined) {
+        throw new Error(`Unsupported recovery record type: ${recordType}`);
+      }
+      const column = columnByField[field];
+      if (column === undefined) {
+        throw new Error(`Unsupported recovery field: ${field}`);
+      }
+      return { date, [column]: payload[field] ?? null, updated_at: updatedAt };
     }
     default:
       return null;

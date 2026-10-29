@@ -36,7 +36,9 @@ describe("Supabase session encryption", () => {
     );
     const payload = encrypted.slice("enc:v2:".length);
     const bytes = Uint8Array.from(atob(payload), (character) => character.charCodeAt(0));
-    bytes[16] ^= 1;
+    const tamperByte = bytes[16];
+    if (tamperByte === undefined) throw new Error("Expected ciphertext bytes.");
+    bytes[16] = tamperByte ^ 1;
     const tampered = `enc:v2:${btoa(String.fromCharCode(...bytes))}`;
 
     expect(() => decryptSession(tampered, encryptionKey, authenticationKey)).toThrow(

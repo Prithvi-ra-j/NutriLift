@@ -1,4 +1,5 @@
 process.env.TZ = "Asia/Kolkata";
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   getItem: jest.fn().mockResolvedValue(null),

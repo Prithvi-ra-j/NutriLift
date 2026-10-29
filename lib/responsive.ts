@@ -81,7 +81,7 @@ export const useResponsive = () => {
   const isDesktop = deviceType.includes("desktop");
   
   // Get responsive value
-  const getValue = (values: { mobile: any; tablet: any; desktop: any }) => {
+  const getValue = <T>(values: { mobile: T; tablet: T; desktop: T }): T => {
     if (isDesktop) return values.desktop;
     if (isTablet) return values.tablet;
     return values.mobile;

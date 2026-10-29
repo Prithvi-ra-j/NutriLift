@@ -7,6 +7,7 @@ export type {
   FoodLog,
   MeasurementTimeOfDay,
   MonthlyReport,
+  NewSetLog,
   PersonalRecord,
   RecoveryLog,
   SetLog,

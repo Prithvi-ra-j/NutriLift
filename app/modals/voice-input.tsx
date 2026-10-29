@@ -1,25 +1,34 @@
 import { useState } from "react";
-import { View, Text, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useAudioRecorder, RecordingPresets } from "expo-audio";
+import {
+  requestRecordingPermissionsAsync,
+  useAudioRecorder,
+  RecordingPresets,
+} from "expo-audio";
 import { transcribeAudioMultilingual } from "../../lib/ai/transcribeAudio";
 import { parseFoodFromVoice } from "../../lib/ai/parsers";
-import type { FoodParseResult } from "../../lib/ai/schemas";
+import {
+  FoodParseSchema,
+  type FoodParseResult,
+  type ParsedFoodItem,
+} from "../../lib/ai/schemas";
 import { AI_SAFETY_RESPONSE, containsEatingSafetyRisk } from "../../lib/ai/riskPhrases";
 import { getAiPreference } from "../../lib/data/aiPreferences";
 import { AiError } from "../../lib/ai/gateway";
 import { isSupabaseConfigured } from "../../lib/supabase/client";
-import { insertFoodLog } from "../../lib/data";
+import { insertFoodLogs } from "../../lib/data";
 import { ModalHeader } from "../../components/ui/ModalHeader";
-import { Button } from "../../components/ui/Button";
+import { VoiceFoodReview } from "../../components/voice/VoiceFoodReview";
 import { M3 } from "../../design-system/tokens";
 import uuid from "react-native-uuid";
 import { useToday } from "../../lib/time/useToday";
 import { localDateParam } from "../../lib/time/localDate";
 import { nowUnix } from "../../lib/time/clock";
 import { logger } from "../../lib/logger";
+import { useToast } from "../../components/ui/Toast";
 
 export default function VoiceInputModal() {
   const params = useLocalSearchParams<{ date?: string }>();
@@ -30,16 +39,17 @@ export default function VoiceInputModal() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedFood, setParsedFood] = useState<FoodParseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const { show } = useToast();
 
   const startRecording = async () => {
     try {
       if (!isSupabaseConfigured) {
-        Alert.alert(
-          "AI Service Unavailable",
-          "Supabase is not configured, so voice logging cannot use the AI service.",
-          [{ text: "OK" }]
-        );
+        show({
+          message: "Voice logging is unavailable because the AI service is not configured.",
+          kind: "error",
+        });
         return;
       }
       const consent = await getAiPreference("ai_consent_v1");
@@ -48,24 +58,29 @@ export default function VoiceInputModal() {
         return;
       }
 
-      const { granted } = await (audioRecorder as any).requestPermissions();
+      const { granted } = await requestRecordingPermissionsAsync();
       if (!granted) {
-        Alert.alert(
-          "Permission Required",
-          "Microphone access is needed for voice logging. Please enable it in your device settings.",
-          [{ text: "OK" }]
-        );
+        show({
+          message: "Microphone access is required for voice logging.",
+          kind: "error",
+        });
         return;
       }
 
       setError(null);
       setTranscript("");
       setParsedFood(null);
+      setIsConfirming(false);
       await audioRecorder.record();
       setIsRecording(true);
-    } catch (err: any) {
-      logger.error("Recording error", { error: err?.message || String(err) });
-      Alert.alert("Recording Error", err?.message || "Could not start recording. Please try again.");
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Could not start recording. Please try again.";
+      logger.error("Recording error", { error: message });
+      setError(message);
+      show({ message, kind: "error" });
     }
   };
 
@@ -87,21 +102,16 @@ export default function VoiceInputModal() {
         setTranscript("");
         setParsedFood(null);
         setError(AI_SAFETY_RESPONSE);
-        Alert.alert("Support is available", AI_SAFETY_RESPONSE);
+        show({ message: AI_SAFETY_RESPONSE, kind: "info" });
         return;
       }
       setTranscript(transcribedText);
-
-      logger.info("Parsing food from voice transcription", { transcriptionLength: transcribedText.length });
-      const foodResult = await parseFoodFromVoice(transcribedText);
-      setParsedFood(foodResult);
-
     } catch (err: unknown) {
       if (err instanceof AiError && err.code === "safety") {
         setTranscript("");
         setParsedFood(null);
         setError(AI_SAFETY_RESPONSE);
-        Alert.alert("Support is available", AI_SAFETY_RESPONSE);
+        show({ message: AI_SAFETY_RESPONSE, kind: "info" });
         return;
       }
       if (err instanceof AiError && err.code === "consent") {
@@ -110,50 +120,129 @@ export default function VoiceInputModal() {
       const message = err instanceof Error ? err.message : String(err);
       logger.error("Processing error", { error: message });
       setError(message || "Could not process recording");
-      Alert.alert("Processing Error", message || "Could not process recording. Please try again.");
+      show({
+        message: message || "Could not process the recording. Try again.",
+        kind: "error",
+      });
     } finally {
       setIsProcessing(false);
     }
   };
 
+  const parseTranscript = async () => {
+    if (!transcript.trim()) {
+      show({ message: "Add a transcript before reviewing food items.", kind: "error" });
+      return;
+    }
+    if (containsEatingSafetyRisk(transcript)) {
+      setTranscript("");
+      setParsedFood(null);
+      setError(AI_SAFETY_RESPONSE);
+      show({ message: AI_SAFETY_RESPONSE, kind: "info" });
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+    try {
+      logger.info("Parsing reviewed voice transcript", {
+        transcriptionLength: transcript.length,
+      });
+      setParsedFood(await parseFoodFromVoice(transcript));
+      setIsConfirming(false);
+    } catch (err: unknown) {
+      if (err instanceof AiError && err.code === "safety") {
+        setTranscript("");
+        setParsedFood(null);
+        setError(AI_SAFETY_RESPONSE);
+        show({ message: AI_SAFETY_RESPONSE, kind: "info" });
+        return;
+      }
+      if (err instanceof AiError && err.code === "consent") {
+        router.push("/modals/ai-consent");
+      }
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message || "Could not review food items.");
+      logger.error("Food review error", { error: message });
+      show({ message: message || "Could not review food items.", kind: "error" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const updateParsedItem = (
+    index: number,
+    changes: Partial<ParsedFoodItem>,
+  ) => {
+    setParsedFood((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        items: current.items.map((item, itemIndex) => {
+          if (itemIndex !== index) return item;
+          const updated = { ...item, ...changes };
+          return {
+            ...updated,
+            needs_review:
+              Math.abs(
+                updated.calories -
+                  (4 * updated.protein_g +
+                    4 * updated.carbs_g +
+                    9 * updated.fat_g),
+              ) >
+              0.3 * updated.calories + 20,
+          };
+        }),
+      };
+    });
+  };
+
   const saveFoodLogs = async () => {
-    if (!parsedFood || !parsedFood.items || parsedFood.items.length === 0) {
-      Alert.alert("No Food Items", "No food items were detected. Please try again.");
+    if (!parsedFood || parsedFood.items.length === 0) {
+      show({ message: "No food items were detected. Review the transcript first.", kind: "error" });
+      return;
+    }
+
+    const validated = FoodParseSchema.safeParse({
+      ...parsedFood,
+      items: parsedFood.items.map(({ needs_review: _needsReview, ...item }) => item),
+    });
+    if (!validated.success) {
+      show({ message: "Check each food name and nutrition value before saving.", kind: "error" });
       return;
     }
 
     try {
-      const meal = parsedFood.meal_suggestion || "snack";
-
-      // Save each food item
-      for (const item of parsedFood.items) {
-        await insertFoodLog({
+      const meal = validated.data.meal_suggestion || "snack";
+      await insertFoodLogs(
+        validated.data.items.map((item) => ({
           id: uuid.v4() as string,
           date: logDate,
           meal,
           name: item.name,
-          quantity_g: item.quantity_g,
+          quantity_g: item.quantity_g ?? null,
           calories: item.calories,
           protein_g: item.protein_g,
           carbs_g: item.carbs_g,
           fat_g: item.fat_g,
-          fiber_g: item.fiber_g,
+          fiber_g: item.fiber_g ?? null,
           sugar_g: null,
           sodium_mg: null,
           source: "voice",
           raw_input: transcript,
           created_at: nowUnix(),
-        });
-      }
-
-      Alert.alert(
-        "Success!",
-        `Logged ${parsedFood.items.length} food item(s) to ${meal}`,
-        [{ text: "OK", onPress: () => router.back() }]
+        })),
       );
-    } catch (err: any) {
-      logger.error("Save error", { error: err?.message || String(err) });
-      Alert.alert("Save Error", err?.message || "Could not save food logs");
+      setIsConfirming(false);
+      show({
+        message: `Saved ${validated.data.items.length} reviewed food item(s) to ${meal}.`,
+        kind: "success",
+      });
+      router.back();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Could not save food logs.";
+      logger.error("Save error", { error: message });
+      show({ message, kind: "error" });
     }
   };
 
@@ -218,90 +307,23 @@ export default function VoiceInputModal() {
           </View>
         )}
 
-        {/* Transcript Display */}
-        {transcript && (
-          <View style={{ backgroundColor: M3.colors.surface, borderRadius: M3.shape.large, padding: 16, borderWidth: 1, borderColor: M3.colors.outline }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
-              <Feather name="message-square" size={14} color={M3.colors.primary} />
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
-                TRANSCRIPT
-              </Text>
-            </View>
-            <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_400Regular", lineHeight: 20 }}>
-              {transcript}
-            </Text>
-          </View>
-        )}
-
-        {/* Parsed Food Display */}
-        {parsedFood && parsedFood.items && parsedFood.items.length > 0 && (
-          <View style={{ backgroundColor: M3.colors.surface, borderRadius: M3.shape.large, padding: 16, borderWidth: 1, borderColor: M3.colors.outline, gap: 12 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-              <Feather name="check-circle" size={14} color={M3.colors.success} />
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
-                DETECTED FOOD ({parsedFood.items.length})
-              </Text>
-            </View>
-
-            {parsedFood.items.map((item, index: number) => (
-              <View
-                key={index}
-                style={{
-                  backgroundColor: M3.colors.surfaceVariant,
-                  borderRadius: M3.shape.medium,
-                  padding: 12,
-                  gap: 6,
-                }}
-              >
-                <Text style={{ color: M3.colors.onSurface, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-                  {item.name}
-                </Text>
-                <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
-                  {item.quantity}
-                </Text>
-                <View style={{ flexDirection: "row", gap: 12, marginTop: 4 }}>
-                  <Text style={{ color: M3.colors.secondary, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
-                    {item.calories} kcal
-                  </Text>
-                  <Text style={{ color: M3.colors.success, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
-                    P: {item.protein_g}g
-                  </Text>
-                  <Text style={{ color: M3.colors.warning, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
-                    C: {item.carbs_g}g
-                  </Text>
-                  <Text style={{ color: M3.colors.error, fontSize: 11, fontFamily: "DMSans_500Medium" }}>
-                    F: {item.fat_g}g
-                  </Text>
-                </View>
-                {item.confidence === "low" && (
-                  <Text style={{ color: M3.colors.warning, fontSize: 10, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
-                    Low confidence estimate
-                  </Text>
-                )}
-                {item.needs_review && (
-                  <Text style={{ color: M3.colors.warning, fontSize: 10, fontFamily: "DMSans_700Bold", marginTop: 4 }}>
-                    Review this estimate before saving
-                  </Text>
-                )}
-              </View>
-            ))}
-
-            {parsedFood.meal_suggestion && (
-              <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
-                Suggested meal: {parsedFood.meal_suggestion}
-              </Text>
-            )}
-
-            {parsedFood.parse_notes && (
-              <Text style={{ color: M3.colors.warning, fontSize: 11, fontFamily: "DMSans_400Regular", marginTop: 4 }}>
-                Note: {parsedFood.parse_notes}
-              </Text>
-            )}
-
-            {/* Save Button */}
-            <Button label="Save to Food Log" onPress={saveFoodLogs} style={{ marginTop: 8 }} />
-          </View>
-        )}
+        <VoiceFoodReview
+          isConfirming={isConfirming}
+          isProcessing={isProcessing}
+          onCancelConfirm={() => setIsConfirming(false)}
+          onConfirmSave={saveFoodLogs}
+          onParseTranscript={() => { void parseTranscript(); }}
+          onRequestSave={() => setIsConfirming(true)}
+          onTranscriptChange={(value) => {
+            setTranscript(value);
+            setParsedFood(null);
+            setIsConfirming(false);
+            setError(null);
+          }}
+          onUpdateItem={updateParsedItem}
+          parsedFood={parsedFood}
+          transcript={transcript}
+        />
       </ScrollView>
     </SafeAreaView>
   );

@@ -48,8 +48,8 @@ export async function getOrGenerateYearlySummary(year: string): Promise<YearlySu
     const allPRs = await getAllPRs();
     
     // Calculate starting and ending weights
-    const startingWeight = bodyStats.length > 0 ? bodyStats[0].weight_kg : 0;
-    const endingWeight = bodyStats.length > 0 ? bodyStats[bodyStats.length - 1].weight_kg : 0;
+    const startingWeight = bodyStats[0]?.weight_kg ?? 0;
+    const endingWeight = bodyStats.at(-1)?.weight_kg ?? 0;
     
     // Aggregate stats from quarterly summaries
     const allStats = quarterlySummaries.map(q => JSON.parse(q.stats_json));

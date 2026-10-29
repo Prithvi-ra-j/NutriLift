@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,23 +8,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { getDailyNutrition, getLast7DaysNutrition } from "../../lib/data";
-import { getSessionsForDate } from "../../lib/data";
-import { getRecoveryLog } from "../../lib/data";
-import { getProfile, getTargetsForDate } from "../../lib/data/profile";
+import { router, useFocusEffect } from "expo-router";
+import { useHomeSummary } from "../../lib/data";
 import { DEFAULT_TARGETS } from "../../lib/constants/defaults";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { MacroRing } from "../../components/ui/MacroRing";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
-import type { DailyNutrition, WorkoutSession } from "../../lib/data/types";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";
 import { addDays, dayOfWeek, parseLocalDate } from "../../lib/time/localDate";
 import { logger } from "../../lib/logger";
-import { beginRequest, invalidateRequests, isLatestRequest } from "../../lib/async/latestRequest";
-import { getTrackingPauseStatus, isTrackingPausedOnDate } from "../../lib/pauseMode";
+import { isTrackingPausedOnDate } from "../../lib/pauseMode";
+import { mealForHour } from "../../lib/domain/nutrition";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -57,20 +53,27 @@ interface AdherenceDot {
 
 export default function DashboardScreen() {
   const today = useToday();
+  const suggestedMeal = mealForHour(new Date().getHours());
+  const {
+    data: summary,
+    error,
+    isError,
+    isFetching,
+    isLoading,
+    refetch,
+  } = useHomeSummary(today);
 
-  const [nutrition, setNutrition] = useState<DailyNutrition | null>(null);
-  const [session, setSession] = useState<WorkoutSession | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [adherenceDots, setAdherenceDots] = useState<AdherenceDot[]>([]);
-  const [trackingPaused, setTrackingPaused] = useState(false);
-  const [recoveryScore, setRecoveryScore] = useState<number | null>(null);
-  const [profile, setProfile] = useState<Awaited<ReturnType<typeof getProfile>>>(null);
-  const [targets, setTargets] = useState<
-    Pick<Awaited<ReturnType<typeof getTargetsForDate>>, "calories" | "protein_g" | "carbs_g" | "fat_g">
-  >(DEFAULT_TARGETS);
-  const requestId = useRef(0);
+  useFocusEffect(useCallback(() => {
+    void refetch();
+  }, [refetch]));
+
+  useEffect(() => {
+    if (error) {
+      logger.error("Dashboard load failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }, [error]);
 
   const getTodayDayType = (date: string): string => {
     const weekday = dayOfWeek(date);
@@ -92,92 +95,40 @@ export default function DashboardScreen() {
     return dayTypeMap[weekday] || "";
   };
 
-  const [todayDayType, setTodayDayType] = useState<string>(() => getTodayDayType(today));
-
-  const loadData = useCallback(async () => {
-    const request = beginRequest(requestId);
-    setLoadError(null);
-    try {
-      const [nutritionData, sessionsData, last7Days, recoveryData, profileData, targetData, pauseStatus] =
-        await Promise.all([
-          getDailyNutrition(today),
-          getSessionsForDate(today),
-          getLast7DaysNutrition(),
-          getRecoveryLog(today),
-          getProfile(),
-          getTargetsForDate(today),
-          getTrackingPauseStatus(today),
-        ]);
-
-      if (!isLatestRequest(requestId, request)) return;
-      setNutrition(nutritionData);
-      setProfile(profileData);
-      setTargets(targetData);
-      setTrackingPaused(pauseStatus.paused);
-      
-      // Handle session and day type
-      if (sessionsData[0]) {
-        setSession(sessionsData[0]);
-        // On Sunday, always show "Cardio" regardless of what workout was logged
-        if (dayOfWeek(today) === 0) {
-          setTodayDayType("Cardio");
-        } else {
-          setTodayDayType(sessionsData[0].day_type);
-        }
-      } else {
-        setSession(null);
-        setTodayDayType(getTodayDayType(today));
-      }
-
-      // Build neutral logging-status dots rather than scoring missed days.
-      const dots: AdherenceDot[] = [];
-      for (let i = 6; i >= 0; i--) {
-        const dateStr = addDays(today, -i);
-        const skipped = isTrackingPausedOnDate(dateStr, pauseStatus.from, pauseStatus.until);
-        const dayData = last7Days.find((n) => n.date === dateStr);
-        dots.push({
-          date: dateStr,
-          logged: !skipped && (dayData?.food_count ?? 0) > 0,
-          skipped,
-        });
-      }
-      setAdherenceDots(dots);
-
-      // Recovery score
-      if (recoveryData) {
-        const score =
-          ((recoveryData.sleep_quality ?? 3) +
-            (recoveryData.energy_level ?? 3) +
-            (6 - (recoveryData.muscle_soreness ?? 3))) /
-          3;
-        setRecoveryScore(Math.round((score / 5) * 100));
-      }
-    } catch (error) {
-      logger.error("Dashboard load failed", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      if (isLatestRequest(requestId, request)) {
-        setLoadError("Could not load today's dashboard. Please retry.");
-      }
-    } finally {
-      if (isLatestRequest(requestId, request)) {
-        setIsLoading(false);
-        setRefreshing(false);
-      }
-    }
-  }, [today]);
-
-  useEffect(() => {
-    loadData();
-    return () => {
-      invalidateRequests(requestId);
+  const nutrition = summary?.nutrition ?? null;
+  const session = summary?.sessions[0] ?? null;
+  const profile = summary?.profile ?? null;
+  const targets = summary?.targets ?? DEFAULT_TARGETS;
+  const trackingPaused = summary?.trackingPause.paused ?? false;
+  const todayDayType = session
+    ? dayOfWeek(today) === 0 ? "Cardio" : session.day_type
+    : getTodayDayType(today);
+  const adherenceDots: AdherenceDot[] = Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(today, index - 6);
+    const skipped = isTrackingPausedOnDate(
+      date,
+      summary?.trackingPause.from ?? null,
+      summary?.trackingPause.until ?? null,
+    );
+    const dayData = summary?.last7Days.find((entry) => entry.date === date);
+    return {
+      date,
+      logged: !skipped && (dayData?.food_count ?? 0) > 0,
+      skipped,
     };
-  }, [loadData]);
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadData();
-  };
+  });
+  const recoveryScore = summary?.recovery
+    ? Math.round(
+      (((summary.recovery.sleep_quality ?? 3) +
+        (summary.recovery.energy_level ?? 3) +
+        (6 - (summary.recovery.muscle_soreness ?? 3))) /
+        3 / 5) *
+        100,
+    )
+    : null;
+  const loadError = isError
+    ? "Could not load today's dashboard. Please retry."
+    : null;
 
   const calories = nutrition?.total_calories ?? 0;
   const protein = nutrition?.total_protein_g ?? 0;
@@ -210,8 +161,8 @@ export default function DashboardScreen() {
         contentContainerStyle={{ padding: 20, paddingBottom: 100, gap: 16 }}
         refreshControl={
           <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
+            refreshing={isFetching && !isLoading}
+            onRefresh={() => { void refetch(); }}
             tintColor={M3.colors.primary}
           />
         }
@@ -231,8 +182,7 @@ export default function DashboardScreen() {
             <TouchableOpacity
               accessibilityRole="button"
               onPress={() => {
-                setIsLoading(true);
-                loadData();
+                void refetch();
               }}
               style={{ padding: 14, borderRadius: 10, backgroundColor: M3.colors.errorContainer }}
             >
@@ -443,7 +393,7 @@ export default function DashboardScreen() {
           <TouchableOpacity
             onPress={() => router.push({
               pathname: "/modals/log-food",
-              params: { meal: "breakfast", date: today },
+              params: { meal: suggestedMeal, date: today },
             })}
             style={{
               flex: 1,
@@ -460,7 +410,7 @@ export default function DashboardScreen() {
           >
             <Feather name="plus-circle" size={18} color={M3.colors.primary} />
             <Text style={{ color: M3.colors.primary, fontSize: 14, fontFamily: "DMSans_700Bold" }}>
-              Log Food
+              Log {suggestedMeal}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

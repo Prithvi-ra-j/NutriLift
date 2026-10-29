@@ -6,6 +6,7 @@ import {
   adherenceScore,
   createManualFoodDraft,
   isValidFoodLog,
+  mealForHour,
   sumFoodLogs,
 } from "../nutrition";
 import { num } from "../barcode";
@@ -124,17 +125,23 @@ describe("strength domain", () => {
       date,
       sets: [1, 2, 3].map(() => ({ weightKg: 50, reps: 12, isWarmup: false })),
     }));
+    const firstReady = ready.at(0);
+    const secondReady = ready.at(1);
+    if (!firstReady || !secondReady) throw new Error("Expected two progression sessions.");
     expect(shouldIncreaseLoad(ready, [8, 12], 3)).toBe(true);
     expect(
       shouldIncreaseLoad(
-        [{ ...ready[0], date: "2026-01-05" }, { ...ready[1], date: "2026-01-05" }],
+        [{ ...firstReady, date: "2026-01-05" }, { ...secondReady, date: "2026-01-05" }],
         [8, 12],
         3,
       ),
     ).toBe(false);
     expect(
       shouldIncreaseLoad(
-        [{ ...ready[0], sets: [{ weightKg: 45, reps: 12, isWarmup: false }, ...ready[0].sets.slice(1)] }, ready[1]],
+        [{
+          ...firstReady,
+          sets: [{ weightKg: 45, reps: 12, isWarmup: false }, ...firstReady.sets.slice(1)],
+        }, secondReady],
         [8, 12],
         3,
       ),
@@ -154,6 +161,21 @@ describe("strength domain", () => {
 });
 
 describe("nutrition domain", () => {
+  it("chooses a meal by local hour and rejects invalid hours", () => {
+    expect([4, 5, 10, 11, 14, 15, 17, 18, 23].map(mealForHour)).toEqual([
+      "dinner",
+      "breakfast",
+      "breakfast",
+      "lunch",
+      "lunch",
+      "snack",
+      "snack",
+      "dinner",
+      "dinner",
+    ]);
+    expect(() => mealForHour(24)).toThrow(RangeError);
+  });
+
   it("sums food logs and withholds score for fewer than two foods", () => {
     const logs = [
       { calories: 500, protein_g: 25, carbs_g: 50, fat_g: 15 },
@@ -165,7 +187,9 @@ describe("nutrition domain", () => {
       carbs_g: 100,
       fat_g: 30,
     });
-    expect(adherenceScore(logs[0], { calories: 1000, protein_g: 50 }, 1)).toBeNull();
+    const firstLog = logs.at(0);
+    if (!firstLog) throw new Error("Expected a food log.");
+    expect(adherenceScore(firstLog, { calories: 1000, protein_g: 50 }, 1)).toBeNull();
     expect(adherenceScore(sumFoodLogs(logs), { calories: 1000, protein_g: 50 }, 2)).toBe(100);
     expect(adherenceScore({ calories: 2000, protein_g: 75 }, { calories: 1000, protein_g: 50 }, 2)).toBe(40);
     expect(() => adherenceScore(sumFoodLogs(logs), { calories: 0, protein_g: 50 }, 2)).toThrow(RangeError);

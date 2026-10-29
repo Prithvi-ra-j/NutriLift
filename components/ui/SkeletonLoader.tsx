@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
-import { View, Animated, type ViewStyle } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { AccessibilityInfo, View, Animated, type ViewStyle } from "react-native";
 import { M3 } from "../../design-system/tokens";
+import { logger } from "../../lib/logger";
 
 interface SkeletonProps {
   width?: number | string;
@@ -11,8 +12,34 @@ interface SkeletonProps {
 
 export function Skeleton({ width = "100%", height = 16, borderRadius = 8, style }: SkeletonProps) {
   const opacity = useRef(new Animated.Value(0.2)).current;
+  const [reduceMotion, setReduceMotion] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((enabled) => {
+        if (active) setReduceMotion(enabled);
+      })
+      .catch((error: unknown) => {
+        logger.warn("Could not read reduced-motion preference", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    const subscription = AccessibilityInfo.addEventListener(
+      "reduceMotionChanged",
+      setReduceMotion,
+    );
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      opacity.setValue(0.4);
+      return;
+    }
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
@@ -29,7 +56,7 @@ export function Skeleton({ width = "100%", height = 16, borderRadius = 8, style 
     );
     animation.start();
     return () => animation.stop();
-  }, [opacity]);
+  }, [opacity, reduceMotion]);
 
   return (
     <Animated.View

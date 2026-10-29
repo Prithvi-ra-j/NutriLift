@@ -1,12 +1,12 @@
 import { eq, and, gte, lte, desc, isNull } from "drizzle-orm";
 import { db } from "../db/client";
 import { foodLogs, dailyNutrition, type FoodLog, type NewFoodLog, type DailyNutrition } from "../db/schema";
-import { getTargetsForDate } from "../../data/profile";
+import { getTargetsForDate } from "../profile";
 import { adherenceScore, sumFoodLogs } from "../../domain/nutrition";
-import { inTx } from "../db/tx";
+import { inRead, inTx } from "../db/tx";
 import { nowIso } from "../../time/clock";
-import { getAppSetting } from "../../data/appSettings";
-import { isTrackingPausedOnDate } from "../../pauseMode";
+import { getAppSetting } from "../appSettings";
+import { getTrackingPauseStatus, isTrackingPausedOnDate } from "../../pauseMode";
 import { addDays, localDateString } from "../../time/localDate";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
@@ -29,48 +29,139 @@ export async function getFoodLogsByMeal(date: string, meal: string): Promise<Foo
     ));
 }
 
-export async function insertFoodLog(log: NewFoodLog): Promise<void> {
-  await insertFoodLogs([log]);
+export async function insertFoodLog(log: NewFoodLog): Promise<NutritionMutationResult> {
+  return insertFoodLogs([log]);
 }
 
-export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
-  if (logs.length === 0) return;
-  await inTx(async () => {
+export type NutritionMutationResult = {
+  saved: FoodLog[];
+  summaries: DailyNutrition[];
+};
+
+export async function insertFoodLogs(
+  logs: NewFoodLog[],
+): Promise<NutritionMutationResult> {
+  if (logs.length === 0) return { saved: [], summaries: [] };
+  return inTx(async () => {
     const timestamp = nowIso();
-    await db.insert(foodLogs).values(
-      logs.map((log) => ({
-        ...log,
-        updated_at: timestamp,
-        deleted_at: null,
-      })),
-    );
-    for (const date of new Set(logs.map((log) => log.date))) {
+    const saved: FoodLog[] = logs.map((log) => ({
+      ...log,
+      quantity_g: log.quantity_g ?? null,
+      fiber_g: log.fiber_g ?? null,
+      sugar_g: log.sugar_g ?? null,
+      sodium_mg: log.sodium_mg ?? null,
+      raw_input: log.raw_input ?? null,
+      updated_at: timestamp,
+      deleted_at: null,
+    }));
+    await db.insert(foodLogs).values(saved);
+    const summaries: DailyNutrition[] = [];
+    for (const date of new Set(saved.map((log) => log.date))) {
       await recomputeDailyNutritionInTransaction(date);
+      const summary = await getDailyNutrition(date);
+      if (!summary) throw new Error(`Daily nutrition summary for ${date} was not saved.`);
+      summaries.push(summary);
     }
+    return { saved, summaries };
   });
 }
 
-export async function deleteFoodLog(id: string, date: string): Promise<void> {
-  await inTx(async () => {
-    const timestamp = nowIso();
-    await db
-      .update(foodLogs)
-      .set({ deleted_at: timestamp, updated_at: timestamp })
+export async function deleteFoodLog(
+  id: string,
+  date: string,
+): Promise<NutritionMutationResult> {
+  return inTx(async () => {
+    const [existing] = await db
+      .select()
+      .from(foodLogs)
       .where(and(eq(foodLogs.id, id), isNull(foodLogs.deleted_at)));
+    const timestamp = nowIso();
+    if (existing) {
+      await db
+        .update(foodLogs)
+        .set({ deleted_at: timestamp, updated_at: timestamp })
+        .where(and(eq(foodLogs.id, id), isNull(foodLogs.deleted_at)));
+    }
     await recomputeDailyNutritionInTransaction(date);
+    const summary = await getDailyNutrition(date);
+    if (!summary) throw new Error(`Daily nutrition summary for ${date} is missing.`);
+    return {
+      saved: existing
+        ? [{ ...existing, deleted_at: timestamp, updated_at: timestamp }]
+        : [],
+      summaries: [summary],
+    };
   });
 }
 
-export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, date: string): Promise<void> {
-  await inTx(async () => {
+export async function restoreFoodLog(
+  id: string,
+  date: string,
+): Promise<NutritionMutationResult> {
+  return inTx(async () => {
+    const [existing] = await db
+      .select()
+      .from(foodLogs)
+      .where(and(eq(foodLogs.id, id), eq(foodLogs.date, date)));
     const timestamp = nowIso();
-    await db
-      .update(foodLogs)
-      .set({ ...updates, updated_at: timestamp })
-      .where(and(eq(foodLogs.id, id), isNull(foodLogs.deleted_at)));
-    for (const affectedDate of new Set([date, updates.date ?? date])) {
-      await recomputeDailyNutritionInTransaction(affectedDate);
+    if (existing?.deleted_at) {
+      await db
+        .update(foodLogs)
+        .set({ deleted_at: null, updated_at: timestamp })
+        .where(and(eq(foodLogs.id, id), eq(foodLogs.date, date)));
     }
+    await recomputeDailyNutritionInTransaction(date);
+    const summary = await getDailyNutrition(date);
+    if (!summary) throw new Error(`Daily nutrition summary for ${date} is missing.`);
+    const [restored] = existing?.deleted_at
+      ? await db
+        .select()
+        .from(foodLogs)
+        .where(and(eq(foodLogs.id, id), isNull(foodLogs.deleted_at)))
+      : [];
+    return {
+      saved: restored ? [restored] : [],
+      summaries: [summary],
+    };
+  });
+}
+
+export async function updateFoodLog(
+  id: string,
+  updates: Partial<NewFoodLog>,
+  date: string,
+): Promise<NutritionMutationResult> {
+  return inTx(async () => {
+    const dates = [...new Set([date, updates.date ?? date])];
+    const [existing] = await db
+      .select()
+      .from(foodLogs)
+      .where(and(eq(foodLogs.id, id), isNull(foodLogs.deleted_at)));
+    const timestamp = nowIso();
+    let saved: FoodLog[] = [];
+    if (existing) {
+      await db
+        .update(foodLogs)
+        .set({ ...updates, updated_at: timestamp })
+        .where(and(eq(foodLogs.id, id), isNull(foodLogs.deleted_at)));
+      saved = await db
+        .select()
+        .from(foodLogs)
+        .where(and(eq(foodLogs.id, id), isNull(foodLogs.deleted_at)));
+    }
+    const summaries: DailyNutrition[] = [];
+    for (const affectedDate of dates) {
+      await recomputeDailyNutritionInTransaction(affectedDate);
+      const summary = await getDailyNutrition(affectedDate);
+      if (!summary) {
+        throw new Error(`Daily nutrition summary for ${affectedDate} is missing.`);
+      }
+      summaries.push(summary);
+    }
+    return {
+      saved,
+      summaries,
+    };
   });
 }
 
@@ -101,6 +192,39 @@ export async function getLast7DaysNutrition(): Promise<DailyNutrition[]> {
     addDays(today, -6),
     today,
   );
+}
+
+export async function getNutritionDay(
+  date: string,
+  asOfDate: string = localDateString(),
+) {
+  return inRead(async () => {
+    const trendDates = Array.from({ length: 7 }, (_, index) =>
+      addDays(asOfDate, index - 6)
+    );
+    const nutrition = await getDailyNutrition(date);
+    const foodLogs = await getFoodLogsForDate(date);
+    const last7Days = await getDailyNutritionRange(
+      addDays(asOfDate, -6),
+      asOfDate,
+    );
+    const targets = await getTargetsForDate(date);
+    const trackingPause = await getTrackingPauseStatus(asOfDate);
+    const proteinTargetsByDate: Record<string, number> = {};
+    for (const trendDate of trendDates) {
+      const dayTargets = await getTargetsForDate(trendDate);
+      proteinTargetsByDate[trendDate] = dayTargets.protein_g;
+    }
+
+    return {
+      nutrition,
+      foodLogs,
+      last7Days,
+      targets,
+      trackingPause,
+      proteinTargetsByDate,
+    };
+  });
 }
 
 export async function getLast30DaysNutrition(): Promise<DailyNutrition[]> {

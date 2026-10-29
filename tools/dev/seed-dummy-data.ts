@@ -181,8 +181,7 @@ export async function addDummyWeekData(): Promise<void> {
   console.log("\n📊 Adding body stats...");
   
   // Add weight logs for each day (morning weigh-ins)
-  for (let i = 0; i < dates.length; i++) {
-    const date = dates[i];
+  for (const [i, date] of dates.entries()) {
     const baseWeight = 75.0;
     const dailyVariation = (Math.random() - 0.5) * 0.4; // ±0.2kg daily fluctuation
     const weight = baseWeight + dailyVariation;
@@ -223,8 +222,7 @@ export async function addDummyWeekData(): Promise<void> {
   // ═══════════════════════════════════════════════════════════════════════════
   console.log("\n💊 Adding supplement logs...");
   
-  for (let i = 0; i < dates.length; i++) {
-    const date = dates[i];
+  for (const date of dates) {
     const now = Math.floor(Date.now() / 1000);
     
     for (const supplement of SAMPLE_SUPPLEMENTS) {
@@ -282,8 +280,7 @@ export async function addDummyWeekData(): Promise<void> {
   // 4. ADD NUTRITION, WORKOUTS, AND RECOVERY (Daily logs)
   // ═══════════════════════════════════════════════════════════════════════════
   
-  for (let i = 0; i < dates.length; i++) {
-    const date = dates[i];
+  for (const [i, date] of dates.entries()) {
     const dayOfWeek = new Date(date).getDay();
     const now = Math.floor(Date.now() / 1000);
     
@@ -293,7 +290,9 @@ export async function addDummyWeekData(): Promise<void> {
     // Get day type (cycle through 6-day split, skip Sundays)
     let dayType = "";
     if (!isRestDay) {
-      dayType = dayTypes[dayTypeIndex % dayTypes.length];
+      const plannedDayType = dayTypes[dayTypeIndex % dayTypes.length];
+      if (!plannedDayType) throw new Error("No workout day type is configured.");
+      dayType = plannedDayType;
       dayTypeIndex++;
     }
     
@@ -412,6 +411,9 @@ export async function addDummyWeekData(): Promise<void> {
       let totalVolume = 0;
       
       const workoutTemplate = WORKOUT_TEMPLATES[dayType];
+      if (!workoutTemplate) {
+        throw new Error(`No workout template configured for ${dayType}.`);
+      }
       
       // Add workout duration variability (45-75 minutes)
       const duration = 45 + Math.floor(Math.random() * 30);
@@ -434,8 +436,7 @@ export async function addDummyWeekData(): Promise<void> {
       // ─────────────────────────────────────────────────────────────────────────
       // 4d. Add exercises and sets (with variability)
       // ─────────────────────────────────────────────────────────────────────────
-      for (let j = 0; j < workoutTemplate.length; j++) {
-        const exercise = workoutTemplate[j];
+      for (const [j, exercise] of workoutTemplate.entries()) {
         const exerciseId = uuid.v4() as string;
         
         await db.insert(exerciseLogs).values({
@@ -449,8 +450,7 @@ export async function addDummyWeekData(): Promise<void> {
         });
         
         // Add sets with variability
-        for (let k = 0; k < exercise.sets.length; k++) {
-          const set = exercise.sets[k];
+        for (const [k, set] of exercise.sets.entries()) {
           
           // Add weight progression over time (earlier dates = lighter weight)
           const daysAgo = dates.length - 1 - i;

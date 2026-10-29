@@ -30,10 +30,15 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
   const today = new Date();
   const currentQuarter = Math.floor(today.getMonth() / 3) + 1;
   const currentYear = today.getFullYear();
-  const [year, q] = quarter.split('-');
-  const quarterNum = parseInt(q.replace('Q', ''));
-  
-  if (parseInt(year) === currentYear && quarterNum === currentQuarter) {
+  const quarterParts = /^(\d{4})-Q([1-4])$/.exec(quarter);
+  const year = quarterParts?.[1];
+  const quarterPart = quarterParts?.[2];
+  if (year === undefined || quarterPart === undefined) {
+    throw new RangeError(`Invalid quarter: ${quarter}`);
+  }
+  const quarterNum = Number(quarterPart);
+
+  if (Number(year) === currentYear && quarterNum === currentQuarter) {
     return null; // Current quarter - don't generate yet
   }
 
@@ -47,8 +52,8 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
 
     // Calculate quarter date range
     const startMonth = (quarterNum - 1) * 3 + 1;
-    const startDate = new Date(parseInt(year), startMonth - 1, 1);
-    const endDate = new Date(parseInt(year), startMonth + 2, 0); // Last day of 3rd month
+    const startDate = new Date(Number(year), startMonth - 1, 1);
+    const endDate = new Date(Number(year), startMonth + 2, 0); // Last day of 3rd month
     
     // Aggregate stats from monthly reports
     const allStats = monthlySummaries.map(m => JSON.parse(m.report_json));

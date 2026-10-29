@@ -40,7 +40,7 @@ export const colors = {
 
   // ── Error (Red) ──
   error:              "#FF5449",
-  onError:            "#690005",
+  onError:            "#490003",
   errorContainer:     "#930006",
   onErrorContainer:   "#FFDAD6",
 
@@ -58,7 +58,7 @@ export const colors = {
   onBackground:       "#E8E8F0",   // Primary text
   onSurface:          "#E8E8F0",   // Primary text on surfaces
   onSurfaceVariant:   "#909090",   // Secondary / helper text
-  onSurfaceMuted:     "#8080A0",   // Placeholder, disabled
+  onSurfaceMuted:     "#8A8AA6",   // Placeholder, disabled
 
   // ── Borders ──
   outline:            "#2E2E3F",   // Card borders, dividers

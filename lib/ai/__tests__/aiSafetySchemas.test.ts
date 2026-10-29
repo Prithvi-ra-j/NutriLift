@@ -27,8 +27,10 @@ describe("AI output validation", () => {
         confidence: "low",
       }],
     });
-    expect(result.items[0].needs_review).toBe(true);
-    expect(result.items[0].quantity).toBe("1 serving");
+    const item = result.items.at(0);
+    if (!item) throw new Error("Expected one parsed food item.");
+    expect(item.needs_review).toBe(true);
+    expect(item.quantity).toBe("1 serving");
   });
 
   it("rejects food responses outside the allowlisted schema", () => {

@@ -1,6 +1,7 @@
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { M3 } from "../../design-system/tokens";
+import { Chip } from "./Chip";
 import { addDays, localDateString, parseLocalDate, startOfWeekMonday } from "../../lib/time/localDate";
 import { useToday } from "../../lib/time/useToday";
 
@@ -11,7 +12,8 @@ interface DateNavigatorProps {
 }
 
 export function DateNavigator({ selectedDate, onDateChange, showFullDate = true }: DateNavigatorProps) {
-  const today = parseLocalDate(useToday());
+  const todayString = useToday();
+  const today = parseLocalDate(todayString);
   const selected = parseLocalDate(selectedDate);
 
   // Get week for a given date (Monday to Sunday)
@@ -87,25 +89,16 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
               {selected.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
             </Text>
           </View>
-          {!isToday(selected) && (
-            <TouchableOpacity
-              onPress={goToToday}
-              style={{
-                backgroundColor: M3.colors.primaryContainer,
-                borderRadius: 6,
-                paddingHorizontal: 10,
-                paddingVertical: 6,
-                borderWidth: 1,
-                borderColor: M3.colors.primary,
-              }}
-            >
-              <Text style={{ color: M3.colors.primary, fontSize: 11, fontFamily: "DMSans_700Bold" }}>
-                TODAY
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
       )}
+
+      {selectedDate !== todayString ? (
+        <Chip
+          label="Today"
+          onPress={goToToday}
+          testID="date.today"
+        />
+      ) : null}
 
       {/* Week Navigation */}
       {!isCurrentWeek() && (
@@ -131,7 +124,7 @@ export function DateNavigator({ selectedDate, onDateChange, showFullDate = true 
           </TouchableOpacity>
           
           <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-            Week of {days[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+            Week of {days[0]?.toLocaleDateString("en-US", { month: "short", day: "numeric" }) ?? ""}
           </Text>
           
           <TouchableOpacity

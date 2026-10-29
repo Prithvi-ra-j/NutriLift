@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -22,8 +21,11 @@ import { useToday } from "../../lib/time/useToday";
 import { isLocalDateString } from "../../lib/time/localDate";
 import type { MeasurementTimeOfDay } from "../../lib/data/types";
 import { MeasurementTimeOfDaySelector } from "../../components/ui/MeasurementTimeOfDaySelector";
+import { useToast } from "../../components/ui/Toast";
+import { logger } from "../../lib/logger";
 
 export default function InBodyPasteModal() {
+  const { show } = useToast();
   const params = useLocalSearchParams<{ date?: string }>();
   const today = useToday();
   const [pasteText, setPasteText] = useState("");
@@ -47,10 +49,12 @@ export default function InBodyPasteModal() {
       if (err instanceof AiError && err.code === "consent") {
         router.push("/modals/ai-consent");
       }
-      Alert.alert(
-        err instanceof AiError && err.code === "safety" ? "Support is available" : "Parse Failed",
-        err instanceof Error ? err.message : "Could not parse InBody data. Please check the input and try again.",
-      );
+      show({
+        message: err instanceof Error
+          ? err.message
+          : "Could not parse InBody data. Check the input and try again.",
+        kind: "error",
+      });
     } finally {
       setIsParsing(false);
     }
@@ -59,7 +63,7 @@ export default function InBodyPasteModal() {
   const handleSave = async () => {
     if (!parsed) return;
     if (!measurementTimeOfDay) {
-      Alert.alert("Choose measurement time", "Select when the InBody measurement was taken.");
+      show({ message: "Select when the InBody measurement was taken.", kind: "error" });
       return;
     }
     setIsSaving(true);
@@ -92,11 +96,13 @@ export default function InBodyPasteModal() {
         raw_paste: pasteText,
         source: "inbody_paste",
       });
-      Alert.alert("Saved", "InBody data imported successfully.", [
-        { text: "OK", onPress: () => router.back() },
-      ]);
+      show({ message: "InBody data imported successfully.", kind: "success" });
+      router.back();
     } catch (err) {
-      Alert.alert("Save Failed", "Could not save InBody data.");
+      logger.error("InBody data save failed", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+      show({ message: "Could not save InBody data.", kind: "error" });
     } finally {
       setIsSaving(false);
     }

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -20,6 +19,7 @@ import { searchLocalFoods, type IndianFood } from "../../lib/data/indianFoodDB";
 import { Card } from "../../components/ui/Card";
 import { ModalHeader } from "../../components/ui/ModalHeader";
 import { Button } from "../../components/ui/Button";
+import { useToast } from "../../components/ui/Toast";
 import uuid from "react-native-uuid";
 import { M3 } from "../../design-system/tokens";
 import { logger } from "../../lib/logger";
@@ -32,6 +32,7 @@ type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 const MEALS: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
 
 export default function LogFoodModal() {
+  const { show } = useToast();
   const params = useLocalSearchParams<{ meal?: string; date?: string }>();
   const mealParam = MEALS.find((meal) => meal === params.meal);
   
@@ -101,15 +102,14 @@ export default function LogFoodModal() {
       if (err instanceof AiError && err.code === "safety") {
         setParseNotes(AI_SAFETY_RESPONSE);
         setParsedItems(null);
-        Alert.alert("Support is available", AI_SAFETY_RESPONSE);
+        show({ message: AI_SAFETY_RESPONSE, kind: "info" });
         return;
       }
       // Fallback: show raw input as editable
-      Alert.alert(
-        "Parse Failed",
-        "Could not parse food automatically. You can add items manually.",
-        [{ text: "OK" }]
-      );
+      show({
+        message: "Could not parse food automatically. You can add items manually.",
+        kind: "error",
+      });
       // Create a basic item from the input
       setItemSource("manual");
       setParsedItems([makeManualItem(input.trim())]);
@@ -122,7 +122,9 @@ export default function LogFoodModal() {
   const updateItem = (index: number, field: keyof ParsedFoodItem, value: string) => {
     if (!parsedItems) return;
     const updated = [...parsedItems];
-    const item = { ...updated[index] } as Record<string, unknown>;
+    const existing = updated[index];
+    if (!existing) return;
+    const item = { ...existing } as Record<string, unknown>;
     if (field === "name" || field === "quantity" || field === "confidence") {
       item[field] = value;
     } else {
@@ -166,12 +168,13 @@ export default function LogFoodModal() {
           raw_input: input,
           created_at: now,
         })));
+      show({ message: "Food entry saved.", kind: "success" });
       router.back();
     } catch (error) {
       logger.error("Food log save failed", {
         error: error instanceof Error ? error.message : String(error),
       });
-      Alert.alert("Save Failed", "Could not save food log. Please try again.");
+      show({ message: "Could not save food log. Please try again.", kind: "error" });
     } finally {
       setIsSaving(false);
     }

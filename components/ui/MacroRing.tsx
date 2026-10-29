@@ -20,6 +20,7 @@ export function MacroRing({
   carbsTarget,
   fatTarget,
   calories,
+  caloriesTarget,
 }: MacroRingProps) {
   const size = 90;
 
@@ -29,7 +30,12 @@ export function MacroRing({
   const fatPct = Math.min(100, (fat / fatTarget) * 100);
 
   return (
-    <View style={{ alignItems: "center", justifyContent: "center" }}>
+    <View
+      accessible
+      accessibilityLabel={`Calories ${calories.toFixed(0)} of ${caloriesTarget} kilocalories. Protein ${protein.toFixed(0)} of ${proteinTarget} grams. Carbohydrates ${carbs.toFixed(0)} of ${carbsTarget} grams. Fat ${fat.toFixed(0)} of ${fatTarget} grams.`}
+      accessibilityRole="image"
+      style={{ alignItems: "center", justifyContent: "center" }}
+    >
       {/* Main circle with stacked colored bars */}
       <View
         style={{

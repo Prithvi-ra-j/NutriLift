@@ -1,23 +1,33 @@
 import { Platform } from "react-native";
-import * as FileSystem from "expo-file-system/legacy";
-import { localDateString } from "./time/localDate";
-import { nowIso, nowUnix } from "./time/clock";
+import { nowIso } from "./time/clock";
+import { FileLogStore } from "./logger/fileStore";
+import type { LogEntry, LogLevel } from "./logger/types";
 
-type LogLevel = "info" | "warn" | "error" | "debug";
+type ConsoleArguments = Parameters<Console["log"]>;
+const runtimeConsole: Console = globalThis["console"];
 
-interface LogEntry {
-  timestamp: string;
-  level: LogLevel;
-  message: string;
-  stack?: string;
-  context?: any;
+function isLogEntry(value: unknown): value is LogEntry {
+  if (typeof value !== "object" || value === null) return false;
+  const entry = value as Record<string, unknown>;
+  return (
+    typeof entry.timestamp === "string" &&
+    (entry.level === "info" ||
+      entry.level === "warn" ||
+      entry.level === "error" ||
+      entry.level === "debug") &&
+    typeof entry.message === "string" &&
+    (entry.stack === undefined || typeof entry.stack === "string")
+  );
 }
 
 class Logger {
-  private logDir: string | null = null;
-  private currentLogFile: string | null = null;
+  private readonly fileStore = new FileLogStore();
   private isInitialized = false;
   private logQueue: LogEntry[] = [];
+  private fileWriteQueue: Promise<void> = Promise.resolve();
+  private originalConsoleMethods:
+    | Pick<Console, "log" | "warn" | "error" | "debug">
+    | null = null;
 
   constructor() {
     this.initialize();
@@ -32,42 +42,30 @@ class Logger {
     }
 
     try {
-      // Create logs directory in document directory
-      this.logDir = `${FileSystem.documentDirectory}logs`;
-      
-      const dirInfo = await FileSystem.getInfoAsync(this.logDir);
-      if (!dirInfo.exists) {
-        await FileSystem.makeDirectoryAsync(this.logDir, { intermediates: true });
+      const timestamp = await this.fileStore.initialize();
+      if (__DEV__) {
+        await this.writeToFile({
+          timestamp,
+          level: "info",
+          message: "=== Log session started ===",
+        });
       }
-
-      // Create log file with timestamp
-      const timestamp = nowIso();
-      const now = new Date(timestamp);
-      const dateStr = localDateString(now);
-      const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "-"); // HH-MM-SS
-      const fileName = `app-${dateStr}_${timeStr}.log`;
-      
-      this.currentLogFile = `${this.logDir}/${fileName}`;
-      
-      // Write initial log entry
-      await this.writeToFile({
-        timestamp,
-        level: "info",
-        message: "=== Log session started ===",
-      });
 
       this.isInitialized = true;
 
       // Process queued logs
       for (const entry of this.logQueue) {
-        await this.writeToFile(entry);
+        if (__DEV__ || entry.level === "error") {
+          await this.writeToFile(entry);
+        }
       }
       this.logQueue = [];
 
-      // Clean up old logs (keep last 30 days)
-      this.cleanupOldLogs();
+      void this.fileStore.cleanupOldLogs().catch((error: unknown) => {
+        runtimeConsole.error("Failed to cleanup old logs:", error);
+      });
     } catch (error) {
-      console.error("Failed to initialize logger:", error);
+      runtimeConsole.error("Failed to initialize logger:", error);
       this.isInitialized = true; // Set to true anyway to prevent infinite queue
     }
   }
@@ -75,29 +73,30 @@ class Logger {
   private setupWebLogging() {
     // Intercept console methods on web
     const originalConsole = {
-      log: console.log,
-      warn: console.warn,
-      error: console.error,
-      debug: console.debug,
+      log: runtimeConsole.log,
+      warn: runtimeConsole.warn,
+      error: runtimeConsole.error,
+      debug: runtimeConsole.debug,
     };
+    this.originalConsoleMethods = originalConsole;
 
     // Override console methods to also log to localStorage
-    console.log = (...args: any[]) => {
+    runtimeConsole.log = (...args: ConsoleArguments) => {
       originalConsole.log(...args);
       this.logToWebStorage("info", args);
     };
 
-    console.warn = (...args: any[]) => {
+    runtimeConsole.warn = (...args: ConsoleArguments) => {
       originalConsole.warn(...args);
       this.logToWebStorage("warn", args);
     };
 
-    console.error = (...args: any[]) => {
+    runtimeConsole.error = (...args: ConsoleArguments) => {
       originalConsole.error(...args);
       this.logToWebStorage("error", args);
     };
 
-    console.debug = (...args: any[]) => {
+    runtimeConsole.debug = (...args: ConsoleArguments) => {
       originalConsole.debug(...args);
       this.logToWebStorage("debug", args);
     };
@@ -122,7 +121,7 @@ class Logger {
     });
   }
 
-  private logToWebStorage(level: LogLevel, args: any[]) {
+  private logToWebStorage(level: LogLevel, args: ConsoleArguments) {
     try {
       const entry: LogEntry = {
         timestamp: nowIso(),
@@ -147,77 +146,51 @@ class Logger {
       localStorage.setItem(logsKey, JSON.stringify(logs));
       localStorage.removeItem("apex_logs");
     } catch (error) {
-      // Silently fail if localStorage is full or unavailable
+      this.originalConsoleMethods?.warn("Failed to persist web logs:", error);
     }
   }
 
   private async writeToFile(entry: LogEntry) {
-    if (!this.currentLogFile) return;
-
     try {
-      const logLine = this.formatLogEntry(entry);
-      await FileSystem.writeAsStringAsync(this.currentLogFile, logLine, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      const persistedEntry: LogEntry = __DEV__
+        ? entry
+        : {
+            timestamp: entry.timestamp,
+            level: entry.level,
+            message: entry.message.slice(0, 2_000),
+            stack: entry.stack?.slice(0, 8_000),
+          };
+      await this.fileStore.write(persistedEntry);
     } catch (error) {
-      console.error("Failed to write to log file:", error);
+      runtimeConsole.error("Failed to write to log file:", error);
     }
   }
 
   private formatLogEntry(entry: LogEntry): string {
-    let line = `[${entry.timestamp}] [${entry.level.toUpperCase()}] ${entry.message}\n`;
-    
-    if (entry.stack) {
-      line += `Stack: ${entry.stack}\n`;
-    }
-    
-    if (entry.context) {
-      line += `Context: ${JSON.stringify(entry.context, null, 2)}\n`;
-    }
-    
-    return line;
+    return `${JSON.stringify(entry)}\n`;
   }
 
-  private async cleanupOldLogs() {
-    if (!this.logDir) return;
-
-    try {
-      const files = await FileSystem.readDirectoryAsync(this.logDir);
-      const now = nowUnix() * 1000;
-      const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
-
-      for (const file of files) {
-        const filePath = `${this.logDir}/${file}`;
-        const fileInfo = await FileSystem.getInfoAsync(filePath);
-        
-        if (fileInfo.exists && fileInfo.modificationTime) {
-          if (fileInfo.modificationTime < thirtyDaysAgo) {
-            await FileSystem.deleteAsync(filePath);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Failed to cleanup old logs:", error);
-    }
+  private enqueueFileWrite(entry: LogEntry) {
+    this.fileWriteQueue = this.fileWriteQueue.then(() => this.writeToFile(entry));
   }
 
-  public info(message: string, context?: any) {
+  public info(message: string, context?: unknown) {
     this.log("info", message, context);
   }
 
-  public warn(message: string, context?: any) {
+  public warn(message: string, context?: unknown) {
     this.log("warn", message, context);
   }
 
-  public error(message: string, context?: any) {
+  public error(message: string, context?: unknown) {
     this.log("error", message, context);
   }
 
-  public debug(message: string, context?: any) {
+  public debug(message: string, context?: unknown) {
     this.log("debug", message, context);
   }
 
-  private log(level: LogLevel, message: string, context?: any) {
+  private log(level: LogLevel, message: string, context?: unknown) {
     const entry: LogEntry = {
       timestamp: nowIso(),
       level,
@@ -226,8 +199,8 @@ class Logger {
     };
 
     // Also log to console
-    const consoleMethod = level === "debug" ? console.log : console[level];
-    if (context) {
+    const consoleMethod = level === "debug" ? runtimeConsole.log : runtimeConsole[level];
+    if (__DEV__ && context) {
       consoleMethod(`[${level.toUpperCase()}]`, message, context);
     } else {
       consoleMethod(`[${level.toUpperCase()}]`, message);
@@ -238,24 +211,23 @@ class Logger {
       return;
     }
 
-    if (Platform.OS !== "web") {
-      this.writeToFile(entry);
+    if (Platform.OS !== "web" && (__DEV__ || level === "error")) {
+      this.enqueueFileWrite(entry);
     }
   }
 
   public async getLogFilePath(): Promise<string | null> {
-    return this.currentLogFile;
+    return this.fileStore.getPath();
   }
 
   public async getAllLogFiles(): Promise<string[]> {
-    if (!this.logDir || Platform.OS === "web") return [];
+    if (Platform.OS === "web") return [];
 
     try {
-      const files = await FileSystem.readDirectoryAsync(this.logDir);
-      return files.map((file) => `${this.logDir}/${file}`);
+      return await this.fileStore.getAllPaths();
     } catch (error) {
-      console.error("Failed to get log files:", error);
-      return [];
+      this.error("Failed to get log files", error);
+      throw error;
     }
   }
 
@@ -265,9 +237,14 @@ class Logger {
     try {
       const logsKey = "nutrilift_logs";
       const existingLogs = localStorage.getItem(logsKey);
-      return existingLogs ? JSON.parse(existingLogs) : [];
+      const logs: unknown = existingLogs ? JSON.parse(existingLogs) : [];
+      if (!Array.isArray(logs) || !logs.every(isLogEntry)) {
+        throw new Error("Stored web logs have an invalid format.");
+      }
+      return logs;
     } catch (error) {
-      return [];
+      this.error("Failed to read web logs", error);
+      throw error;
     }
   }
 
@@ -287,7 +264,7 @@ class Logger {
 export const logger = new Logger();
 
 // Export error boundary helper
-export function logError(error: Error, errorInfo?: any) {
+export function logError(error: Error, errorInfo?: unknown) {
   logger.error(error.message, {
     stack: error.stack,
     errorInfo,

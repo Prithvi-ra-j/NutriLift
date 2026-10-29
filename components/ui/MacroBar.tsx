@@ -15,7 +15,13 @@ export function MacroBar({ label, current, target, color, unit = "g" }: MacroBar
   const overPct = over ? ((current - target) / target) * 100 : 0;
 
   return (
-    <View style={{ marginBottom: 10 }}>
+    <View
+      accessible
+      accessibilityLabel={`${label} ${current.toFixed(0)} of ${target} ${unit}`}
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: target, now: current }}
+      style={{ marginBottom: 10 }}
+    >
       <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 4 }}>
         <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, fontFamily: "DMSans_400Regular" }}>
           {label}

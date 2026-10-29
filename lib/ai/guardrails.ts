@@ -48,7 +48,9 @@ export function applyCoachGuardrails(
 ): string {
   const calorieFigures = text.matchAll(/\b(\d{1,2}(?:,\d{3})|\d{3,4}(?:\.\d+)?)\s*(?:kcal|calories)\b/gi);
   for (const match of calorieFigures) {
-    const calories = Number(match[1].replaceAll(",", ""));
+    const figure = match[1];
+    if (figure === undefined) continue;
+    const calories = Number(figure.replaceAll(",", ""));
     if (calories < minimumCalories) {
       return `${text}\n\nPlease discuss calorie targets with a qualified professional; NutriLift does not recommend targets below your configured floor.`;
     }

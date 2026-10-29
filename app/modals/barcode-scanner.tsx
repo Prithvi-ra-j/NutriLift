@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   TextInput,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -17,10 +16,12 @@ import { Button } from "../../components/ui/Button";
 import { M3 } from "../../design-system/tokens";
 import { useToday } from "../../lib/time/useToday";
 import { isLocalDateString } from "../../lib/time/localDate";
+import { useToast } from "../../components/ui/Toast";
 
 type ScanState = "scanning" | "detecting" | "found" | "not_found" | "error" | "offline";
 
 export default function BarcodeScannerModal() {
+  const { show } = useToast();
   const params = useLocalSearchParams<{ date?: string }>();
   const today = useToday();
   const logDate = isLocalDateString(params.date) ? params.date : today;
@@ -66,14 +67,11 @@ export default function BarcodeScannerModal() {
         
         // Suggest torch after 3 failed scans
         if (failedScans >= 2 && !torchOn) {
-          Alert.alert(
-            "Having trouble?",
-            "Try turning on the torch for better lighting.",
-            [
-              { text: "Turn on Torch", onPress: () => setTorchOn(true) },
-              { text: "Continue", style: "cancel" }
-            ]
-          );
+          show({
+            message: "Low light can make scanning harder.",
+            kind: "info",
+            action: { label: "Turn on torch", onPress: () => setTorchOn(true) },
+          });
         }
         
         setTimeout(() => {
@@ -109,7 +107,7 @@ export default function BarcodeScannerModal() {
 
   const handleManualEntry = async () => {
     if (!manualBarcode.trim()) {
-      Alert.alert("Error", "Please enter a barcode number");
+      show({ message: "Enter a barcode number.", kind: "error" });
       return;
     }
 
@@ -120,26 +118,23 @@ export default function BarcodeScannerModal() {
       const result = await lookupBarcode(manualBarcode.trim());
       
       if (result.status === "NOT_FOUND") {
-        Alert.alert(
-          "Not Found",
-          "Product not found in database. Would you like to enter it manually?",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Enter Manually",
-              onPress: () => {
-                router.push({
-                  pathname: "/modals/nutrition-card",
-                  params: {
-                    barcode: manualBarcode.trim(),
-                    source: "manual",
-                    date: logDate,
-                  }
-                });
-              }
-            }
-          ]
-        );
+        show({
+          message: "Product not found. Enter its details manually instead.",
+          kind: "info",
+          action: {
+            label: "Enter manually",
+            onPress: () => {
+              router.push({
+                pathname: "/modals/nutrition-card",
+                params: {
+                  barcode: manualBarcode.trim(),
+                  source: "manual",
+                  date: logDate,
+                },
+              });
+            },
+          },
+        });
         setScanState("scanning");
       } else {
         setScanState("found");
@@ -154,24 +149,17 @@ export default function BarcodeScannerModal() {
       }
     } catch (error) {
       logger.error("Manual barcode lookup failed", { error });
-      Alert.alert("Error", "Failed to lookup barcode. Please try again.");
+      show({ message: "Could not look up this barcode. Please try again.", kind: "error" });
       setScanState("scanning");
     }
   };
 
   const openSettings = () => {
-    Alert.alert(
-      "Camera Permission Required",
-      "Please enable camera access in your device settings to scan barcodes.",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Open Settings", onPress: () => {
-          // On iOS/Android, this would open app settings
-          // For now, just show manual entry
-          setManualEntry(true);
-        }}
-      ]
-    );
+    show({
+      message: "Camera access is off. You can enter the barcode manually.",
+      kind: "info",
+      action: { label: "Enter manually", onPress: () => setManualEntry(true) },
+    });
   };
 
   if (hasPermission === null) {
@@ -186,7 +174,7 @@ export default function BarcodeScannerModal() {
   if (hasPermission === false) {
     return (
       <View style={styles.container}>
-        <Ionicons name={"camera-off" as any} size={64} color={M3.colors.onSurfaceMuted} />
+        <Ionicons name="camera-outline" size={64} color={M3.colors.onSurfaceMuted} />
         <Text style={styles.errorTitle}>Camera Access Denied</Text>
         <Text style={styles.errorText}>
           Camera permission is required to scan barcodes.

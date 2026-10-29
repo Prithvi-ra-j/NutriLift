@@ -82,7 +82,9 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
     const startingWeight = bodyStats[0]?.weight_kg;
     const endingWeight = bodyStats[bodyStats.length - 1]?.weight_kg;
     const bodyStatsData =
-      bodyStats.length >= 2 && startingWeight !== null && endingWeight !== null
+      bodyStats.length >= 2 &&
+      typeof startingWeight === "number" &&
+      typeof endingWeight === "number"
         ? {
             weight_change_kg: endingWeight - startingWeight,
             starting_weight: startingWeight,

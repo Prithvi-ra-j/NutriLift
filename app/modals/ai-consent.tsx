@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "../../components/ui/Button";
@@ -7,8 +7,10 @@ import { ModalHeader } from "../../components/ui/ModalHeader";
 import { M3 } from "../../design-system/tokens";
 import { getAiPreference, setAiPreference } from "../../lib/data/aiPreferences";
 import { logger } from "../../lib/logger";
+import { useToast } from "../../components/ui/Toast";
 
 export default function AiConsentModal() {
+  const { show } = useToast();
   const [consent, setConsent] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -19,9 +21,9 @@ export default function AiConsentModal() {
         logger.error("AI consent status lookup failed", {
           error: error instanceof Error ? error.message : String(error),
         });
-        Alert.alert("Could not check consent", "Please try opening this page again.");
+        show({ message: "Could not check consent. Please try again.", kind: "error" });
       });
-  }, []);
+  }, [show]);
 
   const saveConsent = async (value: "accepted" | "revoked") => {
     setIsSaving(true);
@@ -33,10 +35,10 @@ export default function AiConsentModal() {
       logger.error("AI consent preference could not be saved", {
         error: error instanceof Error ? error.message : String(error),
       });
-      Alert.alert(
-        "Consent not saved",
-        error instanceof Error ? error.message : "Please try again.",
-      );
+      show({
+        message: error instanceof Error ? error.message : "Consent could not be saved.",
+        kind: "error",
+      });
     } finally {
       setIsSaving(false);
     }
