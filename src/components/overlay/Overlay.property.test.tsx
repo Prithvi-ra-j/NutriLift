@@ -88,9 +88,10 @@ describe('Overlay Components Accessibility Properties', () => {
           visible={true}
           onDismiss={jest.fn()}
           title="Dialog Title"
-          children={<Text>Dialog Content</Text>}
           actions={[{ label: 'Confirm', onPress: jest.fn() }]}
-        />
+        >
+          <Text>Dialog Content</Text>
+        </Dialog>
       );
 
       const dialog = getByRole('alert');
