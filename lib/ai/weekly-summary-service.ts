@@ -40,7 +40,7 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
       avg_calories: Math.round(nutrition.reduce((sum, d) => sum + d.total_calories, 0) / nutrition.length),
       avg_protein: Math.round(nutrition.reduce((sum, d) => sum + d.total_protein_g, 0) / nutrition.length),
       protein_hit_rate: Math.round((nutrition.filter(d => d.protein_target_met === 1).length / nutrition.length) * 100),
-      adherence_score: Math.round(nutrition.reduce((sum, d) => sum + d.adherence_score, 0) / nutrition.length),
+      adherence_score: Math.round(nutrition.reduce((sum, d) => sum + (d.adherence_score ?? 0), 0) / nutrition.length),
       days_logged: nutrition.length,
     } : {
       avg_calories: 0,
@@ -81,10 +81,11 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
     };
 
     // Calculate body stats
-    const bodyStatsData = bodyStats.length >= 2 ? {
-      weight_change_kg: bodyStats[bodyStats.length - 1].weight_kg! - bodyStats[0].weight_kg!,
-      starting_weight: bodyStats[0].weight_kg,
-      ending_weight: bodyStats[bodyStats.length - 1].weight_kg,
+    const validBodyStats = bodyStats.filter((entry) => entry.weight_kg !== null);
+    const bodyStatsData = validBodyStats.length >= 2 ? {
+      weight_change_kg: validBodyStats[validBodyStats.length - 1].weight_kg - validBodyStats[0].weight_kg,
+      starting_weight: validBodyStats[0].weight_kg,
+      ending_weight: validBodyStats[validBodyStats.length - 1].weight_kg,
     } : {};
 
     // Generate AI summary
