@@ -94,7 +94,9 @@ Deno.serve(async (request) => {
   }
 
   const form = new FormData();
-  form.append("file", new Blob([bytes], { type: mimeType }), mimeType === "audio/m4a" ? "recording.m4a" : `recording.${mimeType.split("/")[1]}`);
+  const audioBuffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(audioBuffer).set(bytes);
+  form.append("file", new Blob([audioBuffer], { type: mimeType }), mimeType === "audio/m4a" ? "recording.m4a" : `recording.${mimeType.split("/")[1]}`);
   form.append("model", "whisper-large-v3-turbo");
   form.append("response_format", "json");
   form.append("temperature", "0");
