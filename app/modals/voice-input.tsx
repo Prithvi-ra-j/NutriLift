@@ -173,7 +173,7 @@ export default function VoiceInputModal() {
           </Text>
 
           <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 12, fontFamily: "DMSans_400Regular", textAlign: "center", paddingHorizontal: 20 }}>
-            Say what you ate, e.g. "4 eggs, a bowl of dal, and 2 rotis"
+            Say what you ate, e.g. &quot;4 eggs, a bowl of dal, and 2 rotis&quot;
           </Text>
         </View>
 
