@@ -37,16 +37,24 @@ Deno.serve(async (request) => {
     return Response.json({ error: "Invalid session" }, { status: 401, headers: corsHeaders });
   }
 
-  let body: { audio_base64?: unknown; mime_type?: unknown; language?: unknown };
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > Math.ceil(MAX_AUDIO_BYTES * 4 / 3) + 16_384) {
+    return Response.json({ error: "Audio is missing or exceeds the 20 MB limit." }, { status: 413, headers: corsHeaders });
+  }
+
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: "Invalid request body" }, { status: 400, headers: corsHeaders });
   }
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return Response.json({ error: "Invalid request body" }, { status: 400, headers: corsHeaders });
+  }
 
-  const audioBase64 = body.audio_base64;
-  const mimeType = body.mime_type;
-  const language = body.language;
+  const audioBase64 = (body as Record<string, unknown>).audio_base64;
+  const mimeType = (body as Record<string, unknown>).mime_type;
+  const language = (body as Record<string, unknown>).language;
   if (typeof audioBase64 !== "string" || !audioBase64 || audioBase64.length > Math.ceil(MAX_AUDIO_BYTES * 4 / 3) + 8) {
     return Response.json({ error: "Audio is missing or exceeds the 20 MB limit." }, { status: 413, headers: corsHeaders });
   }
@@ -57,7 +65,16 @@ Deno.serve(async (request) => {
     return Response.json({ error: "Invalid language code." }, { status: 400, headers: corsHeaders });
   }
 
-  const bytes = Uint8Array.from(atob(audioBase64), (character) => character.charCodeAt(0));
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(audioBase64)) {
+    return Response.json({ error: "Audio encoding is invalid." }, { status: 400, headers: corsHeaders });
+  }
+
+  let bytes: Uint8Array;
+  try {
+    bytes = Uint8Array.from(atob(audioBase64), (character) => character.charCodeAt(0));
+  } catch {
+    return Response.json({ error: "Audio encoding is invalid." }, { status: 400, headers: corsHeaders });
+  }
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_AUDIO_BYTES) {
     return Response.json({ error: "Audio is empty or exceeds the 20 MB limit." }, { status: 413, headers: corsHeaders });
   }
@@ -83,11 +100,16 @@ Deno.serve(async (request) => {
   form.append("temperature", "0");
   if (typeof language === "string") form.append("language", language);
 
-  const groqResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${groqApiKey}` },
-    body: form,
-  });
+  let groqResponse: Response;
+  try {
+    groqResponse = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${groqApiKey}` },
+      body: form,
+    });
+  } catch {
+    return Response.json({ error: "Voice transcription provider is temporarily unavailable." }, { status: 502, headers: corsHeaders });
+  }
   const responseText = await groqResponse.text();
   if (!groqResponse.ok) {
     const message = groqResponse.status === 401
