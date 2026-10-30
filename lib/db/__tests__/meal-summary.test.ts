@@ -4,7 +4,7 @@ import { groupFoodLogsByMeal, getRecentFoods } from "../queries/nutrition";
 import type { FoodLog } from "../schema";
 
 function food(id: string, meal: string, name: string, calories: number, protein: number): FoodLog {
-  return { id, date: "2026-10-15", meal, name, quantity_g: 100, calories, protein_g: protein, carbs_g: 10, fat_g: 5, fiber_g: null, sugar_g: null, sodium_mg: null, source: "manual", raw_input: null, provenance_type: "manual", provenance_json: null, estimate_confidence: null, estimate_reviewed: 1, created_at: 1 };
+  return { id, date: "2026-10-15", meal, name, quantity_g: 100, calories, protein_g: protein, carbs_g: 10, fat_g: 5, fiber_g: null, sugar_g: null, sodium_mg: null, source: "manual", raw_input: null, provenance_type: "manual", provenance_json: null, estimate_confidence: null, estimate_reviewed: 1, created_at: 1, updated_at: "2026-10-15T00:00:00.000Z" };
 }
 
 describe("meal summaries", () => {
