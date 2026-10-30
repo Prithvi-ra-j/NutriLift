@@ -27,6 +27,7 @@ import { getLocalHealthSummary, type LocalHealthSummary } from "../../lib/observ
 import { isSupabaseConfigured } from "../../lib/supabase/client";
 import { getCurrentSession, signInWithEmail, signOut } from "../../lib/supabase/auth";
 import { M3 } from "../../design-system/tokens";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { toLocalDateKey } from "../../lib/utils/local-date";
 import { DEFAULT_NUTRITION_TARGETS, getNutritionTargets, saveNutritionTargets, type NutritionTargets } from "../../lib/db/queries/nutrition-targets";
 import { getAdaptiveTargetSuggestion } from "../../lib/nutrition/adaptive-target-service";
@@ -143,9 +144,7 @@ export default function MoreScreen() {
 
   useEffect(() => {
     // Remove keys saved by older versions; provider credentials belong on the server.
-    void import("@react-native-async-storage/async-storage").then(({ default: storage }) =>
-      storage.removeItem("GROQ_API_KEY").catch(() => undefined),
-    );
+    void AsyncStorage.removeItem("GROQ_API_KEY").catch(() => undefined);
   }, []);
 
   const applyAdaptiveTargetSuggestion = async (originalTargets: NutritionTargets, suggestedCalories: number) => {
