@@ -7,6 +7,7 @@ jest.mock("drizzle-orm/expo-sqlite", () => ({ drizzle: () => ({}) }));
 import {
   buildPersonalRecordExternalId,
   mapDailyNutrition,
+  mapFoodLog,
   mapTombstone,
   mapRecoveryLog,
   mapWorkoutSession,
@@ -27,6 +28,36 @@ describe("NutriLift record mappers", () => {
     expect(record.externalId).toBe("nutrilift:workout_session:session-1");
     expect(record.recordType).toBe("body.training.session");
     expect(record.payload).toMatchObject({ durationMin: 50, totalVolumeKg: 3210 });
+  });
+
+  it("exports food logs with stable IDs and no raw user input", () => {
+    const record = mapFoodLog({
+      id: "food-1",
+      date: "2026-10-30",
+      meal: "lunch",
+      name: "Dal rice",
+      quantity_g: 350,
+      calories: 520,
+      protein_g: 22,
+      carbs_g: 78,
+      fat_g: 12,
+      fiber_g: 8,
+      sugar_g: 4,
+      sodium_mg: 540,
+      source: "manual",
+      raw_input: "private note",
+      provenance_type: "user_entered",
+      estimate_confidence: null,
+      estimate_reviewed: 1,
+      created_at: 1793380000,
+      updated_at: "2026-10-30T12:00:00.000Z",
+    });
+
+    expect(record.externalId).toBe("nutrilift:food_log:food-1");
+    expect(record.recordType).toBe("body.nutrition.food");
+    expect(record.sourceUpdatedAt).toBe("2026-10-30T12:00:00.000Z");
+    expect(record.payload).toMatchObject({ name: "Dal rice", calories: 520, estimateReviewed: true });
+    expect(record.payload).not.toHaveProperty("raw_input");
   });
 
   it("exports only populated recovery signals", () => {
