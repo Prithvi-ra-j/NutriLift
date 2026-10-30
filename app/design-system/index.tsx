@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, ScrollView, Text } from 'react-native';
-import { Button, Dialog, Snackbar, Menu, Badge, Progress, List, DataTable, ThemeProvider, useTheme } from '../../src/components';
+import { Button, Dialog, Snackbar, Menu, Badge, Progress, List, DataTable } from '../../src/components';
+import { ThemeProvider } from '../../src/core';
+import { useTheme } from '../../src/hooks';
 
 const ShowcaseContent = () => {
   const { tokens, isDark, toggleDarkMode } = useTheme();
