@@ -2,7 +2,9 @@
 import React, { useState } from 'react';
 import { render, act, fireEvent } from '@testing-library/react-native';
 import { View } from 'react-native';
-import { ThemeProvider, Button, Dialog, Snackbar, useTheme } from '../components';
+import { Button, Dialog, Snackbar } from '../components';
+import { ThemeProvider } from '../core';
+import { useTheme } from '../hooks';
 
 const IntegrationFlow = () => {
   const [dialogOpen, setDialogOpen] = useState(false);

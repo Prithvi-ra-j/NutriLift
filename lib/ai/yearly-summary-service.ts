@@ -1,3 +1,4 @@
+import { logServiceFailure } from "../utils/logger";
 import uuid from "react-native-uuid";
 import { 
   getYearlySummary, 
@@ -91,7 +92,7 @@ export async function getOrGenerateYearlySummary(year: string): Promise<YearlySu
     await insertYearlySummary(summary);
     return summary;
   } catch (error) {
-    console.error("Failed to generate yearly summary:", error);
+    logServiceFailure("Failed to generate summary");
     return null;
   }
 }

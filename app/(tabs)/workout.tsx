@@ -1411,7 +1411,7 @@ export default function WorkoutScreen() {
                   {filteredExercises.length === 0 && (
                     <View style={{ alignItems: "center", paddingVertical: 20 }}>
                       <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 13, fontFamily: "DMSans_400Regular" }}>
-                        No exercises found for "{exerciseSearch}"
+                        No exercises found for &quot;{exerciseSearch}&quot;
                       </Text>
                     </View>
                   )}

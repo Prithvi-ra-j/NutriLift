@@ -77,7 +77,8 @@ export async function runMigrations(): Promise<void> {
       provenance_json TEXT,
       estimate_confidence REAL,
       estimate_reviewed INTEGER NOT NULL DEFAULT 0,
-      created_at INTEGER NOT NULL
+      created_at INTEGER NOT NULL,
+      updated_at TEXT
     );
 
     CREATE INDEX IF NOT EXISTS idx_food_logs_date ON food_logs(date);
@@ -454,6 +455,7 @@ export async function runMigrations(): Promise<void> {
 
   const migrationTimestamp = new Date().toISOString();
   await sqlite.execAsync(`
+    UPDATE food_logs SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', created_at, 'unixepoch') WHERE updated_at IS NULL;
     UPDATE daily_nutrition SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
     UPDATE workout_sessions SET updated_at = '${migrationTimestamp}' WHERE updated_at IS NULL;
     UPDATE workout_sessions SET status = CASE WHEN ended_at IS NOT NULL THEN 'completed' WHEN started_at IS NOT NULL THEN 'in_progress' ELSE 'planned' END WHERE status IS NULL OR status = '';

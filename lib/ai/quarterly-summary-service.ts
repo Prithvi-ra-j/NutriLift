@@ -1,3 +1,4 @@
+import { logServiceFailure } from "../utils/logger";
 import uuid from "react-native-uuid";
 import { 
   getQuarterlySummary, 
@@ -88,7 +89,7 @@ export async function getOrGenerateQuarterlySummary(quarter: string): Promise<Qu
     await insertQuarterlySummary(summary);
     return summary;
   } catch (error) {
-    console.error("Failed to generate quarterly summary:", error);
+    logServiceFailure("Failed to generate summary");
     return null;
   }
 }

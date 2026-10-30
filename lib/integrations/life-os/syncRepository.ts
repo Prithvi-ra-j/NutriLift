@@ -3,6 +3,7 @@ import { sqlite } from "../../db/client";
 import {
   mapBodyStat,
   mapDailyNutrition,
+  mapFoodLog,
   mapPersonalRecord,
   mapRecoveryLog,
   mapTombstone,
@@ -72,8 +73,9 @@ export async function getChangedRecords(cursor: string | null): Promise<SyncReco
   // same-timestamp rows that a strict ">" cursor would silently miss.
   const query = async (table: string) => database.getAllAsync(`SELECT * FROM ${table} WHERE updated_at >= ?`, [since]);
 
-  const [nutrition, workouts, records, bodyStats, recoveryLogs, tombstones] = await Promise.all([
+  const [nutrition, foodLogs, workouts, records, bodyStats, recoveryLogs, tombstones] = await Promise.all([
     query("daily_nutrition"),
+    query("food_logs"),
     query("workout_sessions"),
     query("personal_records"),
     query("body_stats"),
@@ -83,6 +85,7 @@ export async function getChangedRecords(cursor: string | null): Promise<SyncReco
 
   return [
     ...nutrition.map(mapDailyNutrition),
+    ...foodLogs.map(mapFoodLog),
     ...workouts.map(mapWorkoutSession),
     ...records.map(mapPersonalRecord),
     ...bodyStats.map(mapBodyStat),

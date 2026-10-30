@@ -9,6 +9,7 @@ export const SUPPORTED_RECORD_TYPES = [
   "body.recovery.soreness",
   "body.recovery.stress",
   "body.nutrition.adherence",
+  "body.nutrition.food",
 ] as const;
 
 export type SupportedRecordType = (typeof SUPPORTED_RECORD_TYPES)[number];
@@ -55,6 +56,10 @@ export function validateSyncRecord(record: Partial<SyncRecord> | null | undefine
 
   if (!record.occurredAt || Number.isNaN(Date.parse(record.occurredAt))) {
     errors.push("occurredAt is invalid");
+  }
+
+  if (!record.sourceUpdatedAt || Number.isNaN(Date.parse(record.sourceUpdatedAt))) {
+    errors.push("sourceUpdatedAt is invalid");
   }
 
   if (record.payload && typeof record.payload === "object") {

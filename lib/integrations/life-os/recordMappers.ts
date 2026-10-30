@@ -12,7 +12,13 @@ function dateToIso(date: string | null | undefined, timestamp?: unknown): string
 }
 
 function sourceUpdatedAt(row: SyncableRow): string {
-  return row.updated_at ?? new Date().toISOString();
+  if (typeof row.updated_at === "string" && !Number.isNaN(Date.parse(row.updated_at))) {
+    return row.updated_at;
+  }
+  if (typeof row.created_at === "number" && row.created_at > 0) {
+    return dateToIso(null, row.created_at);
+  }
+  return "";
 }
 
 function createRecord(
@@ -94,6 +100,33 @@ export function mapBodyStat(row: SyncableRow): SyncRecord {
   );
 }
 
+export function mapFoodLog(row: SyncableRow): SyncRecord {
+  const id = String(row.id);
+  return createRecord(
+    "body.nutrition.food",
+    `nutrilift:food_log:${id}`,
+    dateToIso(row.date, row.created_at),
+    sourceUpdatedAt(row),
+    {
+      date: row.date,
+      meal: row.meal,
+      name: row.name,
+      quantityG: row.quantity_g,
+      calories: row.calories,
+      proteinG: row.protein_g,
+      carbsG: row.carbs_g,
+      fatG: row.fat_g,
+      fiberG: row.fiber_g,
+      sugarG: row.sugar_g,
+      sodiumMg: row.sodium_mg,
+      source: row.source,
+      provenanceType: row.provenance_type,
+      estimateConfidence: row.estimate_confidence,
+      estimateReviewed: Boolean(row.estimate_reviewed),
+    },
+  );
+}
+
 export function mapDailyNutrition(row: SyncableRow): SyncRecord {
   const date = String(row.date);
   return createRecord(
@@ -152,6 +185,7 @@ export function mapTombstone(
     personal_record: "body.performance",
     body_stat: "body.measurement",
     daily_nutrition: "body.nutrition.adherence",
+    food_log: "body.nutrition.food",
   };
   const recordType = recordTypeByEntity[entityType];
   if (!recordType) return null;

@@ -34,7 +34,7 @@ describe('Performance Benchmarks', () => {
 
   it('Memoization prevents unnecessary re-renders of the List', () => {
     let renderCount = 0;
-    const MemoizedList = React.memo(() => {
+    const MemoizedList = React.memo(function MemoizedList() {
       renderCount++;
       return <List data={[{ id: '1', title: 'test' }]} />;
     });
