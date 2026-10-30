@@ -63,7 +63,11 @@ Deno.serve(async (request) => {
 
     let body: unknown;
     try {
-      body = await request.json();
+      const rawBody = await request.text();
+      if (new TextEncoder().encode(rawBody).byteLength > MAX_REQUEST_BYTES) {
+        return jsonError("AI request is too large", 413);
+      }
+      body = JSON.parse(rawBody);
     } catch {
       return jsonError("Request body must be valid JSON", 400);
     }
