@@ -21,7 +21,3 @@ export * from './data-display/Progress';
 // Forms & Inputs (Assuming they will be added here or imported from similar directories)
 // export * from './forms/TextField';
 // export * from './forms/Switch';
-
-// Theme Context Export
-export { ThemeProvider } from '../core/theme/ThemeProvider';
-export { useTheme, useColors, useTypography, useSpacing, useDarkMode } from '../hooks/useTheme';
