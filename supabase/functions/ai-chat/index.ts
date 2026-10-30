@@ -118,29 +118,19 @@ Deno.serve(async (request) => {
     }
 
     const admin = createClient(supabaseUrl, serviceRoleKey);
-    const startOfDay = new Date().toISOString().slice(0, 10);
-    const { count, error: countError } = await admin
-      .from("ai_request_usage")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", user.id)
-      .gte("created_at", `${startOfDay}T00:00:00.000Z`);
-
-    if (countError) {
-      console.error("AI usage count query failed");
-      return jsonError("AI usage tracking is unavailable", 503);
-    }
-    if ((count ?? 0) >= DAILY_REQUEST_LIMIT) {
-      return jsonError("Daily AI request limit reached", 429);
-    }
-
-    const { error: usageInsertError } = await admin.from("ai_request_usage").insert({
-      user_id: user.id,
-      model: body.model,
-      max_output_tokens: Math.min(maxTokens, MAX_OUTPUT_TOKENS),
+    const { data: quotaReserved, error: quotaError } = await admin.rpc("reserve_ai_request_usage", {
+      p_user_id: user.id,
+      p_model: body.model,
+      p_max_output_tokens: Math.min(maxTokens, MAX_OUTPUT_TOKENS),
+      p_daily_limit: DAILY_REQUEST_LIMIT,
     });
-    if (usageInsertError) {
-      console.error("AI usage record could not be saved");
+
+    if (quotaError) {
+      console.error("AI usage reservation failed");
       return jsonError("AI usage tracking is unavailable", 503);
+    }
+    if (quotaReserved !== true) {
+      return jsonError("Daily AI request limit reached", 429);
     }
 
     let providerResponse: Response;
