@@ -396,7 +396,7 @@ export default function DashboardScreen() {
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <View style={{ gap: 3 }}>
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", letterSpacing: 0.5 }}>
-                TODAY'S WORKOUT
+                TODAY&apos;S WORKOUT
               </Text>
               {session ? (
                 <>
