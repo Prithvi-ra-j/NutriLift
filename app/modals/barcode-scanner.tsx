@@ -322,7 +322,7 @@ export default function BarcodeScannerModal() {
           >
             <Ionicons name="keypad" size={20} color={M3.colors.primary} />
             <Text style={styles.manualEntryText}>
-              Can't scan? Enter barcode manually
+              Can&apos;t scan? Enter barcode manually
             </Text>
           </TouchableOpacity>
         </View>
