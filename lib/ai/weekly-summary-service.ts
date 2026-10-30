@@ -1,4 +1,4 @@
-// @ts-nocheck
+import { logServiceFailure } from "../utils/logger";
 import uuid from "react-native-uuid";
 import { getDailyNutritionRange } from "../db/queries/nutrition";
 import { getSessionsForDateRange } from "../db/queries/workout";
@@ -115,7 +115,7 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
     await insertWeeklySummary(summary);
     return summary;
   } catch (error) {
-    console.error("Failed to generate weekly summary:", error);
+    logServiceFailure("Failed to generate summary");
     return null;
   }
 }
