@@ -469,7 +469,7 @@ export default function MoreScreen() {
         {activeSection === "supplements" && (
           <Card>
             <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 11, fontFamily: "DMSans_500Medium", marginBottom: 12, letterSpacing: 0.5 }}>
-              TODAY'S SUPPLEMENTS
+              TODAY&apos;S SUPPLEMENTS
             </Text>
             {USER_PROFILE.supplements.length === 0 ? (
               <Text style={{ color: M3.colors.onSurfaceVariant, fontSize: 12, lineHeight: 18 }}>
