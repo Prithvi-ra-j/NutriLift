@@ -24,7 +24,7 @@ begin
   end if;
 
   perform pg_advisory_xact_lock(
-    hashtextextended(p_user_id::text || ':' || v_day_start::date::text, 0)
+    hashtextextended(p_user_id::text || ':' || (v_day_start at time zone 'utc')::date::text, 0)
   );
 
   select count(*)
