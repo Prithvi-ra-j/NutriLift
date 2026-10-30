@@ -5,7 +5,7 @@ import { getNutritionTargetsForDate } from "./nutrition-targets";
 import { addCalendarDays, fromLocalDateKey, toLocalDateKey } from "../../utils/local-date";
 import { validateFoodLogInput, validateFoodLogsInput, validateNutritionEstimate } from "../../data/food-log-validation";
 import { calculateTargetComparison } from "../../nutrition/target-validation";
-import { enqueueDailyNutrition, enqueueTombstone } from "./sync-outbox";
+import { enqueueDailyNutrition, enqueueFoodLog, enqueueTombstone } from "./sync-outbox";
 import { appendDomainEvent } from "./domain-events";
 
 // ─── Food Log Queries ─────────────────────────────────────────────────────────
@@ -68,6 +68,7 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
       provenance_json: log.provenance_json ?? JSON.stringify({ source: log.source, inferred: log.provenance_type == null }),
       estimate_confidence: log.estimate_confidence ?? null,
       estimate_reviewed: log.estimate_reviewed ?? (provenanceType === "ai_estimated" ? 0 : 1),
+      updated_at: new Date().toISOString(),
     };
   });
   validateFoodLogsInput(preparedLogs);
@@ -80,6 +81,7 @@ export async function insertFoodLogs(logs: NewFoodLog[]): Promise<void> {
     const date = preparedLogs[0].date;
     const targets = await getNutritionTargetsForDate(date, tx);
     await tx.insert(foodLogs).values(preparedLogs);
+    for (const log of preparedLogs) await enqueueFoodLog(tx, log as FoodLog);
     const rows = await tx.select().from(foodLogs).where(eq(foodLogs.date, date));
     const totals = rows.reduce(
       (acc: { calories: number; protein_g: number; carbs_g: number; fat_g: number }, log: FoodLog) => ({
@@ -139,8 +141,9 @@ export async function deleteFoodLog(id: string, date: string): Promise<void> {
     const rows = await tx.select().from(foodLogs).where(eq(foodLogs.id, id)).limit(1);
     const existing = rows[0] as FoodLog | undefined;
     if (!existing) return;
-    await tx.delete(foodLogs).where(eq(foodLogs.id, id));
     const deletedAt = new Date().toISOString();
+    await enqueueTombstone(tx, "food_log", id, `nutrilift:food_log:${id}`);
+    await tx.delete(foodLogs).where(eq(foodLogs.id, id));
     const deletedVersion = Date.now();
     await appendDomainEvent(tx, {
       id: `food-log:${id}:deleted:${deletedVersion}`, eventType: "nutrition.food.deleted",
@@ -164,8 +167,10 @@ export async function updateFoodLog(id: string, updates: Partial<NewFoodLog>, da
     const next = { ...existing, ...mutableUpdates } as FoodLog;
     validateFoodLogInput(next as NewFoodLog);
     const affectedDates = Array.from(new Set([existing.date, next.date, date]));
-    await tx.update(foodLogs).set(mutableUpdates).where(eq(foodLogs.id, id));
     const updatedAt = new Date().toISOString();
+    const updatedRow = { ...next, ...mutableUpdates, updated_at: updatedAt } as FoodLog;
+    await tx.update(foodLogs).set({ ...mutableUpdates, updated_at: updatedAt }).where(eq(foodLogs.id, id));
+    await enqueueFoodLog(tx, updatedRow);
     const updatedVersion = Date.now();
     await appendDomainEvent(tx, {
       id: `food-log:${id}:updated:${updatedVersion}`, eventType: "nutrition.food.updated",
