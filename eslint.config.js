@@ -32,4 +32,23 @@ module.exports = [
     plugins: { 'react-native': reactNativePlugin, '@typescript-eslint': tsPlugin },
     rules: strict,
   },
+
+  {
+    // Runtime globals for Node/Jest and Supabase's Deno Edge Functions.
+    files: ['scripts/**/*.js', 'jest.setup.js'],
+    languageOptions: {
+      globals: {
+        __dirname: 'readonly',
+        Buffer: 'readonly',
+        jest: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['supabase/functions/**/*.ts'],
+    rules: { 'import/no-unresolved': 'off' },
+    languageOptions: {
+      globals: { Deno: 'readonly' },
+    },
+  },
 ];
