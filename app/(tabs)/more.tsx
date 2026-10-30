@@ -676,7 +676,7 @@ export default function MoreScreen() {
                   <Input value={password} onChangeText={setPassword} secureTextEntry placeholder="Password" />
                   <Button label={isAuthenticating ? "Signing in…" : "Sign in"} onPress={handleSignIn} disabled={!isSupabaseConfigured || isAuthenticating} loading={isAuthenticating} />
                   <Text style={{ color: M3.colors.onSurfaceMuted, fontSize: 11, fontFamily: "DMSans_400Regular" }}>
-                    You'll stay signed in across app restarts once verified.
+                    You&apos;ll stay signed in across app restarts once verified.
                   </Text>
                 </View>
               )}
