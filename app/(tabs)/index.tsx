@@ -19,6 +19,7 @@ import { DAY_TYPES, type DayType } from "../../lib/constants/exercises";
 import { Card } from "../../components/ui/Card";
 import { MacroBar } from "../../components/ui/MacroBar";
 import { MacroRing } from "../../components/ui/MacroRing";
+import { QuickAddSheet } from "../../components/ui/QuickAddSheet";
 import { CardSkeleton } from "../../components/ui/SkeletonLoader";
 import type { DailyNutrition, WorkoutSession } from "../../lib/db/schema";
 import { M3 } from "../../design-system/tokens";
@@ -58,6 +59,7 @@ export default function DashboardScreen() {
   const { coachInsight } = useUIStore();
 
   const [isLoading, setIsLoading] = useState(true);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
   const [activeTargets, setActiveTargets] = useState<NutritionTargets>(DEFAULT_NUTRITION_TARGETS);
   const [refreshing, setRefreshing] = useState(false);
   const [adherenceDots, setAdherenceDots] = useState<AdherenceDot[]>([]);
@@ -439,7 +441,7 @@ export default function DashboardScreen() {
         {/* ── Quick Log FAB area ── */}
         <View style={{ flexDirection: "row", gap: 12 }}>
           <TouchableOpacity
-            onPress={() => router.push("/modals/log-food")}
+            onPress={() => setQuickAddVisible(true)}
             style={{
               flex: 1,
               backgroundColor: M3.colors.primaryContainer,
@@ -480,6 +482,7 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      <QuickAddSheet visible={quickAddVisible} onClose={() => setQuickAddVisible(false)} />
     </SafeAreaView>
   );
 }
