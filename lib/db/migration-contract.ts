@@ -48,6 +48,7 @@ export const ADDITIVE_COLUMN_MIGRATIONS = [
   { table: "food_logs", column: "provenance_json", type: "TEXT" },
   { table: "food_logs", column: "estimate_confidence", type: "REAL" },
   { table: "food_logs", column: "estimate_reviewed", type: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "food_logs", column: "updated_at", type: "TEXT" },
   { table: "favorite_foods", column: "provenance_type", type: "TEXT NOT NULL DEFAULT 'legacy_unknown'" },
   { table: "favorite_foods", column: "provenance_json", type: "TEXT" },
   { table: "favorite_foods", column: "estimate_confidence", type: "REAL" },
@@ -68,7 +69,7 @@ export const ADDITIVE_COLUMN_MIGRATIONS = [
 ] as const;
 
 export const REQUIRED_CORE_COLUMNS: Readonly<Record<string, readonly string[]>> = {
-  food_logs: ["provenance_type", "provenance_json", "estimate_confidence", "estimate_reviewed"],
+  food_logs: ["provenance_type", "provenance_json", "estimate_confidence", "estimate_reviewed", "updated_at"],
   favorite_foods: ["provenance_type", "provenance_json", "estimate_confidence", "estimate_reviewed"],
   daily_nutrition: ["updated_at", "is_complete", "completed_at"],
   workout_sessions: ["updated_at", "status"],
