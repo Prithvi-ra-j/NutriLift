@@ -9,6 +9,7 @@ describe("NutriLift sync contract", () => {
     expect(SUPPORTED_RECORD_TYPES).toContain("body.training.session");
     expect(SUPPORTED_RECORD_TYPES).toContain("body.measurement");
     expect(SUPPORTED_RECORD_TYPES).toContain("body.nutrition.adherence");
+    expect(SUPPORTED_RECORD_TYPES).toContain("body.nutrition.food");
   });
 
   it("accepts a valid NutriLift sync payload", () => {
