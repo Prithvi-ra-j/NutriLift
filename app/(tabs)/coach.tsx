@@ -228,7 +228,7 @@ export default function CoachScreen() {
           <View style={{ marginHorizontal: 20, marginBottom: 12, backgroundColor: M3.colors.errorContainer, borderRadius: 8, padding: 12, flexDirection: "row", gap: 8 }}>
             <Feather name="alert-circle" size={14} color={M3.colors.error} />
             <Text style={{ color: M3.colors.error, fontSize: 12, fontFamily: "DMSans_400Regular", flex: 1 }}>
-              Groq API key is not configured. Please add GROQ_API_KEY to your .env file or Settings.
+              AI gateway is unavailable. Check the server-side Supabase configuration and sign-in.
             </Text>
           </View>
         )}
