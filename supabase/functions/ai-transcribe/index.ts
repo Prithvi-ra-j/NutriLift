@@ -57,34 +57,23 @@ Deno.serve(async (request) => {
     return Response.json({ error: "Invalid language code." }, { status: 400, headers: corsHeaders });
   }
 
-  const admin = createClient(supabaseUrl, serviceRoleKey);
-  const startOfDay = new Date().toISOString().slice(0, 10);
-  const { count, error: countError } = await admin
-    .from("ai_request_usage")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id)
-    .gte("created_at", `${startOfDay}T00:00:00.000Z`);
-  if (countError) {
-    return Response.json({ error: "AI usage tracking is unavailable" }, { status: 503, headers: corsHeaders });
-  }
-  if ((count ?? 0) >= DAILY_REQUEST_LIMIT) {
-    return Response.json({ error: "Daily AI request limit reached" }, { status: 429, headers: corsHeaders });
-  }
-
   const bytes = Uint8Array.from(atob(audioBase64), (character) => character.charCodeAt(0));
   if (bytes.byteLength === 0 || bytes.byteLength > MAX_AUDIO_BYTES) {
     return Response.json({ error: "Audio is empty or exceeds the 20 MB limit." }, { status: 413, headers: corsHeaders });
   }
 
-  // Reserve quota before calling the provider so concurrent requests cannot
-  // all pass the count check and exceed the per-user daily limit.
-  const { error: usageError } = await admin.from("ai_request_usage").insert({
-    user_id: user.id,
-    model: "whisper-large-v3-turbo",
-    max_output_tokens: 0,
+  const admin = createClient(supabaseUrl, serviceRoleKey);
+  const { data: quotaReserved, error: quotaError } = await admin.rpc("reserve_ai_request_usage", {
+    p_user_id: user.id,
+    p_model: "whisper-large-v3-turbo",
+    p_max_output_tokens: 0,
+    p_daily_limit: DAILY_REQUEST_LIMIT,
   });
-  if (usageError) {
-    return Response.json({ error: "Could not record AI usage. Please retry." }, { status: 503, headers: corsHeaders });
+  if (quotaError) {
+    return Response.json({ error: "AI usage tracking is unavailable" }, { status: 503, headers: corsHeaders });
+  }
+  if (quotaReserved !== true) {
+    return Response.json({ error: "Daily AI request limit reached" }, { status: 429, headers: corsHeaders });
   }
 
   const form = new FormData();
