@@ -12,7 +12,17 @@ const strict = {
     message: 'Use localDateString() from lib/time/localDate',
   }],
 };
-const ratchet = Object.fromEntries(Object.keys(strict).map((k) => [k, 'warn']));
+const ratchet = {
+  ...Object.fromEntries(Object.keys(strict).map((k) => [k, 'warn'])),
+  // Expo SDK 54 app code predates the newer React Compiler purity/immutability
+  // constraints. Keep these rules active as warnings for legacy app/src code;
+  // new domain/data/AI modules continue to use strict error-level rules.
+  'react-hooks/immutability': 'warn',
+  'react-hooks/purity': 'warn',
+  'react-hooks/set-state-in-effect': 'warn',
+  'react-hooks/static-components': 'warn',
+  'react-hooks/refs': 'warn',
+};
 
 module.exports = [
   ...expo,
