@@ -1,3 +1,4 @@
+import { logServiceFailure } from "../utils/logger";
 import uuid from "react-native-uuid";
 import { getDailyNutritionRange } from "../db/queries/nutrition";
 import { getSessionsForDateRange } from "../db/queries/workout";
@@ -126,7 +127,7 @@ export async function getOrGenerateMonthlySummary(month: string): Promise<Monthl
       return report;
     }
   } catch (error) {
-    console.error("Failed to generate monthly summary:", error);
+    logServiceFailure("Failed to generate summary");
     return null;
   }
 }
