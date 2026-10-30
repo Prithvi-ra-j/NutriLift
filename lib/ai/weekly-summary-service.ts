@@ -81,7 +81,9 @@ export async function getOrGenerateWeeklySummary(weekStart: string, weekEnd: str
     };
 
     // Calculate body stats
-    const validBodyStats = bodyStats.filter((entry) => entry.weight_kg !== null);
+    const validBodyStats = bodyStats.filter(
+      (entry): entry is typeof entry & { weight_kg: number } => typeof entry.weight_kg === "number",
+    );
     const bodyStatsData = validBodyStats.length >= 2 ? {
       weight_change_kg: validBodyStats[validBodyStats.length - 1].weight_kg - validBodyStats[0].weight_kg,
       starting_weight: validBodyStats[0].weight_kg,
