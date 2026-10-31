@@ -80,8 +80,12 @@ Thumbs.db
 
 expo-env.d.ts
 # @end expo-cli
-# Archived planning documents (not part of the app)
-docs/archive/
+# Documentation and planning notes
+/docs/
+*.md
+
+# Supabase local branch metadata
+supabase/.branches/
 
 
 # Old project copy (not the active workspace)
